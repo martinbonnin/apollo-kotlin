@@ -16,7 +16,7 @@ import java.io.File
 import java.io.IOException
 import java.util.Locale
 
-internal object GraphSDLSchemaParser {
+object GraphSDLSchemaParser {
   fun File.parse(): GraphSdlSchema {
     val document = try {
       readText()

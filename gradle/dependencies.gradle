@@ -97,6 +97,7 @@ ext.dep = [
     ],
     truth                 : "com.google.truth:truth:$versions.truth",
     uuid                  : "com.benasher44:uuid:0.2.0",
+    clikt                 : "com.github.ajalt.clikt:clikt:3.0.1",
 ]
 ext.androidConfig = [
     compileSdkVersion: 28,

@@ -12,6 +12,7 @@ include("apollo-http-cache-api")
 include("apollo-normalized-cache")
 include("apollo-normalized-cache-api")
 include("apollo-runtime-kotlin")
+include("apollo-cli")
 
 include("apollo-idling-resource")
 include("apollo-normalized-cache-sqlite")
