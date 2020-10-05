@@ -54,6 +54,7 @@ subprojects {
   this.apply(plugin = "signing")
 
   repositories {
+    mavenLocal()
     google()
     mavenCentral()
     jcenter() // for trove4j
@@ -124,16 +125,23 @@ fun Project.configurePublishing() {
   }
 
   val javaPluginConvention = project.convention.findPlugin(JavaPluginConvention::class.java)
-  val sourcesJarTaskProvider = tasks.register("sourcesJar", org.gradle.jvm.tasks.Jar::class.java) {
-    archiveClassifier.set("sources")
-    when {
-      javaPluginConvention != null && android == null -> {
-        from(javaPluginConvention.sourceSets.get("main").allSource)
+  var sourcesJarTaskProvider = try {
+    tasks.named("sourcesJar") as? Provider<org.gradle.jvm.tasks.Jar>
+  } catch (e: Exception) {
+    null
+  }
+  if (sourcesJarTaskProvider == null) {
+    sourcesJarTaskProvider = tasks.register("sourcesJar", org.gradle.jvm.tasks.Jar::class.java) {
+      archiveClassifier.set("sources")
+      when {
+        javaPluginConvention != null && android == null -> {
+          from(javaPluginConvention.sourceSets.get("main").allSource)
+        }
+        android != null -> {
+          from(android.sourceSets["main"].java.sourceFiles)
+        }
       }
-      android != null -> {
-        from(android.sourceSets["main"].java.sourceFiles)
-      }
-    }
+    }!!
   }
 
   tasks.withType(Javadoc::class.java) {

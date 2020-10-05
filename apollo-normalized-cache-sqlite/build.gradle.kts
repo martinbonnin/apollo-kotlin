@@ -16,20 +16,7 @@ configure<com.squareup.sqldelight.gradle.SqlDelightExtension> {
 }
 
 configure<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension> {
-  data class iOSTarget(val name: String, val preset: String, val id: String)
-
-  val iosTargets = listOf(
-      iOSTarget("ios", "iosArm64", "ios-arm64"),
-      iOSTarget("iosSim", "iosX64", "ios-x64")
-  )
-
-  for ((targetName, presetName, id) in iosTargets) {
-    targetFromPreset(presets.getByName(presetName), targetName) {
-      mavenPublication {
-        artifactId = "${project.name}-$id"
-      }
-    }
-  }
+  ios()
 
   if (apollographql_skipAndroidModule != "true") {
     android {
@@ -66,14 +53,9 @@ configure<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension> {
     }
 
     val iosMain by getting {
-      dependsOn(commonMain)
       dependencies {
         implementation(groovy.util.Eval.x(project, "x.dep.sqldelight.native"))
       }
-    }
-
-    val iosSimMain by getting {
-      dependsOn(iosMain)
     }
 
     val commonTest by getting {
@@ -97,14 +79,6 @@ configure<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension> {
       val androidTest by getting {
         dependsOn(jvmTest)
       }
-    }
-
-    val iosTest by getting {
-      dependsOn(commonTest)
-    }
-
-    val iosSimTest by getting {
-      dependsOn(iosTest)
     }
   }
 }
