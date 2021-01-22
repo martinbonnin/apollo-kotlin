@@ -7,6 +7,7 @@ import com.apollographql.apollo.compiler.introspection.IntrospectionSchema
 import com.apollographql.apollo.compiler.introspection.resolveType
 import com.apollographql.apollo.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo.compiler.operationoutput.findOperationId
+import com.apollographql.apollo.compiler.toUpperCamelCase
 
 internal class AstBuilder private constructor(
     private val backendIr: BackendIr,
@@ -712,10 +713,5 @@ internal class AstBuilder private constructor(
   private fun String.toLowerCamelCase(): String {
     val firstLetterIndex = this.indexOfFirst { it.isLetter() }
     return this.substring(0, firstLetterIndex) + this.substring(firstLetterIndex, this.length).decapitalize()
-  }
-
-  private fun String.toUpperCamelCase(): String {
-    val firstLetterIndex = this.indexOfFirst { it.isLetter() }
-    return this.substring(0, firstLetterIndex) + this.substring(firstLetterIndex, this.length).capitalize()
   }
 }

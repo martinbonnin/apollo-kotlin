@@ -1,0 +1,16 @@
+interface Animal {
+  name: String
+}
+
+type Cat implements Animal {
+  name: String
+  meowVolume: Float
+}
+
+type Lion implements Animal {
+  name: String
+}
+
+type Query {
+  animal: Animal
+}

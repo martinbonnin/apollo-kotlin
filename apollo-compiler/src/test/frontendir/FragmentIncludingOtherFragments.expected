@@ -1,0 +1,62 @@
+package com.example
+
+import kotlin.Float
+import kotlin.String
+
+interface GetAnimal {
+  interface Query {
+    val randomAnimal: Animal?
+
+    interface AnimalCat {
+      val name: String
+
+      val habitat: com.example.Habitat
+
+      interface Habitat {
+        val temperature: Float?
+      }
+    }
+
+    interface AnimalLion {
+      val name: String
+    }
+  }
+}
+
+interface QueryFragment {
+  interface Query {
+    val randomAnimal: Animal?
+
+    interface AnimalCat {
+      val name: String
+
+      val habitat: com.example.Habitat
+
+      interface Habitat {
+        val temperature: Float?
+      }
+    }
+
+    interface AnimalLion {
+      val name: String
+    }
+  }
+}
+
+interface CatFragment {
+  interface Cat {
+    val name: String
+
+    val habitat: com.example.Habitat
+
+    interface Habitat {
+      val temperature: Float?
+    }
+  }
+}
+
+interface LionFragment {
+  interface Lion {
+    val name: String
+  }
+}

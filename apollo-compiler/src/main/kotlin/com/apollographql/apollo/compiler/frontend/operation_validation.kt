@@ -8,6 +8,8 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
 
   private val issues = mutableListOf<Issue>()
 
+  private val visitedFieldPairs = mutableListOf<Pair<GQLField, GQLField>>()
+
   fun validateDocument(document: GQLDocument): List<Issue> {
     document.validateExecutable()
     document.validateFragments()
@@ -162,8 +164,6 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
      * against all fragments is required
      */
     selectionSet.validate(null, fragmentRootTypeDefinition)
-
-    fieldsInSetCanMerge(selectionSet.collectFields(fragmentRootTypeDefinition.name))
   }
 
   private fun GQLOperationDefinition.validate() {
@@ -178,8 +178,6 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
     }
 
     selectionSet.validate(this, rootTypeDefinition)
-
-    fieldsInSetCanMerge(selectionSet.collectFields(rootTypeDefinition.name))
   }
 
   private fun GQLSelectionSet.validate(operation: GQLOperationDefinition?, typeDefinitionInScope: GQLTypeDefinition) {
@@ -199,6 +197,7 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
         is GQLFragmentSpread -> it.validate(operation, typeDefinitionInScope)
       }
     }
+    fieldsInSetCanMerge(collectFields(typeDefinitionInScope.name))
   }
 
   /**
@@ -207,6 +206,15 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
   private fun fieldPairCanMerge(fieldWithParentA: FieldWithParent, fieldWithParentB: FieldWithParent) {
     val parentTypeDefinitionA = fieldWithParentA.parentTypeDefinition
     val parentTypeDefinitionB = fieldWithParentB.parentTypeDefinition
+
+    if (visitedFieldPairs.any {
+        it.first == fieldWithParentA.field && it.second == fieldWithParentB.field
+            || it.first == fieldWithParentB.field && it.second == fieldWithParentA.field
+        }) {
+      return
+    }
+
+    visitedFieldPairs.add(fieldWithParentA.field to fieldWithParentB.field)
 
     if (parentTypeDefinitionA.name != parentTypeDefinitionB.name
         && parentTypeDefinitionA is GQLObjectTypeDefinition
@@ -551,8 +559,8 @@ private class InputValueValidationScope(val schema: Schema) {
   }
 
   private fun validateAndCoerceEnum(value: GQLValue, enumTypeDefinition: GQLEnumTypeDefinition): GQLValue {
-    val expectedType = GQLNamedType(name = enumTypeDefinition.name)
     if (value !is GQLEnumValue) {
+      val expectedType = GQLNamedType(name = enumTypeDefinition.name)
       registerIssue(value, expectedType)
       return value
     }

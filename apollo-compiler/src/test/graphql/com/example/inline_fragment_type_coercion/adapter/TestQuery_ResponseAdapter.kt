@@ -18,13 +18,17 @@ import kotlin.Suppress
     "RemoveExplicitTypeArguments", "NestedLambdaShadowedImplicitParameter", "PropertyName",
     "RemoveRedundantQualifierName")
 object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
-  private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+  val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
     ResponseField(
       type = ResponseField.Type.Named.Object("Foo"),
       responseName = "foo",
       fieldName = "foo",
       arguments = emptyMap(),
       conditions = emptyList(),
+      possibleFieldSets = mapOf(
+        "FooBar" to Foo.BarFoo.RESPONSE_FIELDS,
+        "" to Foo.OtherFoo.RESPONSE_FIELDS,
+      ),
     )
   )
 
@@ -56,6 +60,7 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
   }
 
   object Foo : ResponseAdapter<TestQuery.Data.Foo> {
+<<<<<<< HEAD
     private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
       ResponseField(
         type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -73,8 +78,10 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
       )
     )
 
+=======
+>>>>>>> e374eee24... forward subfields
     override fun fromResponse(reader: ResponseReader, __typename: String?): TestQuery.Data.Foo {
-      val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+      val typename = __typename ?: reader.readString(ResponseField.Typename)
       return when(typename) {
         "FooBar" -> BarFoo.fromResponse(reader, typename)
         else -> OtherFoo.fromResponse(reader, typename)
@@ -89,13 +96,14 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
     }
 
     object BarFoo : ResponseAdapter<TestQuery.Data.Foo.BarFoo> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
           responseName = "__typename",
           fieldName = "__typename",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -103,6 +111,7 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
           fieldName = "foo",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -110,6 +119,7 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
           fieldName = "bar",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         )
       )
 
@@ -143,13 +153,14 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
     }
 
     object OtherFoo : ResponseAdapter<TestQuery.Data.Foo.OtherFoo> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
           responseName = "__typename",
           fieldName = "__typename",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -157,6 +168,7 @@ object TestQuery_ResponseAdapter : ResponseAdapter<TestQuery.Data> {
           fieldName = "foo",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         )
       )
 

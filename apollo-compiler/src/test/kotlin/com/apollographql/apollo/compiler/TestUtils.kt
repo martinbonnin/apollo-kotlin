@@ -1,5 +1,11 @@
 package com.apollographql.apollo.compiler
 
+import com.apollographql.apollo.compiler.frontend.GraphQLParser
+import com.apollographql.apollo.compiler.frontend.Schema
+import com.apollographql.apollo.compiler.frontend.toSchema
+import com.apollographql.apollo.compiler.introspection.IntrospectionSchema
+import com.google.common.truth.Truth
+import com.google.common.truth.Truth.*
 import java.io.File
 import java.lang.Exception
 
@@ -24,6 +30,81 @@ internal object TestUtils {
       |Run the tests with `-DupdateTestFixtures=true` to do so.
       |diff ${expected.path} ${actual.path}""".trimMargin())
       }
+    }
+  }
+
+
+  fun testParametersForGraphQLFilesIn(path: String): Collection<Array<Any>> {
+    return File(path)
+        .walk()
+        .toList()
+        .filter { it.isFile }
+        .filter { it.extension == "graphql" }
+        .filter {
+          val testFilter = System.getProperty("testFilter")
+          if (testFilter != null) {
+            it.name == testFilter
+          } else {
+            true
+          }
+        }
+        .sortedBy { it.name }
+        .map { arrayOf(it.nameWithoutExtension, it) }
+  }
+
+  private fun File.replaceExtension(newExtension: String): File {
+    return File(parentFile, "$nameWithoutExtension.$newExtension")
+  }
+
+  private fun findSchema(parent: File, nameWithoutExtension: String): Schema? {
+    val schema = File(parent, "$nameWithoutExtension.sdl")
+        .takeIf { it.exists() }
+        ?.let {
+          GraphQLParser.parseSchema(it)
+        }
+    if (schema != null) {
+      return schema
+    }
+    return File(parent, "$nameWithoutExtension.json")
+        .takeIf { it.exists() }
+        ?.let {
+          IntrospectionSchema(it).toSchema()
+        }
+  }
+
+  /**
+   * run the block and checks the result against the .expected file
+   *
+   * @param block: the callback to produce the result. [checkExpected] will try to find a schema
+   * for [graphQLFile] by either looking for a schema with the same name or testing the first
+   * schema.[json|sdl] in the hierarchy
+   */
+  fun checkExpected(graphQLFile: File, block: (Schema?) -> String) {
+    var schema = findSchema(graphQLFile.parentFile, graphQLFile.nameWithoutExtension)
+    if (schema == null) {
+      var parent = graphQLFile.parentFile
+      while (parent.name != "test") {
+        schema = findSchema(graphQLFile.parentFile, "schema")
+        if (schema != null) {
+          break
+        }
+        parent = parent.parentFile
+      }
+    }
+
+    val actual = block(schema)
+
+    val expectedFile = File(graphQLFile.parent, graphQLFile.nameWithoutExtension + ".expected")
+    val expected = try {
+      expectedFile.readText()
+    } catch (e: Exception) {
+      null
+    }
+
+    if (shouldUpdateTestFixtures()) {
+      expectedFile.writeText(actual)
+    } else {
+      assertThat(actual).isEqualTo(expected)
     }
   }
 }

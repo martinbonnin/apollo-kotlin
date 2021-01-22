@@ -39,16 +39,21 @@ private fun CodeGenerationAst.ObjectType.rootResponseAdapterTypeSpec(generateAsI
 private fun CodeGenerationAst.ObjectType.responseAdapterTypeSpec(): TypeSpec {
   return TypeSpec.objectBuilder(this.name)
       .addSuperinterface(ResponseAdapter::class.asTypeName().parameterizedBy(this.typeRef.asTypeName()))
-      .applyIf(this.fields.isNotEmpty()) { addProperty(responseFieldsPropertySpec(this@responseAdapterTypeSpec.fields)) }
+      .applyIf(
+          this.fields.isNotEmpty()
+              && this.kind is CodeGenerationAst.ObjectType.Kind.Object) {
+        addProperty(responseFieldsPropertySpec(this@responseAdapterTypeSpec))
+      }
       .addFunction(readFromResponseFunSpec())
       .addFunction(writeToResponseFunSpec())
       .addTypes(
           this.nestedObjects
-              .filter { it.kind !is CodeGenerationAst.ObjectType.Kind.Fragment || it.kind.possibleImplementations.isNotEmpty() }
-              .mapNotNull { nestedObject ->
-                nestedObject
-                    .takeUnless { it.kind is CodeGenerationAst.ObjectType.Kind.Interface }
-                    ?.responseAdapterTypeSpec()
+              .filter {
+                it.kind is CodeGenerationAst.ObjectType.Kind.Object
+                    || (it.kind is CodeGenerationAst.ObjectType.Kind.Fragment && it.kind.possibleImplementations.isNotEmpty())
+              }
+              .map { nestedObject ->
+                nestedObject.responseAdapterTypeSpec()
               }
       )
       .build()
@@ -72,11 +77,15 @@ internal fun CodeGenerationAst.TypeRef.asAdapterTypeName(): ClassName {
 }
 
 
-private fun responseFieldsPropertySpec(fields: List<CodeGenerationAst.Field>): PropertySpec {
+private fun responseFieldsPropertySpec(objectType: CodeGenerationAst.ObjectType): PropertySpec {
+  val fields = objectType.fields
+
   val initializer = CodeBlock.builder()
       .addStatement("arrayOf(")
       .indent()
-      .add(fields.map { field -> field.responseFieldInitializerCode }.joinToCode(separator = ",\n"))
+      .also { builder->
+        builder.add(fields.map { field -> field.responseFieldInitializerCode(objectType) }.joinToCode(separator = ",\n"))
+      }
       .unindent()
       .addStatement("")
       .add(")")
@@ -85,7 +94,6 @@ private fun responseFieldsPropertySpec(fields: List<CodeGenerationAst.Field>): P
       .builder(
           name = "RESPONSE_FIELDS",
           type = Array<ResponseField>::class.asClassName().parameterizedBy(ResponseField::class.asClassName()),
-          modifiers = arrayOf(KModifier.PRIVATE)
       )
       .initializer(initializer)
       .build()
@@ -124,8 +132,8 @@ private fun CodeBlock.toNonNullable(): CodeBlock {
   builder.add(")")
   return builder.build()
 }
-private val CodeGenerationAst.Field.responseFieldInitializerCode: CodeBlock
-  get() {
+
+private fun CodeGenerationAst.Field.responseFieldInitializerCode(objectType: CodeGenerationAst.ObjectType): CodeBlock {
     val builder = CodeBlock.builder().add("%T(\n", ResponseField::class)
     builder.indent()
     builder.add("type = %L,\n", type.toTypeCode())
@@ -133,12 +141,45 @@ private val CodeGenerationAst.Field.responseFieldInitializerCode: CodeBlock
     builder.add("fieldName = %S,\n", schemaName)
     builder.add("arguments = %L,\n", arguments.takeIf { it.isNotEmpty() }?.let { anyToCode(it) } ?: "emptyMap()")
     builder.add("conditions = %L,\n", conditionsListCode(conditions))
+    builder.add("possibleFieldSets = %L,\n", fieldsCode(this.type, objectType))
     builder.unindent()
     builder.add(")")
 
     return builder.build()
   }
 
+private fun fieldsCode(type: CodeGenerationAst.FieldType, objectType: CodeGenerationAst.ObjectType): CodeBlock {
+  return when (val leafType = type.leafType()) {
+    is CodeGenerationAst.FieldType.Scalar -> CodeBlock.of("emptyMap()")
+    is CodeGenerationAst.FieldType.Object -> {
+      val nestedObjectType = objectType.nestedObjects.first { it.typeRef == leafType.typeRef }
+      val builder = CodeBlock.Builder()
+      builder.add("mapOf(\n")
+      builder.indent()
+      when (val kind = nestedObjectType.kind) {
+        is CodeGenerationAst.ObjectType.Kind.Object -> {
+          builder.add("%S to %T.RESPONSE_FIELDS\n", "", leafType.typeRef.asAdapterTypeName())
+        }
+        is CodeGenerationAst.ObjectType.Kind.Fragment -> {
+          kind.possibleImplementations.forEach {
+            builder.add("%S to %T.RESPONSE_FIELDS,\n", it.key, it.value.asAdapterTypeName())
+          }
+          builder.add("%S to %T.RESPONSE_FIELDS,\n", "", kind.defaultImplementation.asAdapterTypeName())
+        }
+      }
+      builder.unindent()
+      builder.add(")")
+      builder.build()
+    }
+    else -> error("")
+  }
+}
+
+private fun CodeGenerationAst.FieldType.leafType(): CodeGenerationAst.FieldType = when(this) {
+  is CodeGenerationAst.FieldType.Scalar -> this
+  is CodeGenerationAst.FieldType.Object -> this
+  is CodeGenerationAst.FieldType.Array -> rawType.leafType()
+}
 private fun conditionsListCode(conditions: Set<CodeGenerationAst.Field.Condition>): CodeBlock {
   return conditions
       .map { condition ->

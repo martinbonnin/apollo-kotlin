@@ -1,0 +1,13 @@
+query GetAnimal($condition: Boolean!) {
+  randomAnimal {
+    species
+    ...catFragment @include(if: $condition)
+  }
+}
+
+fragment catFragment on Cat {
+  name
+  habitat {
+    temperature
+  }
+}

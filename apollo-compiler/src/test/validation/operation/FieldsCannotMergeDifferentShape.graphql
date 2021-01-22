@@ -1,0 +1,10 @@
+query GetAnimal {
+  animal {
+    ... on Cat {
+      meowVolume
+    }
+    ... on Lion {
+      meowVolume: name
+    }
+  }
+}

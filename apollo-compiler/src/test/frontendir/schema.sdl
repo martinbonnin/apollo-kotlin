@@ -1,0 +1,36 @@
+interface Animal {
+  species: String!
+  habitat: Habitat!
+}
+
+interface Habitat {
+  description: String
+  temperature: Float
+}
+
+type Sea implements Habitat {
+  description: String
+}
+
+type Desert implements Habitat {
+  description: String
+}
+
+interface Pet {
+  name: String!
+}
+
+type Cat implements Animal & Pet {
+  species: String!
+  habitat: Habitat!
+  name: String!
+}
+
+type Lion implements Animal {
+  habitat: Habitat!
+  name: String!
+}
+
+type Query {
+  randomAnimal: Animal
+}

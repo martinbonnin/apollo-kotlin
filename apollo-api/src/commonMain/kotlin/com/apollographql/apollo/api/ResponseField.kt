@@ -17,7 +17,8 @@ class ResponseField(
     val responseName: String,
     val fieldName: String,
     val arguments: Map<String, Any?>,
-    val conditions: List<Condition>
+    val conditions: List<Condition>,
+    val possibleFieldSets: Map<String, Array<ResponseField>>,
 ) {
 
   /**
@@ -101,5 +102,14 @@ class ResponseField(
       is Type.Named -> name
       is Type.List -> ofType.leafType()
     }
+
+    val Typename = ResponseField(
+        type = Type.NotNull(Type.Named.Other("String")),
+        responseName = "__typename",
+        fieldName = "__typename",
+        arguments = emptyMap(),
+        conditions = emptyList(),
+        possibleFieldSets = emptyMap(),
+    )
   }
 }

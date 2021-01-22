@@ -19,7 +19,7 @@ import kotlin.collections.List
     "RemoveExplicitTypeArguments", "NestedLambdaShadowedImplicitParameter", "PropertyName",
     "RemoveRedundantQualifierName")
 object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
-  private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+  val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
     ResponseField(
       type = ResponseField.Type.Named.Object("StarshipsConnection"),
       responseName = "allStarships",
@@ -27,6 +27,9 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
       arguments = mapOf<String, Any?>(
         "first" to 7),
       conditions = emptyList(),
+      possibleFieldSets = mapOf(
+        "" to AllStarships.RESPONSE_FIELDS
+      ),
     )
   )
 
@@ -61,13 +64,16 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
 
   object AllStarships :
       ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships> {
-    private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+    val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
       ResponseField(
         type = ResponseField.Type.List(ResponseField.Type.Named.Object("StarshipsEdge")),
         responseName = "edges",
         fieldName = "edges",
         arguments = emptyMap(),
         conditions = emptyList(),
+        possibleFieldSets = mapOf(
+          "" to Edge.RESPONSE_FIELDS
+        ),
       )
     )
 
@@ -102,13 +108,17 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
 
     object Edge :
         ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.Named.Object("Starship"),
           responseName = "node",
           fieldName = "node",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = mapOf(
+            "Starship" to Node.StarshipNode.RESPONSE_FIELDS,
+            "" to Node.OtherNode.RESPONSE_FIELDS,
+          ),
         )
       )
 
@@ -144,6 +154,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
       object Node :
           ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node>
           {
+<<<<<<< HEAD
         private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
           ResponseField(
             type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -154,9 +165,11 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
           )
         )
 
+=======
+>>>>>>> e374eee24... forward subfields
         override fun fromResponse(reader: ResponseReader, __typename: String?):
             com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node {
-          val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+          val typename = __typename ?: reader.readString(ResponseField.Typename)
           return when(typename) {
             "Starship" -> StarshipNode.fromResponse(reader, typename)
             else -> OtherNode.fromResponse(reader, typename)
@@ -174,13 +187,14 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
         object StarshipNode :
             ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode>
             {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "__typename",
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -188,6 +202,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
               fieldName = "id",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.Named.Other("String"),
@@ -195,6 +210,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
               fieldName = "name",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.Named.Object("StarshipPilotsConnection"),
@@ -202,6 +218,9 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
               fieldName = "pilotConnection",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = mapOf(
+                "" to PilotConnection.RESPONSE_FIELDS
+              ),
             )
           )
 
@@ -249,7 +268,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
           object PilotConnection :
               ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection>
               {
-            private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+            val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
               ResponseField(
                 type =
                     ResponseField.Type.List(ResponseField.Type.Named.Object("StarshipPilotsEdge")),
@@ -257,6 +276,9 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                 fieldName = "edges",
                 arguments = emptyMap(),
                 conditions = emptyList(),
+                possibleFieldSets = mapOf(
+                  "" to Edge.RESPONSE_FIELDS
+                ),
               )
             )
 
@@ -292,13 +314,17 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
             object Edge :
                 ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge>
                 {
-              private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+              val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                 ResponseField(
                   type = ResponseField.Type.Named.Object("Person"),
                   responseName = "node",
                   fieldName = "node",
                   arguments = emptyMap(),
                   conditions = emptyList(),
+                  possibleFieldSets = mapOf(
+                    "Person" to Node.PersonNode.RESPONSE_FIELDS,
+                    "" to Node.OtherNode.RESPONSE_FIELDS,
+                  ),
                 )
               )
 
@@ -334,6 +360,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
               object Node :
                   ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node>
                   {
+<<<<<<< HEAD
                 private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                   ResponseField(
                     type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -344,9 +371,11 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                   )
                 )
 
+=======
+>>>>>>> e374eee24... forward subfields
                 override fun fromResponse(reader: ResponseReader, __typename: String?):
                     com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node {
-                  val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+                  val typename = __typename ?: reader.readString(ResponseField.Typename)
                   return when(typename) {
                     "Person" -> PersonNode.fromResponse(reader, typename)
                     else -> OtherNode.fromResponse(reader, typename)
@@ -364,13 +393,14 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                 object PersonNode :
                     ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.PersonNode>
                     {
-                  private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+                  val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                     ResponseField(
                       type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
                       responseName = "__typename",
                       fieldName = "__typename",
                       arguments = emptyMap(),
                       conditions = emptyList(),
+                      possibleFieldSets = emptyMap(),
                     ),
                     ResponseField(
                       type = ResponseField.Type.Named.Other("String"),
@@ -378,6 +408,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                       fieldName = "name",
                       arguments = emptyMap(),
                       conditions = emptyList(),
+                      possibleFieldSets = emptyMap(),
                     ),
                     ResponseField(
                       type = ResponseField.Type.Named.Object("Planet"),
@@ -385,6 +416,10 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                       fieldName = "homeworld",
                       arguments = emptyMap(),
                       conditions = emptyList(),
+                      possibleFieldSets = mapOf(
+                        "Planet" to Homeworld.PlanetHomeworld.RESPONSE_FIELDS,
+                        "" to Homeworld.OtherHomeworld.RESPONSE_FIELDS,
+                      ),
                     )
                   )
 
@@ -428,6 +463,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                   object Homeworld :
                       ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.PersonNode.Homeworld>
                       {
+<<<<<<< HEAD
                     private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                       ResponseField(
                         type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -438,9 +474,11 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                       )
                     )
 
+=======
+>>>>>>> e374eee24... forward subfields
                     override fun fromResponse(reader: ResponseReader, __typename: String?):
                         com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.PersonNode.Homeworld {
-                      val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+                      val typename = __typename ?: reader.readString(ResponseField.Typename)
                       return when(typename) {
                         "Planet" -> PlanetHomeworld.fromResponse(reader, typename)
                         else -> OtherHomeworld.fromResponse(reader, typename)
@@ -458,7 +496,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                     object PlanetHomeworld :
                         ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.PersonNode.Homeworld.PlanetHomeworld>
                         {
-                      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+                      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                         ResponseField(
                           type =
                               ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -466,6 +504,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                           fieldName = "__typename",
                           arguments = emptyMap(),
                           conditions = emptyList(),
+                          possibleFieldSets = emptyMap(),
                         ),
                         ResponseField(
                           type = ResponseField.Type.Named.Other("String"),
@@ -473,6 +512,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                           fieldName = "name",
                           arguments = emptyMap(),
                           conditions = emptyList(),
+                          possibleFieldSets = emptyMap(),
                         )
                       )
 
@@ -505,7 +545,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                     object OtherHomeworld :
                         ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.PersonNode.Homeworld.OtherHomeworld>
                         {
-                      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+                      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                         ResponseField(
                           type =
                               ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -513,6 +553,7 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                           fieldName = "__typename",
                           arguments = emptyMap(),
                           conditions = emptyList(),
+                          possibleFieldSets = emptyMap(),
                         )
                       )
 
@@ -543,13 +584,14 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
                 object OtherNode :
                     ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.StarshipNode.PilotConnection.Edge.Node.OtherNode>
                     {
-                  private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+                  val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
                     ResponseField(
                       type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
                       responseName = "__typename",
                       fieldName = "__typename",
                       arguments = emptyMap(),
                       conditions = emptyList(),
+                      possibleFieldSets = emptyMap(),
                     )
                   )
 
@@ -582,13 +624,14 @@ object AllStarships_ResponseAdapter : ResponseAdapter<AllStarships.Data> {
         object OtherNode :
             ResponseAdapter<com.example.fragment_in_fragment.AllStarships.Data.AllStarships.Edge.Node.OtherNode>
             {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "__typename",
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             )
           )
 

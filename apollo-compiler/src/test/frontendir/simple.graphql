@@ -1,0 +1,17 @@
+query GetAnimal {
+  randomAnimal {
+    species
+    ... on Cat {
+      name
+      habitat {
+        description
+      }
+    }
+    ... on Lion {
+      name
+      habitat {
+        temperature
+      }
+    }
+  }
+}

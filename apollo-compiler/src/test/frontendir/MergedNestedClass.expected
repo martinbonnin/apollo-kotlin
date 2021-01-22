@@ -1,0 +1,31 @@
+package com.example
+
+import kotlin.String
+
+interface GetAnimal {
+  interface Query {
+    val randomAnimal: Animal?
+
+    interface AnimalCat {
+      val species: String
+
+      val name: String
+
+      val habitat: com.example.Habitat
+
+      interface Habitat {
+        val description: String?
+      }
+    }
+
+    interface AnimalLion {
+      val species: String
+
+      val habitat: com.example.Habitat
+
+      interface Habitat {
+        val description: String?
+      }
+    }
+  }
+}

@@ -19,13 +19,17 @@ import kotlin.collections.List
     "RemoveExplicitTypeArguments", "NestedLambdaShadowedImplicitParameter", "PropertyName",
     "RemoveRedundantQualifierName")
 object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
-  private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+  val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
     ResponseField(
       type = ResponseField.Type.NotNull(ResponseField.Type.Named.Object("Collection")),
       responseName = "collection",
       fieldName = "collection",
       arguments = emptyMap(),
       conditions = emptyList(),
+      possibleFieldSets = mapOf(
+        "ParticularCollection" to Collection.ParticularCollectionCollection.RESPONSE_FIELDS,
+        "" to Collection.OtherCollection.RESPONSE_FIELDS,
+      ),
     )
   )
 
@@ -53,6 +57,7 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
   }
 
   object Collection : ResponseAdapter<GetPage.Data.Collection> {
+<<<<<<< HEAD
     private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
       ResponseField(
         type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -71,9 +76,11 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
       )
     )
 
+=======
+>>>>>>> e374eee24... forward subfields
     override fun fromResponse(reader: ResponseReader, __typename: String?):
         GetPage.Data.Collection {
-      val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+      val typename = __typename ?: reader.readString(ResponseField.Typename)
       return when(typename) {
         "ParticularCollection" -> ParticularCollectionCollection.fromResponse(reader, typename)
         else -> OtherCollection.fromResponse(reader, typename)
@@ -89,13 +96,14 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
 
     object ParticularCollectionCollection :
         ResponseAdapter<GetPage.Data.Collection.ParticularCollectionCollection> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
           responseName = "__typename",
           fieldName = "__typename",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type =
@@ -104,6 +112,10 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
           fieldName = "items",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = mapOf(
+            "ParticularItem" to Item.ParticularItemItem.RESPONSE_FIELDS,
+            "" to Item.OtherItem.RESPONSE_FIELDS,
+          ),
         )
       )
 
@@ -141,6 +153,7 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
       }
 
       object Item : ResponseAdapter<GetPage.Data.Collection.ParticularCollectionCollection.Item> {
+<<<<<<< HEAD
         private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
           ResponseField(
             type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -151,9 +164,11 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
           )
         )
 
+=======
+>>>>>>> e374eee24... forward subfields
         override fun fromResponse(reader: ResponseReader, __typename: String?):
             GetPage.Data.Collection.ParticularCollectionCollection.Item {
-          val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+          val typename = __typename ?: reader.readString(ResponseField.Typename)
           return when(typename) {
             "ParticularItem" -> ParticularItemItem.fromResponse(reader, typename)
             else -> OtherItem.fromResponse(reader, typename)
@@ -171,13 +186,14 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
         object ParticularItemItem :
             ResponseAdapter<GetPage.Data.Collection.ParticularCollectionCollection.Item.ParticularItemItem>
             {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "title",
               fieldName = "title",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -185,6 +201,7 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -192,6 +209,7 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
               fieldName = "image",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             )
           )
 
@@ -227,13 +245,14 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
 
         object OtherItem :
             ResponseAdapter<GetPage.Data.Collection.ParticularCollectionCollection.Item.OtherItem> {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "title",
               fieldName = "title",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -241,6 +260,7 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             )
           )
 
@@ -273,13 +293,14 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
     }
 
     object OtherCollection : ResponseAdapter<GetPage.Data.Collection.OtherCollection> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
           responseName = "__typename",
           fieldName = "__typename",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type =
@@ -288,6 +309,9 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
           fieldName = "items",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = mapOf(
+            "" to Item.RESPONSE_FIELDS
+          ),
         )
       )
 
@@ -325,13 +349,14 @@ object GetPage_ResponseAdapter : ResponseAdapter<GetPage.Data> {
       }
 
       object Item : ResponseAdapter<GetPage.Data.Collection.OtherCollection.Item> {
-        private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+        val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
           ResponseField(
             type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
             responseName = "title",
             fieldName = "title",
             arguments = emptyMap(),
             conditions = emptyList(),
+            possibleFieldSets = emptyMap(),
           )
         )
 

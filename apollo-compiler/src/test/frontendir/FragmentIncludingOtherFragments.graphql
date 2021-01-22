@@ -1,0 +1,20 @@
+query GetAnimal {
+  ...queryFragment
+}
+
+fragment queryFragment on Query {
+  randomAnimal {
+    ...catFragment
+    ...lionFragment
+  }
+}
+
+fragment catFragment on Cat {
+  name
+  habitat {
+    temperature
+  }
+}
+fragment lionFragment on Lion {
+  name
+}

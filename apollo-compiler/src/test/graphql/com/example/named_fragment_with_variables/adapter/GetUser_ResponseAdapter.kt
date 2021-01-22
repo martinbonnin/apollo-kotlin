@@ -19,6 +19,7 @@ import kotlin.collections.List
     "RemoveExplicitTypeArguments", "NestedLambdaShadowedImplicitParameter", "PropertyName",
     "RemoveRedundantQualifierName")
 object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
+<<<<<<< HEAD
   private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
     ResponseField(
       type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -29,8 +30,10 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
     )
   )
 
+=======
+>>>>>>> e374eee24... forward subfields
   override fun fromResponse(reader: ResponseReader, __typename: String?): GetUser.Data {
-    val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+    val typename = __typename ?: reader.readString(ResponseField.Typename)
     return when(typename) {
       "Query" -> QueryData.fromResponse(reader, typename)
       else -> OtherData.fromResponse(reader, typename)
@@ -45,13 +48,14 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
   }
 
   object QueryData : ResponseAdapter<GetUser.Data.QueryData> {
-    private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+    val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
       ResponseField(
         type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
         responseName = "__typename",
         fieldName = "__typename",
         arguments = emptyMap(),
         conditions = emptyList(),
+        possibleFieldSets = emptyMap(),
       ),
       ResponseField(
         type = ResponseField.Type.Named.Object("Organization"),
@@ -62,6 +66,9 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
             "kind" to "Variable",
             "variableName" to "organizationId")),
         conditions = emptyList(),
+        possibleFieldSets = mapOf(
+          "" to Organization.RESPONSE_FIELDS
+        ),
       )
     )
 
@@ -97,13 +104,14 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
     }
 
     object Organization : ResponseAdapter<GetUser.Data.QueryData.Organization> {
-      private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+      val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
         ResponseField(
           type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
           responseName = "id",
           fieldName = "id",
           arguments = emptyMap(),
           conditions = emptyList(),
+          possibleFieldSets = emptyMap(),
         ),
         ResponseField(
           type =
@@ -115,6 +123,10 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
               "kind" to "Variable",
               "variableName" to "query")),
           conditions = emptyList(),
+          possibleFieldSets = mapOf(
+            "User" to User.UserUser.RESPONSE_FIELDS,
+            "" to User.OtherUser.RESPONSE_FIELDS,
+          ),
         )
       )
 
@@ -151,6 +163,7 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
       }
 
       object User : ResponseAdapter<GetUser.Data.QueryData.Organization.User> {
+<<<<<<< HEAD
         private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
           ResponseField(
             type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -161,9 +174,11 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
           )
         )
 
+=======
+>>>>>>> e374eee24... forward subfields
         override fun fromResponse(reader: ResponseReader, __typename: String?):
             GetUser.Data.QueryData.Organization.User {
-          val typename = __typename ?: reader.readString(RESPONSE_FIELDS[0])
+          val typename = __typename ?: reader.readString(ResponseField.Typename)
           return when(typename) {
             "User" -> UserUser.fromResponse(reader, typename)
             else -> OtherUser.fromResponse(reader, typename)
@@ -179,13 +194,14 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
         }
 
         object UserUser : ResponseAdapter<GetUser.Data.QueryData.Organization.User.UserUser> {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "__typename",
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -193,6 +209,7 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
               fieldName = "firstName",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -200,6 +217,7 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
               fieldName = "lastName",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             ),
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
@@ -210,6 +228,7 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
                   "kind" to "Variable",
                   "variableName" to "size")),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             )
           )
 
@@ -248,13 +267,14 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
         }
 
         object OtherUser : ResponseAdapter<GetUser.Data.QueryData.Organization.User.OtherUser> {
-          private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+          val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
             ResponseField(
               type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
               responseName = "__typename",
               fieldName = "__typename",
               arguments = emptyMap(),
               conditions = emptyList(),
+              possibleFieldSets = emptyMap(),
             )
           )
 
@@ -284,13 +304,14 @@ object GetUser_ResponseAdapter : ResponseAdapter<GetUser.Data> {
   }
 
   object OtherData : ResponseAdapter<GetUser.Data.OtherData> {
-    private val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
+    val RESPONSE_FIELDS: Array<ResponseField> = arrayOf(
       ResponseField(
         type = ResponseField.Type.NotNull(ResponseField.Type.Named.Other("String")),
         responseName = "__typename",
         fieldName = "__typename",
         arguments = emptyMap(),
         conditions = emptyList(),
+        possibleFieldSets = emptyMap(),
       )
     )
 
