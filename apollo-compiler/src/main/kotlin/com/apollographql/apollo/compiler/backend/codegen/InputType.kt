@@ -16,6 +16,7 @@ import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.asClassName
 
 internal fun CodeGenerationAst.InputField.asPropertySpec(initializer: CodeBlock): PropertySpec {
+  // test
   return PropertySpec
       .builder(
           name = name.escapeKotlinReservedWord(),

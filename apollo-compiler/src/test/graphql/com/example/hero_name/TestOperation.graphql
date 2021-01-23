@@ -4,6 +4,7 @@
 query TestQuery {
   # another comment
   hero {
+    #test
     # the last comment
     name
   }
