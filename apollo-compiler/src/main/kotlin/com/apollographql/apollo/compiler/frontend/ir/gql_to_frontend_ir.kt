@@ -71,7 +71,8 @@ internal class FrontendIrBuilder(
         operationType = operationType.toIrOperationType(),
         variables = variableDefinitions.map { it.toIr() },
         typeDefinition = typeDefinition,
-        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull() ?: error("Multiple FieldSet found for operation '$name'"),
+        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()
+            ?: error("Multiple FieldSet found for operation '$name'"),
         description = description,
         sourceWithFragments = (toUtf8WithIndents() + "\n" + fragmentNames.joinToString(
             separator = "\n"
@@ -87,7 +88,8 @@ internal class FrontendIrBuilder(
     return FrontendIr.NamedFragmentDefinition(
         name = name,
         description = description,
-        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()  ?: error("Multiple FieldSet found for operation '$name'"),
+        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()
+            ?: error("Multiple FieldSet found for operation '$name'"),
         typeCondition = typeDefinition,
         source = toUtf8WithIndents(),
         gqlFragmentDefinition = this,
@@ -176,19 +178,19 @@ internal class FrontendIrBuilder(
        * The real condition for this field to be included in the response.
        * This is used by the cache to not over fetch.
        */
-      val condition: FrontendIr.Condition,
+      val condition: Condition,
       /**
        * The condition for this field to be included in the model shape.
        * - for inline fragments, this only includes the type conditions as field can be made nullable later (cf [canBeSkipped])
        * - for named fragments, this also includes the @include/@skip directive on fragments
        * This is used by codegen to generate the models
        */
-      val shapeCondition: FrontendIr.Condition,
+      val shapeCondition: Condition,
   )
 
   data class CollectedFragment(
       val name: String,
-      val condition: FrontendIr.Condition
+      val condition: Condition
   )
 
   /**
@@ -206,10 +208,10 @@ internal class FrontendIrBuilder(
     private val typeConditions = mutableSetOf<String>()
 
     fun collect(): CollectionResult {
-      check (fields.isEmpty()) {
+      check(fields.isEmpty()) {
         "CollectionScope can only be used once, please create a new CollectionScope"
       }
-      gqlSelectionSet.collect(FrontendIr.Condition.True, FrontendIr.Condition.True, baseType, false)
+      gqlSelectionSet.collect(Condition.True, Condition.True, baseType, false)
       return CollectionResult(
           baseType = baseType,
           collectedFields = fields,
@@ -219,9 +221,9 @@ internal class FrontendIrBuilder(
     }
 
     @Suppress("NAME_SHADOWING")
-    private fun GQLSelectionSet.collect(condition: FrontendIr.Condition, shapeCondition: FrontendIr.Condition, parentType: String, forceNullable: Boolean) {
-      var condition = condition.and(FrontendIr.Condition.Type(parentType))
-      var shapeCondition = shapeCondition.and(FrontendIr.Condition.Type(parentType))
+    private fun GQLSelectionSet.collect(condition: Condition, shapeCondition: Condition, parentType: String, forceNullable: Boolean) {
+      var condition = condition.and(Condition.Type(parentType))
+      var shapeCondition = shapeCondition.and(Condition.Type(parentType))
 
       typeConditions.add(parentType)
 
@@ -236,7 +238,7 @@ internal class FrontendIrBuilder(
              * This is where we decide whether we will force a field as nullable
              */
             val localCondition = it.directives.toCondition()
-            val nullable = forceNullable || localCondition != FrontendIr.Condition.True
+            val nullable = forceNullable || localCondition != Condition.True
 
             condition = condition.and(localCondition)
 
@@ -258,7 +260,7 @@ internal class FrontendIrBuilder(
                 condition.and(directiveCondition),
                 shapeCondition,
                 it.typeCondition.name,
-                directiveCondition != FrontendIr.Condition.True
+                directiveCondition != Condition.True
             )
           }
           is GQLFragmentSpread -> {
@@ -436,7 +438,7 @@ internal class FrontendIrBuilder(
   private fun generateFieldSet(
       collectedFields: List<CollectedField>,
       typeConditions: Set<String>,
-      variables: Map<String, Boolean>,
+      variables: Set<String>,
       fragments: List<CollectedFragment>,
       isBase: Boolean,
   ): FrontendIr.FieldSet {
@@ -457,7 +459,7 @@ internal class FrontendIrBuilder(
           // if all the merged fields are skippable, the resulting one is too but if one of them is not, we know we will have something
           canBeSkipped = fieldList.all { it.canBeSkipped },
           // If one field in the shape is satisfied then all of them are
-          condition = FrontendIr.Condition.Or(fieldList.map { it.condition }.toSet()),
+          condition = Condition.Or(fieldList.map { it.condition }.toSet()),
           type = field.fieldDefinition.type.toIr(),
           arguments = field.gqlField.arguments?.arguments?.map { it.toIrArgument(field.fieldDefinition) } ?: emptyList(),
           description = field.fieldDefinition.description,
@@ -469,17 +471,16 @@ internal class FrontendIrBuilder(
       )
     }
 
-    val condition = FrontendIr.Condition.And(typeConditions.map { FrontendIr.Condition.Type(it) }.toSet())
-        .and(*variables.filter { it.value }.keys.map { FrontendIr.Condition.Variable(it, false) }.toTypedArray())
+    val condition = Condition.And(typeConditions.map { Condition.Type(it) }.toSet())
+        .and(*variables.map { Condition.Variable(it) }.toTypedArray())
 
     return FrontendIr.FieldSet(
         isBase = isBase,
         condition = condition,
-        implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions) }.map { it.name } ,
+        implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions) }.map { it.name },
         fields = fields
     )
   }
-
 
 
   private fun GQLArgument.toIrArgument(fieldDefinition: GQLFieldDefinition): FrontendIr.Argument {
@@ -510,12 +511,12 @@ internal class FrontendIrBuilder(
   }
 
   companion object {
-    private fun List<GQLDirective>.toCondition(): FrontendIr.Condition {
+    private fun List<GQLDirective>.toCondition(): Condition {
       val conditions = mapNotNull {
         it.toCondition()
       }
       return if (conditions.isEmpty()) {
-        FrontendIr.Condition.True
+        Condition.True
       } else {
         check(conditions.toSet().size == conditions.size) {
           "ApolloGraphQL: duplicate @skip/@include directives are not allowed"
@@ -523,11 +524,11 @@ internal class FrontendIrBuilder(
         // Having both @skip and @include is allowed
         // 3.13.2 In the case that both the @skip and @include directives are provided on the same field or fragment,
         // it must be queried only if the @skip condition is false and the @include condition is true.
-        FrontendIr.Condition.And(conditions.toSet())
+        Condition.And(conditions.toSet())
       }
     }
 
-    private fun GQLDirective.toCondition(): FrontendIr.Condition? {
+    private fun GQLDirective.toCondition(): Condition? {
       if (setOf("skip", "include").contains(name).not()) {
         // not a condition directive
         return null
@@ -540,43 +541,46 @@ internal class FrontendIrBuilder(
 
       return when (val value = argument.value) {
         is GQLBooleanValue -> {
-          if (value.value) FrontendIr.Condition.True else FrontendIr.Condition.False
+          if (value.value) Condition.True else Condition.False
         }
-        is GQLVariableValue -> FrontendIr.Condition.Variable(
+        is GQLVariableValue -> Condition.Variable(
             name = value.name,
-            inverted = name == "skip"
-        )
+        ).let {
+          if (name == "skip") it.not() else it
+        }
         else -> throw IllegalStateException("ApolloGraphQL: cannot pass ${value.toUtf8()} to '$name' directive")
       }
     }
 
-    internal fun FrontendIr.Condition.extractVariables(): Set<String> = when (this) {
-      is FrontendIr.Condition.Or -> conditions.flatMap { it.extractVariables() }.toSet()
-      is FrontendIr.Condition.And -> conditions.flatMap { it.extractVariables() }.toSet()
-      is FrontendIr.Condition.Variable -> setOf(this.name)
+    internal fun Condition.extractVariables(): Set<String> = when (this) {
+      is Condition.Or -> conditions.flatMap { it.extractVariables() }.toSet()
+      is Condition.And -> conditions.flatMap { it.extractVariables() }.toSet()
+      is Condition.Variable -> setOf(this.name)
       else -> emptySet()
     }
 
-    internal fun FrontendIr.Condition.extractTypes(): Set<String> = when (this) {
-      is FrontendIr.Condition.Or -> conditions.flatMap { it.extractTypes() }.toSet()
-      is FrontendIr.Condition.And -> conditions.flatMap { it.extractTypes() }.toSet()
-      is FrontendIr.Condition.Type -> setOf(this.name)
+    internal fun Condition.extractTypes(): Set<String> = when (this) {
+      is Condition.Or -> conditions.flatMap { it.extractTypes() }.toSet()
+      is Condition.And -> conditions.flatMap { it.extractTypes() }.toSet()
+      is Condition.Type -> setOf(this.name)
       else -> emptySet()
     }
 
     /**
      * Given a set of variable names, generate all possible variable values
      */
-    private fun Set<String>.possibleVariableValues(): List<Map<String, Boolean>> {
+    private fun Set<String>.possibleVariableValues(): List<Set<String>> {
       val asList = toList()
 
-      val list = mutableListOf<Map<String, Boolean>>()
+      val list = mutableListOf<Set<String>>()
       for (i in 0.until(BigInteger.valueOf(2).pow(size).toInt())) {
-        val map = mutableMapOf<String, Boolean>()
+        val set = mutableSetOf<String>()
         for (j in 0.until(size)) {
-          map[asList[j]] = (i.and(1.shr(j)) != 0)
+          if (i.and(1.shr(j)) != 0) {
+            set.add(asList[j])
+          }
         }
-        list.add(map)
+        list.add(set)
       }
 
       return list
