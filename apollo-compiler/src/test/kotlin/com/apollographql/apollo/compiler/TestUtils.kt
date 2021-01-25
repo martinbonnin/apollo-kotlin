@@ -43,7 +43,7 @@ internal object TestUtils {
         .filter {
           val testFilter = System.getProperty("testFilter")
           if (testFilter != null) {
-            it.name == testFilter
+            it.name.contains(testFilter)
           } else {
             true
           }

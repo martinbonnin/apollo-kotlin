@@ -1,0 +1,9 @@
+# species should be always non-nullable and all shapes should merge
+query GetAnimal($bla: Boolean!) {
+  randomAnimal {
+    species
+    ... on Cat {
+      species @include(if: $bla)
+    }
+  }
+}

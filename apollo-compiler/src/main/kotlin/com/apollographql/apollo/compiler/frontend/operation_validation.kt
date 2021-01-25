@@ -74,8 +74,41 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
         return
       }
     }
+
+    directives.forEach {
+      it.validate(operation)
+    }
   }
 
+  private fun GQLDirective.validate(operation: GQLOperationDefinition?) {
+    if (operation != null) {
+      arguments?.arguments?.forEach {
+        it.value.validateVariables(operation = operation)
+      }
+    }
+  }
+
+  // A stripped down version of validateAndCoerce that just checks for variables since we don't know the type of directive
+  // except for @include/@skip (but these are handled downstream, this is just a generic check)
+  private fun GQLValue.validateVariables(operation: GQLOperationDefinition) {
+    when(this) {
+      is GQLObjectValue -> this.fields.forEach {
+        it.value.validateVariables(operation)
+      }
+      is GQLListValue -> this.values.forEach {
+        it.validateVariables(operation)
+      }
+      is GQLVariableValue -> {
+        val variableDefinition = operation.variableDefinitions.firstOrNull { it.name == name }
+        if (variableDefinition == null) {
+          issues.add(Issue.ValidationError(
+              message = "Variable `${name}` is not defined by operation `${operation.name}`",
+              sourceLocation = sourceLocation
+          ))
+        }
+      }
+    }
+  }
   private fun GQLInlineFragment.validate(operation: GQLOperationDefinition?, typeDefinitionInScope: GQLTypeDefinition) {
     val inlineFragmentTypeDefinition = typeDefinitions[typeCondition.name]
     if (inlineFragmentTypeDefinition == null) {
@@ -520,6 +553,10 @@ private fun GQLEnumValueDefinition.isDeprecated(): Boolean {
 
 fun GQLValue.validateAndCoerce(expectedType: GQLType, schema: Schema, operation: GQLOperationDefinition?) = InputValueValidationScope(schema).validateAndCoerce(operation, this, expectedType)
 
+/**
+ * Coercion is made at the same time as validation as it's easier. Most code inside this file discards the coerced value but it's also
+ * used from outside this file
+ */
 private class InputValueValidationScope(val schema: Schema) {
   val issues = mutableListOf<Issue>()
 

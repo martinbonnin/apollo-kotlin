@@ -71,7 +71,7 @@ internal class FrontendIrBuilder(
         operationType = operationType.toIrOperationType(),
         variables = variableDefinitions.map { it.toIr() },
         typeDefinition = typeDefinition,
-        fieldSets = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets(),
+        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull() ?: error("Multiple FieldSet found for operation '$name'"),
         description = description,
         sourceWithFragments = (toUtf8WithIndents() + "\n" + fragmentNames.joinToString(
             separator = "\n"
@@ -87,7 +87,7 @@ internal class FrontendIrBuilder(
     return FrontendIr.NamedFragmentDefinition(
         name = name,
         description = description,
-        fieldSets = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets(),
+        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()  ?: error("Multiple FieldSet found for operation '$name'"),
         typeCondition = typeDefinition,
         source = toUtf8WithIndents(),
         gqlFragmentDefinition = this,
@@ -117,9 +117,11 @@ internal class FrontendIrBuilder(
     val fieldDefinition = definitionFromScope(schema, typeDefinitionInScope)!!
 
     return (arguments?.arguments?.mapNotNull { argument ->
-      (argument.value as? GQLVariableValue)?.let { value ->
+      if (argument.value is GQLVariableValue) {
         val type = fieldDefinition.arguments.first { it.name == argument.name }.type
         argument.name to type
+      } else {
+        null
       }
     }?.toMap() ?: emptyMap()) + (selectionSet?.inferredVariables(schema.typeDefinition(fieldDefinition.type.leafType().name)) ?: emptyMap())
   }
@@ -148,7 +150,7 @@ internal class FrontendIrBuilder(
    */
   data class CollectionResult(
       val baseType: String,
-      val fields: List<CollectedField>,
+      val collectedFields: List<CollectedField>,
       val fragments: List<CollectedFragment>,
       val typeConditions: Set<String>,
   )
@@ -160,16 +162,16 @@ internal class FrontendIrBuilder(
        */
       val parentTypeDefinition: GQLTypeDefinition,
       /**
-       * the definition of this field
+       * The definition of this field. This can also be computed from [gqlField] and [parentTypeDefinition]
+       * It is added here for convenience
        */
       val fieldDefinition: GQLFieldDefinition,
       /**
        * Whether this field is nullable in the final model. This can happen if:
-       * - the GraphQL type is nullable
        * - the field has a non-trivial @include/@skip directive
        * - the field belongs to an inline fragment with a non-trivial @include/@skip directive
        */
-      val nullable: Boolean,
+      val canBeSkipped: Boolean,
       /**
        * The real condition for this field to be included in the response.
        * This is used by the cache to not over fetch.
@@ -177,7 +179,7 @@ internal class FrontendIrBuilder(
       val condition: FrontendIr.Condition,
       /**
        * The condition for this field to be included in the model shape.
-       * - for inline fragments, this only includes the type conditions as field can be made nullable later (cf [forceNullable])
+       * - for inline fragments, this only includes the type conditions as field can be made nullable later (cf [canBeSkipped])
        * - for named fragments, this also includes the @include/@skip directive on fragments
        * This is used by codegen to generate the models
        */
@@ -210,7 +212,7 @@ internal class FrontendIrBuilder(
       gqlSelectionSet.collect(FrontendIr.Condition.True, FrontendIr.Condition.True, baseType, false)
       return CollectionResult(
           baseType = baseType,
-          fields = fields,
+          collectedFields = fields,
           fragments = fragments,
           typeConditions = typeConditions,
       )
@@ -230,14 +232,20 @@ internal class FrontendIrBuilder(
             val fieldDefinition = it.definitionFromScope(schema, typeDefinition)
                 ?: error("cannot find definition for ${it.name} in $parentType")
 
-            condition = condition.and(it.directives.toCondition())
-            val nullable = forceNullable || fieldDefinition.type !is GQLNonNullType
+            /**
+             * This is where we decide whether we will force a field as nullable
+             */
+            val localCondition = it.directives.toCondition()
+            val nullable = forceNullable || localCondition != FrontendIr.Condition.True
+
+            condition = condition.and(localCondition)
+
             fields.add(
                 CollectedField(
                     gqlField = it,
                     parentTypeDefinition = typeDefinition,
                     fieldDefinition = fieldDefinition,
-                    nullable = nullable,
+                    canBeSkipped = nullable,
                     condition = condition,
                     shapeCondition = shapeCondition
                 )
@@ -286,7 +294,7 @@ internal class FrontendIrBuilder(
         emptySet()
     )) { acc, item ->
       acc.copy(
-          fields = acc.fields + item.fields,
+          collectedFields = acc.collectedFields + item.collectedFields,
           typeConditions = acc.typeConditions + item.typeConditions,
           fragments = acc.fragments + item.fragments,
       )
@@ -297,7 +305,7 @@ internal class FrontendIrBuilder(
    * Transforms this [CollectionResult] to a list of [FrontendIr.FieldSet]. This is where the different shapes are created and deduped
    */
   private fun CollectionResult.toIRFieldSets(): List<FrontendIr.FieldSet> {
-    if (fields.isEmpty()) {
+    if (collectedFields.isEmpty()) {
       return emptyList()
     }
 
@@ -309,41 +317,134 @@ internal class FrontendIrBuilder(
      * Optimization: for type conditions, we create an inverse mapping from each concrete type to
      * the type conditions it satisfies. We can limit the model generation to this partition.
      *
-     * Example, with typeConditions [Being, Human, Wookie] and concrete types [Human, Wookie], we will
+     * Example, with typeConditions \[Being, Human, Wookie\] and concrete types \[Human, Wookie\], we will
      * end up with the following inverse mapping
      *
-     *  [Being, Human]: [Human],
-     *  [Being, Wookie]: [Wookie]
+     *  \[Being, Human\]: \[Human\],
+     *  \[Being, Wookie\]: \[Wookie\]
      */
     val partition = schema.typeDefinition(baseType).possibleTypes(schema.typeDefinitions).map { concreteType ->
-      typeConditions.filter { possibleTypes[it]!!.contains(concreteType) } to concreteType
+      typeConditions.filter { possibleTypes[it]!!.contains(concreteType) }.toSet() to concreteType
     }.toMap()
 
     val possibleVariableValues = fragments.flatMap { it.condition.extractVariables() }
         .toSet()
         .possibleVariableValues()
 
-    val fieldSets = partition.keys.flatMap { typeConditions ->
+    /**
+     * Always generate a FieldSet for the baseType
+     */
+    val typeConditionSets: Set<Set<String>> = partition.keys.union(setOf(setOf(baseType)))
+
+    val fieldSets = typeConditionSets.flatMap { typeConditions ->
       possibleVariableValues.map { variables ->
-        generateFieldSet(fields, typeConditions, variables, fragments)
+        generateFieldSet(
+            isBase = typeConditions == setOf(baseType),
+            collectedFields = collectedFields,
+            typeConditions = typeConditions,
+            variables = variables,
+            fragments = fragments
+        )
       }
     }
 
-    // TODO: dedup
-    return fieldSets
+    /**
+     *  Dedup the identical FieldSet. FieldSets are considered identical if they have the same shape.
+     *
+     *  Duplicated shapes can happen in the following cases:
+     *  1. Different typeConditions end up querying the same fields
+     *  2. Disjoint types query fields with the same shape (see https://spec.graphql.org/draft/#SameResponseShape())
+     *  3. Variables do not affect the shape of the response
+     *
+     *  If there's no @include/@skip directive, the order of the fields should be predictable and deduplicating shapes means we're
+     *  losing it.
+     *  If we ever want to do optimize more, we can remove this step (deduplicating the baseTypeCondition might still be useful)
+     */
+    val remainingFieldSets = fieldSets.toMutableList()
+    val dedupedFieldSets = mutableListOf<FrontendIr.FieldSet>()
+
+    while (remainingFieldSets.isNotEmpty()) {
+      val currentFieldSet = remainingFieldSets.removeAt(0)
+      val index = dedupedFieldSets.indexOfFirst { it.isIdenticalTo(currentFieldSet) }
+      if (index == -1) {
+        dedupedFieldSets.add(currentFieldSet)
+      } else {
+        val existingFieldSet = dedupedFieldSets[index]
+        if (!existingFieldSet.isBase && currentFieldSet.isBase) {
+          // Always keep the base FieldSet
+          dedupedFieldSets.removeAt(index)
+          dedupedFieldSets.add(existingFieldSet.copy(condition = existingFieldSet.condition.or(currentFieldSet.condition)))
+        }
+      }
+    }
+
+    return dedupedFieldSets
+  }
+
+  /**
+   * This could ultimately be an `equals` call but there are a lot of small details so I prefer to keep it apart for now
+   */
+  private fun FrontendIr.FieldSet.isIdenticalTo(other: FrontendIr.FieldSet): Boolean {
+    val thisFields = fields.associateBy { it.responseName }
+    val otherFields = other.fields.associateBy { it.responseName }
+    if (thisFields.size != otherFields.size) {
+      return false
+    }
+
+    thisFields.keys.forEach {
+      val thisField = thisFields[it]!!
+      val otherField = otherFields[it] ?: return false
+
+      if (thisField.fieldSets.isEmpty()) {
+        /**
+         * Scalar or enum types
+         *
+         * They are equals if their GraphQL types are equals
+         */
+        if (otherField.fieldSets.isNotEmpty()) {
+          return false
+        }
+
+        if (thisField.nullable != otherField.nullable) {
+          return false
+        }
+
+        // since the nullability can be overridden, we skip that in the actual check
+        val thisType = if (thisField.type is FrontendIr.Type.NonNull) thisField.type.ofType else thisField.type
+        val otherType = if (otherField.type is FrontendIr.Type.NonNull) otherField.type.ofType else thisField.type
+
+        /**
+         * [FrontendIr.Type] implements equals so that should work
+         */
+        if (thisType != otherType) {
+          return false
+        }
+      } else {
+        /**
+         * Object, interface, union
+         *
+         * They are equals if their shapes are equals
+         */
+        if (!thisField.fieldSets.single { it.isBase }.isIdenticalTo(otherField.fieldSets.single { it.isBase })) {
+          return false
+        }
+      }
+    }
+    return true
   }
 
   private fun generateFieldSet(
       collectedFields: List<CollectedField>,
-      typeConditions: List<String>,
+      typeConditions: Set<String>,
       variables: Map<String, Boolean>,
-      fragments: List<CollectedFragment>
+      fragments: List<CollectedFragment>,
+      isBase: Boolean,
   ): FrontendIr.FieldSet {
     val groupedFields = collectedFields
-        .filter { it.shapeCondition.evaluate(variables, typeConditions.toSet()) }
+        .filter { it.shapeCondition.evaluate(variables, typeConditions) }
         .groupBy { it.gqlField.responseName() }
 
-    val fields = groupedFields.map { (responseName, fieldList) ->
+    val fields = groupedFields.map { (_, fieldList) ->
       /**
        * All fields will have the same arguments and same type so for most things, we take the first one
        */
@@ -353,6 +454,8 @@ internal class FrontendIrBuilder(
       FrontendIr.Field(
           alias = field.gqlField.alias,
           name = field.gqlField.name,
+          // if all the merged fields are skippable, the resulting one is too but if one of them is not, we know we will have something
+          canBeSkipped = fieldList.all { it.canBeSkipped },
           // If one field in the shape is satisfied then all of them are
           condition = FrontendIr.Condition.Or(fieldList.map { it.condition }.toSet()),
           type = field.fieldDefinition.type.toIr(),
@@ -370,8 +473,9 @@ internal class FrontendIrBuilder(
         .and(*variables.filter { it.value }.keys.map { FrontendIr.Condition.Variable(it, false) }.toTypedArray())
 
     return FrontendIr.FieldSet(
+        isBase = isBase,
         condition = condition,
-        implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions.toSet()) }.map { it.name } ,
+        implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions) }.map { it.name } ,
         fields = fields
     )
   }
@@ -470,7 +574,7 @@ internal class FrontendIrBuilder(
       for (i in 0.until(BigInteger.valueOf(2).pow(size).toInt())) {
         val map = mutableMapOf<String, Boolean>()
         for (j in 0.until(size)) {
-          map.put(asList[j], (i.and(1.shr(j)) != 0))
+          map[asList[j]] = (i.and(1.shr(j)) != 0)
         }
         list.add(map)
       }

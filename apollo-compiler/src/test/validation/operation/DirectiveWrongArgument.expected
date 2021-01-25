@@ -1,0 +1,2 @@
+ERROR: ValidationError (4:22)
+Variable `condition` is not defined by operation `GetHero`

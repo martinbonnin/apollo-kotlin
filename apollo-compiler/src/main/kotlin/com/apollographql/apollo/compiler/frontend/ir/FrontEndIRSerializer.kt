@@ -29,9 +29,7 @@ internal fun FrontendIr.serialize(): String {
 private fun FrontendIr.Operation.serialize(writer: FileWriter) {
   writer.write("$name {\n")
   writer.indent()
-  fieldSets.forEach {
-    it.serialize(writer)
-  }
+  fieldSet.serialize(writer)
   writer.unindent()
   writer.write("}\n")
 }

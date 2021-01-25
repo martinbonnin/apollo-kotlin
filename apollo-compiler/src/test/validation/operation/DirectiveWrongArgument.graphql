@@ -1,0 +1,6 @@
+query GetHero {
+  hero {
+    # The condition is not defined in the operation and that should fail
+    name @include(if: $condition)
+  }
+}

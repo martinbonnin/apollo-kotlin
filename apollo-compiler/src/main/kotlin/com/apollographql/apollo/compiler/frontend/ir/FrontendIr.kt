@@ -24,17 +24,33 @@ internal data class FrontendIr(
       val typeDefinition: GQLTypeDefinition,
       val variables: List<Variable>,
       val description: String?,
-      val fieldSets: List<FieldSet>,
+      val fieldSet: FieldSet,
       val sourceWithFragments: String,
       val gqlOperationDefinition: GQLOperationDefinition
   )
 
+  /**
+   * A "shape" that will ultimately be converted to Kotlin
+   *
+   * @param isBase: true when this is the "base" shape, i.e. this corresponds directly to the type of field without any fragment
+   * @param implementedFragments: the fragments implemented by this shape
+   * @param condition: the condition satisfied by this FieldSet. Initially, this is a set of typeConditions and variables combined
+   * with 'and'. But if FieldSets are merged, this can be a more complex condition including 'or'
+   */
   data class FieldSet(
-      val condition: Condition,
+      val isBase: Boolean,
       val implementedFragments: List<String>,
-      val fields: List<Field>
+      val fields: List<Field>,
+      val condition: Condition,
   )
 
+  /**
+   * A Field
+   *
+   * @param type: the GraphQL type
+   * @param canBeSkipped: whether this field is forced nullable because it has an @include/@skip directive
+   * or it belongs to an inline fragment that has one.
+   */
   data class Field(
       val alias: String?,
       val name: String,
@@ -43,15 +59,21 @@ internal data class FrontendIr(
       val arguments: List<Argument>,
       val description: String?,
       val deprecationReason: String?,
-      val fieldSets: List<FieldSet>
+      val fieldSets: List<FieldSet>,
+      val canBeSkipped: Boolean
   ) {
     val responseName = alias ?: name
+
+    /**
+     * Whether the type will be nullable in the final Kotlin model
+     */
+    val nullable = canBeSkipped || type !is Type.NonNull
   }
 
   data class NamedFragmentDefinition(
       val name: String,
       val description: String?,
-      val fieldSets: List<FieldSet>,
+      val fieldSet: FieldSet,
       /**
        * Fragments do not have variables per-se but we can infer them from the document
        * Default values will always be null for those
@@ -177,16 +199,23 @@ internal data class FrontendIr(
   sealed class Type {
     abstract val leafTypeDefinition: GQLTypeDefinition
 
-    class NonNull(val ofType: Type) : Type() {
+    data class NonNull(val ofType: Type) : Type() {
       override val leafTypeDefinition = ofType.leafTypeDefinition
     }
 
-    class List(val ofType: Type) : Type() {
+    data class List(val ofType: Type) : Type() {
       override val leafTypeDefinition = ofType.leafTypeDefinition
     }
 
     class Named(val typeDefinition: GQLTypeDefinition) : Type() {
       override val leafTypeDefinition = typeDefinition
+
+      override fun hashCode(): Int {
+        return typeDefinition.name.hashCode()
+      }
+      override fun equals(other: Any?): Boolean {
+        return (other as? Named)?.typeDefinition?.name == typeDefinition.name
+      }
     }
   }
 }
