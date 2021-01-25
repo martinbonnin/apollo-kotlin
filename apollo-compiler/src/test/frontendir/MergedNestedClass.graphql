@@ -1,6 +1,9 @@
 query GetAnimal {
   randomAnimal {
     species
+    habitat {
+      temperature
+    }
     ... on Cat {
       name
       habitat {

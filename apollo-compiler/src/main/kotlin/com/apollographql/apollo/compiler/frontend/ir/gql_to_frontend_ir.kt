@@ -44,8 +44,8 @@ internal class FrontendIrBuilder(
     it.toIrNamedFragmentDefinition()
   }
 
-  // For metadataFragments, we transform them to IR multiple times, in each module
-  // There's no real alternative as we still need the GQLFragmentDefinition to perform validation
+  // For metadataFragments, we transform them to IR multiple times, in each module. This is a bit silly but
+  // there's no real alternative as we still need the GQLFragmentDefinition to perform validation
   private val allFragmentDefinitions = (irFragmentDefinitions + metadataFragmentDefinitions.map {
     it.toIrNamedFragmentDefinition()
   }).associateBy { it.name }
@@ -71,7 +71,7 @@ internal class FrontendIrBuilder(
         operationType = operationType.toIrOperationType(),
         variables = variableDefinitions.map { it.toIr() },
         typeDefinition = typeDefinition,
-        fieldSets = selectionSet.toIrFieldSet(typeDefinition),
+        fieldSets = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets(),
         description = description,
         sourceWithFragments = (toUtf8WithIndents() + "\n" + fragmentNames.joinToString(
             separator = "\n"
@@ -87,7 +87,7 @@ internal class FrontendIrBuilder(
     return FrontendIr.NamedFragmentDefinition(
         name = name,
         description = description,
-        fieldSets = selectionSet.toIrFieldSet(typeDefinition),
+        fieldSets = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets(),
         typeCondition = typeDefinition,
         source = toUtf8WithIndents(),
         gqlFragmentDefinition = this,
@@ -140,7 +140,14 @@ internal class FrontendIrBuilder(
     }
   }
 
+  /**
+   * The result of collecting fields.
+   *
+   * @param baseType: the baseType of the object whose fields we will collect.
+   * @param typeConditions: the type conditions used by the users in the query. Can contain [baseType]
+   */
   data class CollectionResult(
+      val baseType: String,
       val fields: List<CollectedField>,
       val fragments: List<CollectedFragment>,
       val typeConditions: Set<String>,
@@ -153,7 +160,7 @@ internal class FrontendIrBuilder(
        */
       val parentTypeDefinition: GQLTypeDefinition,
       /**
-       * the defintion of this field
+       * the definition of this field
        */
       val fieldDefinition: GQLFieldDefinition,
       /**
@@ -182,17 +189,27 @@ internal class FrontendIrBuilder(
       val condition: FrontendIr.Condition
   )
 
+  /**
+   * A helper class to collect fields in a given object/interface
+   *
+   */
   private class CollectionScope(
       val schema: Schema,
-      val allGQLFragmentDefinitions: Map<String, GQLFragmentDefinition>
+      val allGQLFragmentDefinitions: Map<String, GQLFragmentDefinition>,
+      val gqlSelectionSet: GQLSelectionSet,
+      val baseType: String
   ) {
     private val fields = mutableListOf<CollectedField>()
     private val fragments = mutableListOf<CollectedFragment>()
     private val typeConditions = mutableSetOf<String>()
 
-    fun collect(gqlSelectionSet: GQLSelectionSet, parentType: String): CollectionResult {
-      gqlSelectionSet.collect(FrontendIr.Condition.True, FrontendIr.Condition.True, parentType, false)
+    fun collect(): CollectionResult {
+      check (fields.isEmpty()) {
+        "CollectionScope can only be used once, please create a new CollectionScope"
+      }
+      gqlSelectionSet.collect(FrontendIr.Condition.True, FrontendIr.Condition.True, baseType, false)
       return CollectionResult(
+          baseType = baseType,
           fields = fields,
           fragments = fragments,
           typeConditions = typeConditions,
@@ -256,13 +273,30 @@ internal class FrontendIrBuilder(
     }
   }
 
-  private fun GQLSelectionSet.collectFields(parentType: String) = CollectionScope(schema, allGQLFragmentDefinitions).collect(this, parentType)
-
-  private fun GQLSelectionSet.toIrFieldSet(typeDefinition: GQLTypeDefinition): List<FrontendIr.FieldSet> {
-    return collectFields(typeDefinition.name).toFieldSets(typeDefinition)
+  /**
+   * Given a list of selection sets sharing the same baseType, collect all fields and returns the CollectionResult
+   */
+  private fun List<GQLSelectionSet>.collectFields(baseType: String): CollectionResult {
+    return map {
+      CollectionScope(schema, allGQLFragmentDefinitions, it, baseType).collect()
+    }.fold(CollectionResult(
+        baseType,
+        emptyList(),
+        emptyList(),
+        emptySet()
+    )) { acc, item ->
+      acc.copy(
+          fields = acc.fields + item.fields,
+          typeConditions = acc.typeConditions + item.typeConditions,
+          fragments = acc.fragments + item.fragments,
+      )
+    }
   }
 
-  private fun CollectionResult.toFieldSets(typeDefinition: GQLTypeDefinition): List<FrontendIr.FieldSet> {
+  /**
+   * Transforms this [CollectionResult] to a list of [FrontendIr.FieldSet]. This is where the different shapes are created and deduped
+   */
+  private fun CollectionResult.toIRFieldSets(): List<FrontendIr.FieldSet> {
     if (fields.isEmpty()) {
       return emptyList()
     }
@@ -281,7 +315,7 @@ internal class FrontendIrBuilder(
      *  [Being, Human]: [Human],
      *  [Being, Wookie]: [Wookie]
      */
-    val partition = typeDefinition.possibleTypes(schema.typeDefinitions).map { concreteType ->
+    val partition = schema.typeDefinition(baseType).possibleTypes(schema.typeDefinitions).map { concreteType ->
       typeConditions.filter { possibleTypes[it]!!.contains(concreteType) } to concreteType
     }.toMap()
 
@@ -315,7 +349,7 @@ internal class FrontendIrBuilder(
        */
       val field = fieldList[0]
 
-      val typeDefinition = schema.typeDefinition(field.fieldDefinition.type.leafType().name)
+      val fieldLeafTypeDefinition = schema.typeDefinition(field.fieldDefinition.type.leafType().name)
       FrontendIr.Field(
           alias = field.gqlField.alias,
           name = field.gqlField.name,
@@ -326,18 +360,9 @@ internal class FrontendIrBuilder(
           description = field.fieldDefinition.description,
           deprecationReason = field.fieldDefinition.directives.findDeprecationReason(),
           fieldSets = fieldList.mapNotNull {
-            it.gqlField.selectionSet?.collectFields(it.fieldDefinition.type.leafType().name)
-          }.fold(CollectionResult(
-              emptyList(),
-              emptyList(),
-              emptySet()
-          )) { acc, item ->
-            acc.copy(
-                fields = acc.fields + item.fields,
-                typeConditions = acc.typeConditions + item.typeConditions,
-                fragments = acc.fragments + item.fragments,
-            )
-          }.toFieldSets(typeDefinition)
+            it.gqlField.selectionSet
+          }.collectFields(fieldLeafTypeDefinition.name)
+              .toIRFieldSets()
       )
     }
 
