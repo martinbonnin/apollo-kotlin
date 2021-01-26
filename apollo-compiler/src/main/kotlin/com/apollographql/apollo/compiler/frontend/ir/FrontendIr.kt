@@ -34,15 +34,16 @@ internal data class FrontendIr(
    *
    * @param isBase: true when this is the "base" shape, i.e. this corresponds directly to the type of field without any fragment
    * @param implementedFragments: the fragments implemented by this shape
-   * @param condition: the condition satisfied by this FieldSet. Initially, this is a set of typeConditions and variables combined
-   * with 'and'. But if FieldSets are merged, this can be a more complex condition including 'or'
+   * @param cond: the condition satisfied by this FieldSet.
    */
   data class FieldSet(
       val isBase: Boolean,
       val implementedFragments: List<String>,
       val fields: List<Field>,
-      val condition: Condition,
-  )
+      val conds: Set<Cond>
+  ) {
+    data class Cond(val types: Set<String>, val variables: Set<String>)
+  }
 
   /**
    * A Field

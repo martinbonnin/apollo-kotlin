@@ -148,13 +148,15 @@ internal class FrontendIrBuilder(
    * The result of collecting fields.
    *
    * @param baseType: the baseType of the object whose fields we will collect.
-   * @param typeConditions: the type conditions used by the users in the query. Can contain [baseType]
+   * @param typeConditions: the map of type conditions used by the users in the query to the list of variables that make their shape change.
+   * typeConditions might contain [baseType] if a user explicitly mentioned it
    */
   data class CollectionResult(
       val baseType: String,
       val collectedFields: List<CollectedField>,
-      val fragments: List<CollectedFragment>,
-      val typeConditions: Set<String>,
+      val collectedNamedFragments: List<CollectedNamedFragment>,
+      val collectedInlineFragments: List<CollectedInlineFragment>,
+      val typeConditions: Map<String, Set<String>>,
   )
 
   data class CollectedField(
@@ -188,9 +190,14 @@ internal class FrontendIrBuilder(
       val shapeCondition: Condition,
   )
 
-  data class CollectedFragment(
+  data class CollectedNamedFragment(
       val name: String,
       val condition: Condition
+  )
+
+  data class CollectedInlineFragment(
+      // we identify inline fragments by their path, i.e. the typeconditions joined
+      val path: String,
   )
 
   /**
@@ -203,29 +210,32 @@ internal class FrontendIrBuilder(
       val gqlSelectionSet: GQLSelectionSet,
       val baseType: String
   ) {
-    private val fields = mutableListOf<CollectedField>()
-    private val fragments = mutableListOf<CollectedFragment>()
-    private val typeConditions = mutableSetOf<String>()
+    private val collectedField = mutableListOf<CollectedField>()
+    private val collectedNamedFragment = mutableListOf<CollectedNamedFragment>()
+    private val collectedInlineFragment = mutableListOf<CollectedInlineFragment>()
+    private val typeConditions = mutableMapOf<String, Set<String>>()
 
     fun collect(): CollectionResult {
-      check(fields.isEmpty()) {
+      check(collectedField.isEmpty()) {
         "CollectionScope can only be used once, please create a new CollectionScope"
       }
+
+      typeConditions[baseType] = emptySet()
+
       gqlSelectionSet.collect(Condition.True, Condition.True, baseType, false)
       return CollectionResult(
           baseType = baseType,
-          collectedFields = fields,
-          fragments = fragments,
+          collectedFields = collectedField,
+          collectedNamedFragments = collectedNamedFragment,
+          collectedInlineFragments = collectedInlineFragment,
           typeConditions = typeConditions,
       )
     }
 
     @Suppress("NAME_SHADOWING")
-    private fun GQLSelectionSet.collect(condition: Condition, shapeCondition: Condition, parentType: String, forceNullable: Boolean) {
+    private fun GQLSelectionSet.collect(condition: Condition, shapeCondition: Condition, parentType: String, canBeSkipped: Boolean) {
       var condition = condition.and(Condition.Type(parentType))
       var shapeCondition = shapeCondition.and(Condition.Type(parentType))
-
-      typeConditions.add(parentType)
 
       selections.forEach {
         when (it) {
@@ -238,11 +248,11 @@ internal class FrontendIrBuilder(
              * This is where we decide whether we will force a field as nullable
              */
             val localCondition = it.directives.toCondition()
-            val nullable = forceNullable || localCondition != Condition.True
+            val nullable = canBeSkipped || localCondition != Condition.True
 
             condition = condition.and(localCondition)
 
-            fields.add(
+            collectedField.add(
                 CollectedField(
                     gqlField = it,
                     parentTypeDefinition = typeDefinition,
@@ -256,6 +266,7 @@ internal class FrontendIrBuilder(
           is GQLInlineFragment -> {
             val directiveCondition = it.directives.toCondition()
 
+            typeConditions.putIfAbsent(it.typeCondition.name, emptySet())
             it.selectionSet.collect(
                 condition.and(directiveCondition),
                 shapeCondition,
@@ -266,10 +277,16 @@ internal class FrontendIrBuilder(
           is GQLFragmentSpread -> {
             val gqlFragmentDefinition = allGQLFragmentDefinitions[it.name]!!
 
-            condition = condition.and(it.directives.toCondition())
-            shapeCondition = shapeCondition.and(it.directives.toCondition())
+            val directivesCondition = it.directives.toCondition()
 
-            fragments.add(CollectedFragment(it.name, condition))
+            condition = condition.and(directivesCondition)
+            shapeCondition = shapeCondition.and(directivesCondition)
+
+            collectedNamedFragment.add(CollectedNamedFragment(it.name, condition))
+
+            typeConditions.merge(gqlFragmentDefinition.typeCondition.name, directivesCondition.extractVariables()) { oldValue, newValue ->
+              oldValue.union(newValue)
+            }
 
             gqlFragmentDefinition.selectionSet.collect(
                 condition,
@@ -293,12 +310,13 @@ internal class FrontendIrBuilder(
         baseType,
         emptyList(),
         emptyList(),
-        emptySet()
+        emptyList(),
+        emptyMap()
     )) { acc, item ->
       acc.copy(
           collectedFields = acc.collectedFields + item.collectedFields,
           typeConditions = acc.typeConditions + item.typeConditions,
-          fragments = acc.fragments + item.fragments,
+          collectedNamedFragments = acc.collectedNamedFragments + item.collectedNamedFragments,
       )
     }
   }
@@ -311,7 +329,7 @@ internal class FrontendIrBuilder(
       return emptyList()
     }
 
-    val possibleTypes = typeConditions.map {
+    val possibleTypes = typeConditions.keys.map {
       it to schema.typeDefinition(it).possibleTypes(schema.typeDefinitions)
     }.toMap()
 
@@ -326,26 +344,28 @@ internal class FrontendIrBuilder(
      *  \[Being, Wookie\]: \[Wookie\]
      */
     val partition = schema.typeDefinition(baseType).possibleTypes(schema.typeDefinitions).map { concreteType ->
-      typeConditions.filter { possibleTypes[it]!!.contains(concreteType) }.toSet() to concreteType
+      typeConditions.keys.filter { possibleTypes[it]!!.contains(concreteType) }.toSet() to concreteType
     }.toMap()
 
-    val possibleVariableValues = fragments.flatMap { it.condition.extractVariables() }
-        .toSet()
-        .possibleVariableValues()
-
     /**
-     * Always generate a FieldSet for the baseType
+     * Generate a FieldSet for each possible combination of user-defined conditions + one of the baseType
      */
     val typeConditionSets: Set<Set<String>> = partition.keys.union(setOf(setOf(baseType)))
 
-    val fieldSets = typeConditionSets.flatMap { typeConditions ->
+
+    val fieldSets = typeConditionSets.flatMap { tcs ->
+      val possibleVariableValues = typeConditions.filter {
+        tcs.contains(it.key)
+      }.values.flatten()
+          .toSet()
+          .possibleVariableValues()
       possibleVariableValues.map { variables ->
         generateFieldSet(
-            isBase = typeConditions == setOf(baseType),
+            isBase = tcs == setOf(baseType),
             collectedFields = collectedFields,
-            typeConditions = typeConditions,
+            typeConditions = tcs,
             variables = variables,
-            fragments = fragments
+            fragments = collectedNamedFragments
         )
       }
     }
@@ -372,15 +392,21 @@ internal class FrontendIrBuilder(
         dedupedFieldSets.add(currentFieldSet)
       } else {
         val existingFieldSet = dedupedFieldSets[index]
-        if (!existingFieldSet.isBase && currentFieldSet.isBase) {
-          // Always keep the base FieldSet
-          dedupedFieldSets.removeAt(index)
-          dedupedFieldSets.add(existingFieldSet.copy(condition = existingFieldSet.condition.or(currentFieldSet.condition)))
-        }
+        dedupedFieldSets.removeAt(index)
+        dedupedFieldSets.add(
+            existingFieldSet.copy(
+                conds = existingFieldSet.conds.union(currentFieldSet.conds),
+                implementedFragments = existingFieldSet.implementedFragments + currentFieldSet.implementedFragments
+            )
+        )
       }
     }
 
     return dedupedFieldSets
+  }
+
+  private fun Set<FrontendIr.FieldSet.Cond>.mergeWith(other: FrontendIr.FieldSet.Cond) {
+
   }
 
   /**
@@ -439,7 +465,7 @@ internal class FrontendIrBuilder(
       collectedFields: List<CollectedField>,
       typeConditions: Set<String>,
       variables: Set<String>,
-      fragments: List<CollectedFragment>,
+      fragments: List<CollectedNamedFragment>,
       isBase: Boolean,
   ): FrontendIr.FieldSet {
     val groupedFields = collectedFields
@@ -471,12 +497,12 @@ internal class FrontendIrBuilder(
       )
     }
 
-    val condition = Condition.And(typeConditions.map { Condition.Type(it) }.toSet())
-        .and(*variables.map { Condition.Variable(it) }.toTypedArray())
-
     return FrontendIr.FieldSet(
         isBase = isBase,
-        condition = condition,
+        conds = setOf(FrontendIr.FieldSet.Cond(
+            types = typeConditions,
+            variables = variables
+        )),
         implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions) }.map { it.name },
         fields = fields
     )
@@ -556,13 +582,6 @@ internal class FrontendIrBuilder(
       is Condition.Or -> conditions.flatMap { it.extractVariables() }.toSet()
       is Condition.And -> conditions.flatMap { it.extractVariables() }.toSet()
       is Condition.Variable -> setOf(this.name)
-      else -> emptySet()
-    }
-
-    internal fun Condition.extractTypes(): Set<String> = when (this) {
-      is Condition.Or -> conditions.flatMap { it.extractTypes() }.toSet()
-      is Condition.And -> conditions.flatMap { it.extractTypes() }.toSet()
-      is Condition.Type -> setOf(this.name)
       else -> emptySet()
     }
 

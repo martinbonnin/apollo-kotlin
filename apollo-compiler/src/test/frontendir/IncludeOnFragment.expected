@@ -5,7 +5,11 @@ import kotlin.String
 
 interface GetAnimal {
   interface Query {
-    val randomAnimal: Animal?
+    val randomAnimal: com.example.Animal?
+
+    interface AnimalCat {
+      val species: String
+    }
 
     interface AnimalCatCondition {
       val species: String
@@ -19,7 +23,7 @@ interface GetAnimal {
       }
     }
 
-    interface AnimalCatCondition {
+    interface Animal {
       val species: String
     }
   }
