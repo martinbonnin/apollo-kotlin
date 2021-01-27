@@ -28,6 +28,7 @@ import com.apollographql.apollo.compiler.frontend.toUtf8
 import com.apollographql.apollo.compiler.frontend.toUtf8WithIndents
 import com.apollographql.apollo.compiler.frontend.usedFragmentNames
 import com.apollographql.apollo.compiler.frontend.validateAndCoerce
+import com.sun.org.apache.xpath.internal.operations.Bool
 import java.math.BigInteger
 
 internal class FrontendIrBuilder(
@@ -401,45 +402,46 @@ internal class FrontendIrBuilder(
         dedupedFieldSets.removeAt(index)
         dedupedFieldSets.add(
             existingFieldSet.copy(
-                fieldConditions = existingFieldSet.fieldConditions.mergeWith(currentFieldSet.fieldConditions.first()),
+                fieldConditions = existingFieldSet.fieldConditions + currentFieldSet.fieldConditions,
                 implementedFragments = existingFieldSet.implementedFragments + currentFieldSet.implementedFragments
             )
         )
       }
     }
 
-    return dedupedFieldSets
-  }
-
-  private fun Set<FrontendIr.FieldSetCondition>.mergeWith(other: FrontendIr.FieldSetCondition): Set<FrontendIr.FieldSetCondition> {
-    var fieldSetConditionToMerge: FrontendIr.FieldSetCondition? = other
-
-    val merged = map {
-      if (fieldSetConditionToMerge != null) {
-        it.mergeWith(fieldSetConditionToMerge!!).also {
-          if (it != null) {
-            fieldSetConditionToMerge = null
-          }
-        } ?: it
-      } else {
-        it
-      }
+    return dedupedFieldSets.map {
+      it.copy(fieldConditions = it.fieldConditions.toList().simplify().toSet())
     }
-    return if (fieldSetConditionToMerge != null) {
-      merged + setOf(fieldSetConditionToMerge!!)
-    } else {
-      merged
-    }.toSet()
   }
 
   /**
-   * A stripped down version of Karnaugh tables
+   * A very naive Karnaugh map simplification
+   * A more advanced version could be https://en.wikipedia.org/wiki/Quine%E2%80%93McCluskey_algorithm
    */
+  private fun List<FrontendIr.FieldSetCondition>.simplify(): List<FrontendIr.FieldSetCondition> {
+    val list = this
+
+    for (i in list.indices) {
+      for (j in (i + 1).until(list.size)) {
+        val fieldSetCondition1 = list[i]
+        val fieldSetCondition2 = list[j]
+
+        val merge = fieldSetCondition1.mergeWith(fieldSetCondition2)
+        if (merge != null) {
+          return (list.filterIndexed { index, _ -> index != i && index != j } + merge).simplify()
+        }
+      }
+    }
+    return this
+  }
+
   private fun FrontendIr.FieldSetCondition.mergeWith(other: FrontendIr.FieldSetCondition): FrontendIr.FieldSetCondition? {
     val union = this.vars.union(other.vars)
     val intersection = this.vars.intersect(other.vars)
 
     if (union.subtract(intersection).size <= 1) {
+      // 0 means they're the same condition
+      // 1 means they can be combined: ( A & !B | A & B = A)
       return FrontendIr.FieldSetCondition(intersection)
     }
     return null

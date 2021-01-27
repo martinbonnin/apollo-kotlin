@@ -45,6 +45,9 @@ private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
 }
 
 
+/**
+ * Outputs a name from a set of conditions
+ */
 private fun Set<FrontendIr.FieldSetCondition>.toName(): String {
   return toList().sortedByDescending {
     it.vars.size
