@@ -4,6 +4,7 @@ import com.apollographql.apollo.compiler.frontend.GQLFragmentDefinition
 import com.apollographql.apollo.compiler.frontend.GQLOperationDefinition
 import com.apollographql.apollo.compiler.frontend.GQLTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLValue
+import com.apollographql.apollo.compiler.toUpperCamelCase
 
 /**
  * FrontendIr is computed from the GQLDocuments. Compared to the GQLDocument, it:
@@ -41,7 +42,20 @@ internal data class FrontendIr(
       val implementedFragments: List<String>,
       val fields: List<Field>,
       val fieldConditions: Set<FieldSetCondition>
-  )
+  ) {
+    /**
+     * Outputs a name from a set of conditions
+     */
+    val name: String = fieldConditions.toList().sortedByDescending {
+      it.vars.size
+    }.map {
+      it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() } +
+          it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() }
+    }.joinToString()
+
+    override fun toString() = name
+  }
+
 
   /**
    * A shorter version of [BooleanExpression]
@@ -124,6 +138,7 @@ internal data class FrontendIr(
       override fun hashCode(): Int {
         return typeDefinition.name.hashCode()
       }
+
       override fun equals(other: Any?): Boolean {
         return (other as? Named)?.typeDefinition?.name == typeDefinition.name
       }

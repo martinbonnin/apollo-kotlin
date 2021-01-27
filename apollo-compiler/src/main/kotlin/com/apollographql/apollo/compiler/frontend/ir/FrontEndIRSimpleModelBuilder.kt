@@ -45,22 +45,13 @@ private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
 }
 
 
-/**
- * Outputs a name from a set of conditions
- */
-private fun Set<FrontendIr.FieldSetCondition>.toName(): String {
-  return toList().sortedByDescending {
-    it.vars.size
-  }.map {
-    it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString("") +
-        it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString("")
-  }.joinToString()
-}
 
 private fun FrontendIr.FieldSet.toTypeSpec() : TypeSpec{
-  val name = fieldConditions.toName ()
-
   val builder = TypeSpec.interfaceBuilder(name)
+
+  implementedFragments.forEach {
+    builder.addSuperinterface(ClassName("com.example", it.toUpperCamelCase()))
+  }
 
   fields.forEach { field ->
     builder.addProperty(field.toPropertySpec())

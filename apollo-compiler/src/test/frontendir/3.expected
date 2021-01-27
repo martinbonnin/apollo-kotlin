@@ -7,7 +7,7 @@ interface GetAnimal {
   interface Query {
     val randomAnimal: com.example.Animal?
 
-    interface AnimalCatCondition {
+    interface AnimalCatCondition : CatFragment {
       val species: String
 
       val name: String

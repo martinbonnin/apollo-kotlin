@@ -1,8 +1,9 @@
 # AnimalCondition and Animal have the same shape and should merge
-query GetAnimal($condition: Boolean!) {
+query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
   randomAnimal {
     species
-    ...catFragment2 @skip(if: $condition)
+    ...catFragment1 @include(if: $condition1)
+    ...catFragment2 @include(if: $condition2)
   }
 }
 
@@ -14,8 +15,3 @@ fragment catFragment2 on Cat {
   name2
 }
 
-Animal -> species, name2
-Animal && Condition ->
-Animal && !Cat -> {species}
-Cat &!Condition -> {species & name2 & name3}
-Cat & Condition -> {species & name1 & name3}

@@ -4,10 +4,10 @@ import kotlin.Float
 import kotlin.String
 
 interface GetAnimal {
-  interface Query {
+  interface Query : QueryFragment {
     val randomAnimal: com.example.Animal?
 
-    interface AnimalCat {
+    interface AnimalCat : CatFragment, LionFragment {
       val name: String
 
       val habitat: com.example.Habitat
@@ -17,11 +17,11 @@ interface GetAnimal {
       }
     }
 
-    interface AnimalLion {
+    interface AnimalLion : CatFragment, LionFragment {
       val name: String
     }
 
-    interface Animal
+    interface Animal : CatFragment, LionFragment
   }
 }
 
@@ -29,7 +29,7 @@ interface QueryFragment {
   interface Query {
     val randomAnimal: com.example.Animal?
 
-    interface AnimalCat {
+    interface AnimalCat : CatFragment, LionFragment {
       val name: String
 
       val habitat: com.example.Habitat
@@ -39,11 +39,11 @@ interface QueryFragment {
       }
     }
 
-    interface AnimalLion {
+    interface AnimalLion : CatFragment, LionFragment {
       val name: String
     }
 
-    interface Animal
+    interface Animal : CatFragment, LionFragment
   }
 }
 

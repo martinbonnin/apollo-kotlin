@@ -28,7 +28,6 @@ import com.apollographql.apollo.compiler.frontend.toUtf8
 import com.apollographql.apollo.compiler.frontend.toUtf8WithIndents
 import com.apollographql.apollo.compiler.frontend.usedFragmentNames
 import com.apollographql.apollo.compiler.frontend.validateAndCoerce
-import com.sun.org.apache.xpath.internal.operations.Bool
 import java.math.BigInteger
 
 internal class FrontendIrBuilder(
@@ -234,9 +233,9 @@ internal class FrontendIrBuilder(
     }
 
     @Suppress("NAME_SHADOWING")
-    private fun GQLSelectionSet.collect(booleanExpression: BooleanExpression, shapeBooleanExpression: BooleanExpression, parentType: String, canBeSkipped: Boolean) {
-      var condition = booleanExpression.and(BooleanExpression.Type(parentType))
-      var shapeCondition = shapeBooleanExpression.and(BooleanExpression.Type(parentType))
+    private fun GQLSelectionSet.collect(condition: BooleanExpression, shapeCondition: BooleanExpression, parentType: String, canBeSkipped: Boolean) {
+      val condition = condition.and(BooleanExpression.Type(parentType))
+      val shapeCondition = shapeCondition.and(BooleanExpression.Type(parentType))
 
       selections.forEach {
         when (it) {
@@ -251,15 +250,13 @@ internal class FrontendIrBuilder(
             val localCondition = it.directives.toCondition()
             val nullable = canBeSkipped || localCondition != BooleanExpression.True
 
-            condition = condition.and(localCondition)
-
             collectedField.add(
                 CollectedField(
                     gqlField = it,
                     parentTypeDefinition = typeDefinition,
                     fieldDefinition = fieldDefinition,
                     canBeSkipped = nullable,
-                    booleanExpression = condition,
+                    booleanExpression = condition.and(localCondition),
                     shapeBooleanExpression = shapeCondition
                 )
             )
@@ -280,18 +277,18 @@ internal class FrontendIrBuilder(
 
             val directivesCondition = it.directives.toCondition()
 
-            condition = condition.and(directivesCondition)
-            shapeCondition = shapeCondition.and(directivesCondition)
+            val fragmentCondition = condition.and(directivesCondition)
+            val fragmentShapeCondition = shapeCondition.and(directivesCondition)
 
-            collectedNamedFragment.add(CollectedNamedFragment(it.name, condition))
+            collectedNamedFragment.add(CollectedNamedFragment(it.name, fragmentCondition))
 
             typeConditions.merge(gqlFragmentDefinition.typeCondition.name, directivesCondition.extractVariables()) { oldValue, newValue ->
               oldValue.union(newValue)
             }
 
             gqlFragmentDefinition.selectionSet.collect(
-                condition,
-                shapeCondition,
+                fragmentCondition,
+                fragmentShapeCondition,
                 gqlFragmentDefinition.typeCondition.name,
                 false
             )
@@ -629,11 +626,12 @@ internal class FrontendIrBuilder(
     private fun Set<String>.possibleVariableValues(): List<Set<String>> {
       val asList = toList()
 
+      val pow = BigInteger.valueOf(2).pow(size).toInt()
       val list = mutableListOf<Set<String>>()
-      for (i in 0.until(BigInteger.valueOf(2).pow(size).toInt())) {
+      for (i in 0.until(pow)) {
         val set = mutableSetOf<String>()
         for (j in 0.until(size)) {
-          if (i.and(1.shr(j)) != 0) {
+          if (i.and(1.shl(j)) != 0) {
             set.add(asList[j])
           }
         }
