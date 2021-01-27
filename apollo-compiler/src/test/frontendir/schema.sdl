@@ -30,6 +30,7 @@ type Cat implements Animal & Pet {
 
 type Lion implements Animal {
   habitat: Habitat!
+  species: String!
   name: String!
 }
 
