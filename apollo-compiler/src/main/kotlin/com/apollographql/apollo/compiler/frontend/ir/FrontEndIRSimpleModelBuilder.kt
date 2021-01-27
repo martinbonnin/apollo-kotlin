@@ -34,13 +34,17 @@ internal fun FrontendIr.toSimpleModels(): String {
 
 private fun FrontendIr.Operation.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  builder.addType(fieldSet.toTypeSpec())
+  shapes.fieldSets.forEach {
+    builder.addType(it.toTypeSpec())
+  }
   return builder.build()
 }
 
 private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  builder.addType(fieldSet.toTypeSpec())
+  shapes.fieldSets.forEach {
+    builder.addType(it.toTypeSpec())
+  }
   return builder.build()
 }
 
@@ -58,7 +62,7 @@ private fun FrontendIr.FieldSet.toTypeSpec() : TypeSpec{
   }
 
   fields.forEach { field ->
-    field.fieldSets.forEach {
+    field.shapes.fieldSets.forEach {
       builder.addType(it.toTypeSpec())
     }
   }

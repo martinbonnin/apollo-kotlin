@@ -19,13 +19,17 @@ internal data class FrontendIr(
     val fragmentDefinitions: List<NamedFragmentDefinition>,
     val allFragmentDefinitions: Map<String, NamedFragmentDefinition>
 ) {
+  /**
+   * @param shapes the different fieldSets that can map to a given operation. This is usually just one
+   * but @include/@skip directives on query fragments can make this more complicated
+   */
   data class Operation(
       val name: String,
       val operationType: FrontendIrBuilder.OperationType,
       val typeDefinition: GQLTypeDefinition,
       val variables: List<Variable>,
       val description: String?,
-      val fieldSet: FieldSet,
+      val shapes: Shapes,
       val sourceWithFragments: String,
       val gqlOperationDefinition: GQLOperationDefinition
   )
@@ -33,25 +37,23 @@ internal data class FrontendIr(
   /**
    * A "shape" that will ultimately be converted to Kotlin
    *
-   * @param isBase: true when this is the "base" shape, i.e. this corresponds directly to the type of field without any fragment
    * @param implementedFragments: the fragments implemented by this shape
-   * @param cond: the condition satisfied by this FieldSet.
+   * @param fieldSetConditions: the condition satisfied by this FieldSet.
    */
   data class FieldSet(
-      val isBase: Boolean,
       val implementedFragments: List<String>,
       val fields: List<Field>,
-      val fieldConditions: Set<FieldSetCondition>
+      val fieldSetConditions: Set<FieldSetCondition>
   ) {
     /**
      * Outputs a name from a set of conditions
      */
-    val name: String = fieldConditions.toList().sortedByDescending {
+    val name: String = fieldSetConditions.toList().sortedByDescending {
       it.vars.size
     }.map {
       it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() } +
           it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() }
-    }.joinToString()
+    }.joinToString("Or")
 
     override fun toString() = name
   }
@@ -64,6 +66,10 @@ internal data class FrontendIr(
 
   data class Var(val name: String, val isType: Boolean)
 
+  /**
+   *
+   */
+  data class Shapes(val commonFields: List<Field>, val fieldSets: List<FieldSet>)
 
   /**
    * A Field
@@ -80,7 +86,7 @@ internal data class FrontendIr(
       val arguments: List<Argument>,
       val description: String?,
       val deprecationReason: String?,
-      val fieldSets: List<FieldSet>,
+      val shapes: Shapes,
       val canBeSkipped: Boolean
   ) {
     val responseName = alias ?: name
@@ -94,7 +100,7 @@ internal data class FrontendIr(
   data class NamedFragmentDefinition(
       val name: String,
       val description: String?,
-      val fieldSet: FieldSet,
+      val shapes: Shapes,
       /**
        * Fragments do not have variables per-se but we can infer them from the document
        * Default values will always be null for those

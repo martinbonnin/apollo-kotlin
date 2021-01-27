@@ -71,8 +71,7 @@ internal class FrontendIrBuilder(
         operationType = operationType.toIrOperationType(),
         variables = variableDefinitions.map { it.toIr() },
         typeDefinition = typeDefinition,
-        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()
-            ?: error("Multiple FieldSet found for operation '$name'"),
+        shapes = listOf(selectionSet).collectFields(typeDefinition.name).toIRShapes(),
         description = description,
         sourceWithFragments = (toUtf8WithIndents() + "\n" + fragmentNames.joinToString(
             separator = "\n"
@@ -88,8 +87,7 @@ internal class FrontendIrBuilder(
     return FrontendIr.NamedFragmentDefinition(
         name = name,
         description = description,
-        fieldSet = listOf(selectionSet).collectFields(typeDefinition.name).toIRFieldSets().singleOrNull()
-            ?: error("Multiple FieldSet found for operation '$name'"),
+        shapes = listOf(selectionSet).collectFields(typeDefinition.name).toIRShapes(),
         typeCondition = typeDefinition,
         source = toUtf8WithIndents(),
         gqlFragmentDefinition = this,
@@ -322,9 +320,9 @@ internal class FrontendIrBuilder(
   /**
    * Transforms this [CollectionResult] to a list of [FrontendIr.FieldSet]. This is where the different shapes are created and deduped
    */
-  private fun CollectionResult.toIRFieldSets(): List<FrontendIr.FieldSet> {
+  private fun CollectionResult.toIRShapes(): FrontendIr.Shapes {
     if (collectedFields.isEmpty()) {
-      return emptyList()
+      return FrontendIr.Shapes(emptyList(), emptyList())
     }
 
     val possibleTypes = typeConditions.keys.map {
@@ -359,7 +357,6 @@ internal class FrontendIrBuilder(
           .possibleVariableValues()
       possibleVariableValues.map { variables ->
         generateFieldSet(
-            isBase = tcs == setOf(baseType),
             collectedFields = collectedFields,
             typeConditions = tcs,
             variables = variables,
@@ -399,18 +396,37 @@ internal class FrontendIrBuilder(
         dedupedFieldSets.removeAt(index)
         dedupedFieldSets.add(
             existingFieldSet.copy(
-                fieldConditions = existingFieldSet.fieldConditions + currentFieldSet.fieldConditions,
+                fieldSetConditions = existingFieldSet.fieldSetConditions + currentFieldSet.fieldSetConditions,
                 implementedFragments = existingFieldSet.implementedFragments + currentFieldSet.implementedFragments
             )
         )
       }
     }
 
-    return dedupedFieldSets.map {
-      it.copy(fieldConditions = it.fieldConditions.toList().simplify().toSet())
-    }
+    val commonResponseNames = dedupedFieldSets.map { it.fields.map { it.responseName } }.intersection().toSet()
+    val commonFields = dedupedFieldSets.flatMap { it.fields }
+        .associateBy { it.responseName }
+        .filterValues { commonResponseNames.contains(it.responseName) }
+        .values
+        .toList()
+
+    return FrontendIr.Shapes(
+        commonFields = commonFields,
+        fieldSets = dedupedFieldSets.map {
+          it.copy(fieldSetConditions = it.fieldSetConditions.toList().simplify().toSet())
+        }
+    )
   }
 
+  private fun List<List<String>>.intersection(): List<String> {
+    if (isEmpty()) {
+      return emptyList()
+    }
+
+    return fold(get(0)) { acc, list ->
+      acc.intersect(list).toList()
+    }
+  }
   /**
    * A very naive Karnaugh map simplification
    * A more advanced version could be https://en.wikipedia.org/wiki/Quine%E2%80%93McCluskey_algorithm
@@ -448,8 +464,11 @@ internal class FrontendIrBuilder(
    * This could ultimately be an `equals` call but there are a lot of small details so I prefer to keep it apart for now
    */
   private fun FrontendIr.FieldSet.isIdenticalTo(other: FrontendIr.FieldSet): Boolean {
-    val thisFields = fields.associateBy { it.responseName }
-    val otherFields = other.fields.associateBy { it.responseName }
+    return fields.areIdenticalTo(other.fields)
+  }
+  private fun List<FrontendIr.Field>.areIdenticalTo(others: List<FrontendIr.Field>): Boolean {
+    val thisFields = this.associateBy { it.responseName }
+    val otherFields = others.associateBy { it.responseName }
     if (thisFields.size != otherFields.size) {
       return false
     }
@@ -458,13 +477,13 @@ internal class FrontendIrBuilder(
       val thisField = thisFields[it]!!
       val otherField = otherFields[it] ?: return false
 
-      if (thisField.fieldSets.isEmpty()) {
+      if (thisField.shapes.fieldSets.isEmpty()) {
         /**
          * Scalar or enum types
          *
          * They are equals if their GraphQL types are equals
          */
-        if (otherField.fieldSets.isNotEmpty()) {
+        if (otherField.shapes.fieldSets.isNotEmpty()) {
           return false
         }
 
@@ -486,9 +505,9 @@ internal class FrontendIrBuilder(
         /**
          * Object, interface, union
          *
-         * They are equals if their shapes are equals
+         * They are equals if their common fields shapes are equals
          */
-        if (!thisField.fieldSets.single { it.isBase }.isIdenticalTo(otherField.fieldSets.single { it.isBase })) {
+        if (!thisField.shapes.commonFields.areIdenticalTo(otherField.shapes.commonFields)) {
           return false
         }
       }
@@ -501,7 +520,6 @@ internal class FrontendIrBuilder(
       typeConditions: Set<String>,
       variables: Set<String>,
       fragments: List<CollectedNamedFragment>,
-      isBase: Boolean,
   ): FrontendIr.FieldSet {
     val groupedFields = collectedFields
         .filter { it.shapeBooleanExpression.evaluate(variables, typeConditions) }
@@ -525,16 +543,15 @@ internal class FrontendIrBuilder(
           arguments = field.gqlField.arguments?.arguments?.map { it.toIrArgument(field.fieldDefinition) } ?: emptyList(),
           description = field.fieldDefinition.description,
           deprecationReason = field.fieldDefinition.directives.findDeprecationReason(),
-          fieldSets = fieldList.mapNotNull {
+          shapes = fieldList.mapNotNull {
             it.gqlField.selectionSet
           }.collectFields(fieldLeafTypeDefinition.name)
-              .toIRFieldSets()
+              .toIRShapes()
       )
     }
 
     return FrontendIr.FieldSet(
-        isBase = isBase,
-        fieldConditions = setOf(
+        fieldSetConditions = setOf(
             FrontendIr.FieldSetCondition(
                 (typeConditions.map { FrontendIr.Var(name = it, isType = true) } + variables.map { FrontendIr.Var(name = it, isType = true) }).toSet()
             )
