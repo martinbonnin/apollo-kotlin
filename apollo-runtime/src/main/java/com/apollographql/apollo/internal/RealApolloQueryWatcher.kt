@@ -32,6 +32,7 @@ class RealApolloQueryWatcher<D : Operation.Data>(
   val recordChangeSubscriber: RecordChangeSubscriber = object : RecordChangeSubscriber {
     override fun onCacheRecordsChanged(changedRecordKeys: Set<String>) {
       if (dependentKeys.isEmpty() || !areDisjoint(dependentKeys, changedRecordKeys)) {
+        // scheduling would need to happen here
         refetch()
       }
     }

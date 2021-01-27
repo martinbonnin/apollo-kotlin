@@ -5,7 +5,6 @@ import com.apollographql.apollo.compiler.frontend.GQLInterfaceTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLObjectTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLScalarTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLUnionTypeDefinition
-import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder.Companion.extractTypes
 import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder.Companion.extractVariables
 import com.apollographql.apollo.compiler.toUpperCamelCase
 import com.squareup.kotlinpoet.ClassName
@@ -34,10 +33,17 @@ private fun FrontendIr.Operation.serialize(writer: FileWriter) {
   writer.write("}\n")
 }
 
+private fun Set<FrontendIr.FieldSetCondition>.toName(): String {
+  return toList().sortedByDescending {
+    it.vars.size
+  }.map {
+    it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString() +
+        it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString()
+  }.joinToString()
+}
+
 private fun FrontendIr.FieldSet.serialize(writer: FileWriter) {
-  val name = (condition.extractTypes().sorted() + condition.extractVariables().sorted()).map {
-    it.toUpperCamelCase()
-  }.joinToString("")
+  val name = fieldConditions.toName()
 
   writer.write("$name {\n")
   writer.indent()

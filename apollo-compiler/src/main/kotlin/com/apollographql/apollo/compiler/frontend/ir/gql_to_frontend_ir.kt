@@ -180,19 +180,19 @@ internal class FrontendIrBuilder(
        * The real condition for this field to be included in the response.
        * This is used by the cache to not over fetch.
        */
-      val condition: Condition,
+      val booleanExpression: BooleanExpression,
       /**
        * The condition for this field to be included in the model shape.
        * - for inline fragments, this only includes the type conditions as field can be made nullable later (cf [canBeSkipped])
        * - for named fragments, this also includes the @include/@skip directive on fragments
        * This is used by codegen to generate the models
        */
-      val shapeCondition: Condition,
+      val shapeBooleanExpression: BooleanExpression,
   )
 
   data class CollectedNamedFragment(
       val name: String,
-      val condition: Condition
+      val booleanExpression: BooleanExpression
   )
 
   data class CollectedInlineFragment(
@@ -222,7 +222,7 @@ internal class FrontendIrBuilder(
 
       typeConditions[baseType] = emptySet()
 
-      gqlSelectionSet.collect(Condition.True, Condition.True, baseType, false)
+      gqlSelectionSet.collect(BooleanExpression.True, BooleanExpression.True, baseType, false)
       return CollectionResult(
           baseType = baseType,
           collectedFields = collectedField,
@@ -233,9 +233,9 @@ internal class FrontendIrBuilder(
     }
 
     @Suppress("NAME_SHADOWING")
-    private fun GQLSelectionSet.collect(condition: Condition, shapeCondition: Condition, parentType: String, canBeSkipped: Boolean) {
-      var condition = condition.and(Condition.Type(parentType))
-      var shapeCondition = shapeCondition.and(Condition.Type(parentType))
+    private fun GQLSelectionSet.collect(booleanExpression: BooleanExpression, shapeBooleanExpression: BooleanExpression, parentType: String, canBeSkipped: Boolean) {
+      var condition = booleanExpression.and(BooleanExpression.Type(parentType))
+      var shapeCondition = shapeBooleanExpression.and(BooleanExpression.Type(parentType))
 
       selections.forEach {
         when (it) {
@@ -248,7 +248,7 @@ internal class FrontendIrBuilder(
              * This is where we decide whether we will force a field as nullable
              */
             val localCondition = it.directives.toCondition()
-            val nullable = canBeSkipped || localCondition != Condition.True
+            val nullable = canBeSkipped || localCondition != BooleanExpression.True
 
             condition = condition.and(localCondition)
 
@@ -258,8 +258,8 @@ internal class FrontendIrBuilder(
                     parentTypeDefinition = typeDefinition,
                     fieldDefinition = fieldDefinition,
                     canBeSkipped = nullable,
-                    condition = condition,
-                    shapeCondition = shapeCondition
+                    booleanExpression = condition,
+                    shapeBooleanExpression = shapeCondition
                 )
             )
           }
@@ -271,7 +271,7 @@ internal class FrontendIrBuilder(
                 condition.and(directiveCondition),
                 shapeCondition,
                 it.typeCondition.name,
-                directiveCondition != Condition.True
+                directiveCondition != BooleanExpression.True
             )
           }
           is GQLFragmentSpread -> {
@@ -391,11 +391,17 @@ internal class FrontendIrBuilder(
       if (index == -1) {
         dedupedFieldSets.add(currentFieldSet)
       } else {
+        /**
+         * two [FrontendIr.FieldSet] have the same shape. Keep only one
+         *
+         * - merge the conditions
+         * - merge the implementedFragments
+         */
         val existingFieldSet = dedupedFieldSets[index]
         dedupedFieldSets.removeAt(index)
         dedupedFieldSets.add(
             existingFieldSet.copy(
-                conds = existingFieldSet.conds.union(currentFieldSet.conds),
+                fieldConditions = existingFieldSet.fieldConditions.mergeWith(currentFieldSet.fieldConditions.first()),
                 implementedFragments = existingFieldSet.implementedFragments + currentFieldSet.implementedFragments
             )
         )
@@ -405,8 +411,38 @@ internal class FrontendIrBuilder(
     return dedupedFieldSets
   }
 
-  private fun Set<FrontendIr.FieldSet.Cond>.mergeWith(other: FrontendIr.FieldSet.Cond) {
+  private fun Set<FrontendIr.FieldSetCondition>.mergeWith(other: FrontendIr.FieldSetCondition): Set<FrontendIr.FieldSetCondition> {
+    var fieldSetConditionToMerge: FrontendIr.FieldSetCondition? = other
 
+    val merged = map {
+      if (fieldSetConditionToMerge != null) {
+        it.mergeWith(fieldSetConditionToMerge!!).also {
+          if (it != null) {
+            fieldSetConditionToMerge = null
+          }
+        } ?: it
+      } else {
+        it
+      }
+    }
+    return if (fieldSetConditionToMerge != null) {
+      merged + setOf(fieldSetConditionToMerge!!)
+    } else {
+      merged
+    }.toSet()
+  }
+
+  /**
+   * A stripped down version of Karnaugh tables
+   */
+  private fun FrontendIr.FieldSetCondition.mergeWith(other: FrontendIr.FieldSetCondition): FrontendIr.FieldSetCondition? {
+    val union = this.vars.union(other.vars)
+    val intersection = this.vars.intersect(other.vars)
+
+    if (union.subtract(intersection).size <= 1) {
+      return FrontendIr.FieldSetCondition(intersection)
+    }
+    return null
   }
 
   /**
@@ -469,7 +505,7 @@ internal class FrontendIrBuilder(
       isBase: Boolean,
   ): FrontendIr.FieldSet {
     val groupedFields = collectedFields
-        .filter { it.shapeCondition.evaluate(variables, typeConditions) }
+        .filter { it.shapeBooleanExpression.evaluate(variables, typeConditions) }
         .groupBy { it.gqlField.responseName() }
 
     val fields = groupedFields.map { (_, fieldList) ->
@@ -485,7 +521,7 @@ internal class FrontendIrBuilder(
           // if all the merged fields are skippable, the resulting one is too but if one of them is not, we know we will have something
           canBeSkipped = fieldList.all { it.canBeSkipped },
           // If one field in the shape is satisfied then all of them are
-          condition = Condition.Or(fieldList.map { it.condition }.toSet()),
+          booleanExpression = BooleanExpression.Or(fieldList.map { it.booleanExpression }.toSet()),
           type = field.fieldDefinition.type.toIr(),
           arguments = field.gqlField.arguments?.arguments?.map { it.toIrArgument(field.fieldDefinition) } ?: emptyList(),
           description = field.fieldDefinition.description,
@@ -499,15 +535,15 @@ internal class FrontendIrBuilder(
 
     return FrontendIr.FieldSet(
         isBase = isBase,
-        conds = setOf(FrontendIr.FieldSet.Cond(
-            types = typeConditions,
-            variables = variables
-        )),
-        implementedFragments = fragments.filter { it.condition.evaluate(variables, typeConditions) }.map { it.name },
+        fieldConditions = setOf(
+            FrontendIr.FieldSetCondition(
+                (typeConditions.map { FrontendIr.Var(name = it, isType = true) } + variables.map { FrontendIr.Var(name = it, isType = true) }).toSet()
+            )
+        ),
+        implementedFragments = fragments.filter { it.booleanExpression.evaluate(variables, typeConditions) }.map { it.name },
         fields = fields
     )
   }
-
 
   private fun GQLArgument.toIrArgument(fieldDefinition: GQLFieldDefinition): FrontendIr.Argument {
     val inputValueDefinition = fieldDefinition.arguments.first { it.name == name }
@@ -537,12 +573,12 @@ internal class FrontendIrBuilder(
   }
 
   companion object {
-    private fun List<GQLDirective>.toCondition(): Condition {
+    private fun List<GQLDirective>.toCondition(): BooleanExpression {
       val conditions = mapNotNull {
         it.toCondition()
       }
       return if (conditions.isEmpty()) {
-        Condition.True
+        BooleanExpression.True
       } else {
         check(conditions.toSet().size == conditions.size) {
           "ApolloGraphQL: duplicate @skip/@include directives are not allowed"
@@ -550,11 +586,11 @@ internal class FrontendIrBuilder(
         // Having both @skip and @include is allowed
         // 3.13.2 In the case that both the @skip and @include directives are provided on the same field or fragment,
         // it must be queried only if the @skip condition is false and the @include condition is true.
-        Condition.And(conditions.toSet())
+        BooleanExpression.And(conditions.toSet())
       }
     }
 
-    private fun GQLDirective.toCondition(): Condition? {
+    private fun GQLDirective.toCondition(): BooleanExpression? {
       if (setOf("skip", "include").contains(name).not()) {
         // not a condition directive
         return null
@@ -567,9 +603,9 @@ internal class FrontendIrBuilder(
 
       return when (val value = argument.value) {
         is GQLBooleanValue -> {
-          if (value.value) Condition.True else Condition.False
+          if (value.value) BooleanExpression.True else BooleanExpression.False
         }
-        is GQLVariableValue -> Condition.Variable(
+        is GQLVariableValue -> BooleanExpression.Variable(
             name = value.name,
         ).let {
           if (name == "skip") it.not() else it
@@ -578,10 +614,10 @@ internal class FrontendIrBuilder(
       }
     }
 
-    internal fun Condition.extractVariables(): Set<String> = when (this) {
-      is Condition.Or -> conditions.flatMap { it.extractVariables() }.toSet()
-      is Condition.And -> conditions.flatMap { it.extractVariables() }.toSet()
-      is Condition.Variable -> setOf(this.name)
+    internal fun BooleanExpression.extractVariables(): Set<String> = when (this) {
+      is BooleanExpression.Or -> booleanExpressions.flatMap { it.extractVariables() }.toSet()
+      is BooleanExpression.And -> booleanExpressions.flatMap { it.extractVariables() }.toSet()
+      is BooleanExpression.Variable -> setOf(this.name)
       else -> emptySet()
     }
 

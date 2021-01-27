@@ -4,43 +4,43 @@ package com.apollographql.apollo.compiler.frontend.ir
  * A condition.
  * It initially comes from @include/@skip directives but is extended to account for variables, type conditions and any combination
  */
-sealed class Condition {
+sealed class BooleanExpression {
   abstract fun evaluate(variables: Set<String>, typeConditions: Set<String>): Boolean
-  abstract fun simplify(): Condition
+  abstract fun simplify(): BooleanExpression
 
-  fun or(vararg other: Condition) = Or((other.toList() + this).toSet())
-  fun and(vararg other: Condition) = And((other.toList() + this).toSet())
+  fun or(vararg other: BooleanExpression) = Or((other.toList() + this).toSet())
+  fun and(vararg other: BooleanExpression) = And((other.toList() + this).toSet())
   fun not() = Not(this)
 
-  object True : Condition() {
+  object True : BooleanExpression() {
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = true
     override fun simplify() = this
     override fun toString() = "true"
   }
 
-  object False : Condition() {
+  object False : BooleanExpression() {
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = false
     override fun simplify() = this
     override fun toString() = "false"
   }
 
-  data class Not(val condition: Condition): Condition() {
-    override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = !condition.evaluate(variables, typeConditions)
+  data class Not(val booleanExpression: BooleanExpression): BooleanExpression() {
+    override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = !booleanExpression.evaluate(variables, typeConditions)
     override fun simplify() = this
-    override fun toString() = "!$condition"
+    override fun toString() = "!$booleanExpression"
   }
 
-  data class Or(val conditions: Set<Condition>) : Condition() {
+  data class Or(val booleanExpressions: Set<BooleanExpression>) : BooleanExpression() {
     init {
-      check(conditions.isNotEmpty()) {
+      check(booleanExpressions.isNotEmpty()) {
         "ApolloGraphQL: cannot create a 'Or' condition from an empty list"
       }
     }
 
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) =
-        conditions.firstOrNull { it.evaluate(variables, typeConditions) } != null
+        booleanExpressions.firstOrNull { it.evaluate(variables, typeConditions) } != null
 
-    override fun simplify() = conditions.filter {
+    override fun simplify() = booleanExpressions.filter {
       it != False
     }.map { it.simplify() }
         .let {
@@ -54,20 +54,20 @@ sealed class Condition {
           }
         }
 
-    override fun toString() = conditions.joinToString(" | ")
+    override fun toString() = booleanExpressions.joinToString(" | ")
   }
 
-  data class And(val conditions: Set<Condition>) : Condition() {
+  data class And(val booleanExpressions: Set<BooleanExpression>) : BooleanExpression() {
     init {
-      check(conditions.isNotEmpty()) {
+      check(booleanExpressions.isNotEmpty()) {
         "ApolloGraphQL: cannot create a 'And' condition from an empty list"
       }
     }
 
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) =
-        conditions.firstOrNull { !it.evaluate(variables, typeConditions) } == null
+        booleanExpressions.firstOrNull { !it.evaluate(variables, typeConditions) } == null
 
-    override fun simplify() = conditions.filter {
+    override fun simplify() = booleanExpressions.filter {
       it != True
     }.map { it.simplify() }
         .let {
@@ -80,13 +80,13 @@ sealed class Condition {
             }
           }
         }
-    override fun toString() = conditions.joinToString(" & ")
+    override fun toString() = booleanExpressions.joinToString(" & ")
   }
 
 
   data class Variable(
       val name: String,
-  ) : Condition() {
+  ) : BooleanExpression() {
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = variables.contains(name)
     override fun simplify() = this
     override fun toString() = "Var($name)"
@@ -94,7 +94,7 @@ sealed class Condition {
 
   data class Type(
       val name: String,
-  ) : Condition() {
+  ) : BooleanExpression() {
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = typeConditions.contains(name)
 
     override fun simplify() = this

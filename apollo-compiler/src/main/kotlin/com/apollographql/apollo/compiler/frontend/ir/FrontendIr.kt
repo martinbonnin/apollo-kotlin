@@ -40,10 +40,16 @@ internal data class FrontendIr(
       val isBase: Boolean,
       val implementedFragments: List<String>,
       val fields: List<Field>,
-      val conds: Set<Cond>
-  ) {
-    data class Cond(val types: Set<String>, val variables: Set<String>)
-  }
+      val fieldConditions: Set<FieldSetCondition>
+  )
+
+  /**
+   * A shorter version of [BooleanExpression]
+   */
+  data class FieldSetCondition(val vars: Set<Var>)
+
+  data class Var(val name: String, val isType: Boolean)
+
 
   /**
    * A Field
@@ -55,7 +61,7 @@ internal data class FrontendIr(
   data class Field(
       val alias: String?,
       val name: String,
-      val condition: Condition,
+      val booleanExpression: BooleanExpression,
       val type: Type,
       val arguments: List<Argument>,
       val description: String?,

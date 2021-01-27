@@ -6,7 +6,6 @@ import com.apollographql.apollo.compiler.frontend.GQLObjectField
 import com.apollographql.apollo.compiler.frontend.GQLObjectTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLScalarTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLUnionTypeDefinition
-import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder.Companion.extractTypes
 import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder.Companion.extractVariables
 import com.apollographql.apollo.compiler.toUpperCamelCase
 import com.squareup.kotlinpoet.ClassName
@@ -45,10 +44,18 @@ private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
   return builder.build()
 }
 
+
+private fun Set<FrontendIr.FieldSetCondition>.toName(): String {
+  return toList().sortedByDescending {
+    it.vars.size
+  }.map {
+    it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString("") +
+        it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().map { it.toUpperCamelCase() }.joinToString("")
+  }.joinToString()
+}
+
 private fun FrontendIr.FieldSet.toTypeSpec() : TypeSpec{
-  val name = (condition.extractTypes().sorted() + condition.extractVariables().sorted()).map {
-    it.toUpperCamelCase()
-  }.joinToString("")
+  val name = fieldConditions.toName ()
 
   val builder = TypeSpec.interfaceBuilder(name)
 
