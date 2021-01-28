@@ -17,11 +17,11 @@ interface GetAnimal {
       }
     }
 
+    interface Animal : CatFragment, LionFragment
+
     interface AnimalLion : CatFragment, LionFragment {
       val name: String
     }
-
-    interface Animal : CatFragment, LionFragment
   }
 }
 
@@ -39,11 +39,11 @@ interface QueryFragment {
       }
     }
 
+    interface Animal : CatFragment, LionFragment
+
     interface AnimalLion : CatFragment, LionFragment {
       val name: String
     }
-
-    interface Animal : CatFragment, LionFragment
   }
 }
 

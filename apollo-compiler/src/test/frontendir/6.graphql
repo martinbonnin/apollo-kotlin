@@ -1,0 +1,13 @@
+# AnimalCondition and Animal have the same shape and should merge
+query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
+  randomAnimal {
+    ...petFragment
+  }
+}
+
+fragment petFragment on Pet {
+  name
+  ... on Cat {
+    name1
+  }
+}

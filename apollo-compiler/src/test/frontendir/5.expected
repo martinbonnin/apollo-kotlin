@@ -6,10 +6,10 @@ interface GetAnimal {
   interface Query {
     val randomAnimal: com.example.Animal?
 
+    interface Animal
+
     interface AnimalCatOrAnimalLion {
       val species: String
     }
-
-    interface Animal
   }
 }

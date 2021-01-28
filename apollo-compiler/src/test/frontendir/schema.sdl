@@ -28,6 +28,13 @@ type Cat implements Animal & Pet {
   name2: String!
 }
 
+type Turtle implements Animal & Pet {
+  species: String!
+  habitat: Habitat!
+  name: String!
+  shell: String!
+}
+
 type Lion implements Animal {
   habitat: Habitat!
   species: String!
