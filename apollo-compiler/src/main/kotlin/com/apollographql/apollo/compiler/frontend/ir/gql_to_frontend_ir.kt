@@ -231,7 +231,12 @@ internal class FrontendIrBuilder(
     }
 
     @Suppress("NAME_SHADOWING")
-    private fun GQLSelectionSet.collect(condition: BooleanExpression, shapeCondition: BooleanExpression, parentType: String, canBeSkipped: Boolean) {
+    private fun GQLSelectionSet.collect(
+        condition: BooleanExpression,
+        shapeCondition: BooleanExpression,
+        parentType: String,
+        canBeSkipped: Boolean
+    ) {
       val condition = condition.and(BooleanExpression.Type(parentType))
       val shapeCondition = shapeCondition.and(BooleanExpression.Type(parentType))
 

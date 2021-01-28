@@ -11,7 +11,8 @@ import com.apollographql.apollo.compiler.toUpperCamelCase
  * - resolves typeDefinitions and other things so that we don't have to carry over a schema in later steps
  * - same thing for allFragments
  * - interprets directives like @include, @skip and @deprecated
- * - merges fields into FieldSets
+ * - infers fragment variables
+ * - merges fields into FieldSets and Shapes
  *
  */
 internal data class FrontendIr(
@@ -20,8 +21,8 @@ internal data class FrontendIr(
     val allFragmentDefinitions: Map<String, NamedFragmentDefinition>
 ) {
   /**
-   * @param shapes the different fieldSets that can map to a given operation. This is usually just one
-   * but @include/@skip directives on query fragments can make this more complicated
+   * @param shapes the different fieldSets that can map to a given operation. This contains usually just one FieldSet
+   * but @include/@skip directives on root operation types can make this more complicated
    */
   data class Operation(
       val name: String,
