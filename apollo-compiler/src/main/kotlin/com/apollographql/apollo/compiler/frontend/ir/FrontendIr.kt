@@ -30,7 +30,7 @@ internal data class FrontendIr(
       val typeDefinition: GQLTypeDefinition,
       val variables: List<Variable>,
       val description: String?,
-      val dataField: Field,
+      val dataField: IField,
       val sourceWithFragments: String,
       val gqlOperationDefinition: GQLOperationDefinition
   )
@@ -66,20 +66,19 @@ internal data class FrontendIr(
       val canBeSkipped: Boolean
   )
 
-  data class InterfaceField(
+  data class IField(
       val info: FieldInfo,
-      val iface: InterfaceShapes?
+      val inode: INode?
   )
 
-  data class InterfaceVariant(
+  // Represents a node in the fragment hierarchy (not the type hierarchy)
+  data class INode(
       val typeCondition: String,
-      val interfaceFields: List<InterfaceField>
-  )
-  data class InterfaceShapes(
-      val variants: List<InterfaceVariant>
+      val ifields: List<IField>,
+      val children: List<INode>,
   )
 
-  data class Field(
+  data class DField(
       val fieldInfo: FieldInfo,
       /**
        * used for cache
@@ -91,20 +90,18 @@ internal data class FrontendIr(
       /**
        * can be null for scalar types
        */
-      val interfaceShapes: InterfaceShapes?,
-      val implementations: List<Implementation>,
+      //val inode: INode?,
   )
 
   data class Implementation(
       val fieldSetConditions: Set<FieldSetCondition>,
-      val interfaceShapes: List<InterfaceShapes>,
-      val fields: List<Field>,
+      val fields: List<DField>,
   )
 
   data class NamedFragmentDefinition(
       val name: String,
       val description: String?,
-      val dataField: Field,
+      val dataField: IField,
       /**
        * Fragments do not have variables per-se but we can infer them from the document
        * Default values will always be null for those

@@ -70,7 +70,7 @@ internal class FrontendIrBuilder(
         operationType = operationType.toIrOperationType(),
         variables = variableDefinitions.map { it.toIr() },
         typeDefinition = typeDefinition,
-        dataField = buildField(
+        dataField = buildIField(
             gqlSelectionSets = listOf(selectionSet),
             name = "data",
             type = FrontendIr.Type.Named(typeDefinition)
@@ -90,7 +90,7 @@ internal class FrontendIrBuilder(
     return FrontendIr.NamedFragmentDefinition(
         name = name,
         description = description,
-        dataField = buildField(
+        dataField = buildIField(
             gqlSelectionSets = listOf(selectionSet),
             name = "data",
             type = FrontendIr.Type.Named(typeDefinition)
@@ -123,7 +123,7 @@ internal class FrontendIrBuilder(
     )
   }*/
 
-  private fun buildField(
+  private fun buildDField(
       gqlSelectionSets: List<GQLSelectionSet>,
       name: String,
       type: FrontendIr.Type,
@@ -133,15 +133,13 @@ internal class FrontendIrBuilder(
       canBeSkipped: Boolean = false,
       arguments: List<FrontendIr.Argument> = emptyList(),
       condition: BooleanExpression = BooleanExpression.True
-  ) : FrontendIr.Field {
+  ): FrontendIr.DField {
 
-    val iface = buildInterfaceShapes(gqlSelectionSets, type.leafTypeDefinition.name)
-
-    return FrontendIr.Field(
+    return FrontendIr.DField(
         fieldInfo = FrontendIr.FieldInfo(
             responseName = alias ?: name,
             description = description,
-            deprecationReason =  deprecationReason,
+            deprecationReason = deprecationReason,
             type = type,
             canBeSkipped = canBeSkipped
         ),
@@ -149,51 +147,89 @@ internal class FrontendIrBuilder(
         alias = alias,
         arguments = arguments,
         condition = condition,
-        interfaceShapes = iface,
-        implementations = emptyList()
     )
   }
 
-  private fun buildInterfaceShapes(
+  private fun buildIField(
+      gqlSelectionSets: List<GQLSelectionSet>,
+      gqlField: GQLField,
+      gqlFieldDefinition: GQLFieldDefinition
+  ) = buildIField(
+      gqlSelectionSets = gqlSelectionSets,
+      name = gqlField.name,
+      alias = gqlField.alias,
+      type = gqlFieldDefinition.type.toIr(),
+      description = gqlFieldDefinition.description,
+      deprecationReason = gqlFieldDefinition.directives.findDeprecationReason(),
+  )
+
+  private fun buildIField(
+      gqlSelectionSets: List<GQLSelectionSet>,
+      name: String,
+      alias: String? = null,
+      type: FrontendIr.Type,
+      description: String? = null,
+      deprecationReason: String? = null,
+      canBeSkipped: Boolean = false,
+  ): FrontendIr.IField {
+
+    val inode = buildINode(gqlSelectionSets, type.leafTypeDefinition.name)
+
+    return FrontendIr.IField(
+        info = FrontendIr.FieldInfo(
+            responseName = alias ?: name,
+            description = description,
+            deprecationReason = deprecationReason,
+            type = type,
+            canBeSkipped = canBeSkipped
+        ),
+        inode = inode
+    )
+  }
+
+  private fun buildINode(
       gqlSelectionSets: List<GQLSelectionSet>,
       parentType: String
-  ): FrontendIr.InterfaceShapes? {
+  ): FrontendIr.INode? {
     if (gqlSelectionSets.isEmpty()) {
       return null
     }
     val selections = gqlSelectionSets.flatMap { it.selections }
     val inlineFragments = selections.filterIsInstance<GQLInlineFragment>()
-    val typeConditions = (listOf(parentType) + inlineFragments.map { it.typeCondition.name }).toSet()
 
-    val variants = typeConditions.map { typeCondition ->
-      val selfFields = selections.filterIsInstance<GQLField>()
-      val inlineFragmentsFields = inlineFragments.filter { it.typeCondition.name == typeCondition }
-          .flatMap { it.selectionSet.selections }
-          .filterIsInstance<GQLField>()
+    /**
+     * Merge redundant inline fragments
+     */
+    val selfFields = selections.filterIsInstance<GQLField>() + inlineFragments.filter { it.typeCondition.name == parentType }
+        .flatMap { it.selectionSet.selections }
+        .filterIsInstance<GQLField>()
 
-      val fields = (selfFields + inlineFragmentsFields).groupBy { it.responseName() }.values.map { gqlFieldList ->
-        val field = gqlFieldList.first()
-        val gqlFieldDefinition = field.definitionFromScope(schema, schema.typeDefinition(typeCondition))!!
-        FrontendIr.InterfaceField(
-            info = FrontendIr.FieldInfo(
-                description = gqlFieldDefinition.description,
-                deprecationReason = gqlFieldDefinition.directives.findDeprecationReason(),
-                responseName = field.alias ?: field.name,
-                type = gqlFieldDefinition.type.toIr(),
-                canBeSkipped = false
-            ),
-            iface = buildInterfaceShapes(gqlFieldList.mapNotNull { it.selectionSet }, gqlFieldDefinition.type.leafType().name)
-        )
-      }
-      FrontendIr.InterfaceVariant(
-          typeCondition,
-          fields
-      )
+    val ifields = selfFields
+        .groupBy { it.responseName() }
+        .values
+        .map { gqlFieldList ->
+          val gqlField = gqlFieldList.first()
+          val gqlFieldDefinition = gqlField.definitionFromScope(schema, schema.typeDefinition(parentType))!!
+          buildIField(
+              gqlSelectionSets = gqlFieldList.mapNotNull { it.selectionSet },
+              gqlField = gqlField,
+              gqlFieldDefinition = gqlFieldDefinition
+          )
+        }
+
+    /**
+     * subtract parentType as we have merged the redundant inline fragments above
+     */
+    val typeConditions = inlineFragments.map { it.typeCondition.name }.toSet().subtract(setOf(parentType))
+
+    val inodes = typeConditions.mapNotNull { typeCondition ->
+      buildINode(inlineFragments.filter { it.typeCondition.name == typeCondition }.map { it.selectionSet }, typeCondition)
     }
 
-
-    return FrontendIr.InterfaceShapes(
-        variants = variants
+    return FrontendIr.INode(
+        typeCondition = parentType,
+        ifields = ifields,
+        children = inodes
     )
   }
 
@@ -419,6 +455,7 @@ internal class FrontendIrBuilder(
     }
     return null
   }
+
   private fun GQLArgument.toIrArgument(fieldDefinition: GQLFieldDefinition): FrontendIr.Argument {
     val inputValueDefinition = fieldDefinition.arguments.first { it.name == name }
 

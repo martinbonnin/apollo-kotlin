@@ -21,9 +21,6 @@ internal fun FrontendIr.toSimpleModels(): String {
   operations.forEach {
     builder.addType(it.toTypeSpec())
   }
-  fragmentDefinitions.forEach {
-    builder.addType(it.toTypeSpec())
-  }
 
   builder.build().writeTo(stringBuilder)
 
@@ -32,42 +29,27 @@ internal fun FrontendIr.toSimpleModels(): String {
 
 private fun FrontendIr.Operation.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  builder.addTypes(dataField.interfaceShapes?.toTypeSpecs(dataField.name) ?: emptyList())
+  builder.addType(dataField.inode!!.toTypeSpec(dataField.info.responseName))
   return builder.build()
 }
 
-private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
-  val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  return builder.build()
-}
 
-private fun FrontendIr.Field.toTypeSpec(): TypeSpec {
-  val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
+private fun FrontendIr.INode.toTypeSpec(responseName: String): TypeSpec {
+  val builder = TypeSpec.interfaceBuilder(typeCondition.toUpperCamelCase() + responseName.toUpperCamelCase())
 
-  builder.addTypes(interfaceShapes?.toTypeSpecs(name) ?: emptyList())
-
-  return builder.build()
-}
-
-private fun FrontendIr.InterfaceShapes.toTypeSpecs(fieldName: String): List<TypeSpec> {
-  return variants.map {
-    it.toTypeSpec(fieldName)
+  ifields.forEach {
+    builder.addProperty(it.info.toPropertySpec())
+    if (it.inode != null) {
+      builder.addType(it.inode.toTypeSpec(it.info.responseName))
+    }
   }
-}
-
-private fun FrontendIr.InterfaceVariant.toTypeSpec(fieldName: String): TypeSpec {
-  val builder = TypeSpec.interfaceBuilder(typeCondition.toUpperCamelCase() + fieldName.toUpperCamelCase())
-
-  interfaceFields.map { it.info }.forEach {
-    builder.addProperty(it.toPropertySpec())
-  }
-  interfaceFields.forEach {
-
-    builder.addTypes(it.iface?.toTypeSpecs(it.info.responseName) ?: emptyList())
+  children.forEach {
+    builder.addType(it.toTypeSpec(responseName))
   }
 
   return builder.build()
 }
+
 
 private fun FrontendIr.FieldInfo.toPropertySpec(): PropertySpec {
   val typeName = type.toTypeName(responseName).let {
