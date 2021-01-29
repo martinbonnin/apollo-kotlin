@@ -21,7 +21,6 @@ import com.apollographql.apollo.compiler.frontend.Schema
 import com.apollographql.apollo.compiler.frontend.definitionFromScope
 import com.apollographql.apollo.compiler.frontend.findDeprecationReason
 import com.apollographql.apollo.compiler.frontend.inferVariables
-import com.apollographql.apollo.compiler.frontend.leafType
 import com.apollographql.apollo.compiler.frontend.responseName
 import com.apollographql.apollo.compiler.frontend.rootTypeDefinition
 import com.apollographql.apollo.compiler.frontend.toUtf8
@@ -132,7 +131,7 @@ internal class FrontendIrBuilder(
             description = description,
             deprecationReason = deprecationReason,
             type = type,
-            canBeSkipped = canBeSkipped
+            mightBeSkipped = canBeSkipped
         ),
         name = name,
         alias = alias,
@@ -144,7 +143,8 @@ internal class FrontendIrBuilder(
   private fun buildIField(
       gqlSelectionSets: List<GQLSelectionSet>,
       gqlField: GQLField,
-      gqlFieldDefinition: GQLFieldDefinition
+      gqlFieldDefinition: GQLFieldDefinition,
+      inlineFragmentsCondition: BooleanExpression
   ) = buildIField(
       gqlSelectionSets = gqlSelectionSets,
       name = gqlField.name,
@@ -152,7 +152,7 @@ internal class FrontendIrBuilder(
       type = gqlFieldDefinition.type.toIr(),
       description = gqlFieldDefinition.description,
       deprecationReason = gqlFieldDefinition.directives.findDeprecationReason(),
-      canBeSkipped = gqlField.directives.toCondition() != BooleanExpression.True
+      mightBeSkipped = gqlField.directives.toCondition() != BooleanExpression.True || inlineFragmentsCondition.simplify() != BooleanExpression.True
   )
 
   private fun buildIField(
@@ -162,10 +162,10 @@ internal class FrontendIrBuilder(
       type: FrontendIr.Type,
       description: String? = null,
       deprecationReason: String? = null,
-      canBeSkipped: Boolean = false,
+      mightBeSkipped: Boolean = false,
   ): FrontendIr.IField {
 
-    val inode = buildINode(gqlSelectionSets, type.leafTypeDefinition.name)
+    val inode = buildINode(gqlSelectionSets.map { CSelectionSet(it, BooleanExpression.True) }, type.leafTypeDefinition.name)
 
     return FrontendIr.IField(
         info = FrontendIr.FieldInfo(
@@ -173,54 +173,95 @@ internal class FrontendIrBuilder(
             description = description,
             deprecationReason = deprecationReason,
             type = type,
-            canBeSkipped = canBeSkipped
+            mightBeSkipped = mightBeSkipped
         ),
         inode = inode
     )
   }
 
+  private class CField(
+      val gqlFields: List<GQLField>,
+      /**
+       * The inline fragment conditions leading to this field. This can be a combination of
+       * - 'OR' for sibling inline fragments with the same typeCondition
+       * - 'AND' for nested inline fragments
+       */
+      val condition: BooleanExpression
+  )
+
+  private class CSelectionSet(
+      val gqlSelectionSet: GQLSelectionSet,
+      val condition: BooleanExpression // A directive condition from an inline fragment
+  )
+
+  private fun List<CSelectionSet>.getCFields() = flatMap { cSelectionSet ->
+    cSelectionSet.gqlSelectionSet.selections.filterIsInstance<GQLField>().map {
+      it to cSelectionSet.condition
+    }
+  }.groupBy {
+    it.first.responseName()
+  }.values
+      .map {
+        CField(
+            gqlFields = it.filter { it.second != BooleanExpression.False }.map { it.first },
+            condition = BooleanExpression.Or(it.map { it.second }.toSet())
+        )
+      }.filter {
+        // Remove fields that we know are always false
+        it.gqlFields.isEmpty() || it.condition.simplify() != BooleanExpression.False
+      }
+
+  private fun GQLInlineFragment.getCSelectionSet(parentCondition: BooleanExpression) = CSelectionSet(
+      gqlSelectionSet = selectionSet,
+      condition = parentCondition.and(directives.toCondition())
+  )
+
+  private fun List<CSelectionSet>.getChildCSelectionSets(typeCondition: String): List<CSelectionSet> {
+    return flatMap { cSelectionSet ->
+      cSelectionSet.gqlSelectionSet.selections.filterIsInstance<GQLInlineFragment>()
+          .filter {
+            it.typeCondition.name == typeCondition
+          }
+          .map { gqlInlineFragment ->
+            gqlInlineFragment.getCSelectionSet(cSelectionSet.condition)
+          }
+    }
+  }
+
   private fun buildINode(
-      gqlSelectionSets: List<GQLSelectionSet>,
+      cSelectionSets: List<CSelectionSet>,
       parentType: String
   ): FrontendIr.INode? {
-    if (gqlSelectionSets.isEmpty()) {
+    if (cSelectionSets.isEmpty()) {
       return null
     }
-    val selections = gqlSelectionSets.flatMap { it.selections }
-    val inlineFragments = selections.filterIsInstance<GQLInlineFragment>()
 
     /**
-     * Merge redundant inline fragments
+     * Merge selection sets with the same typeCondition
      */
-    val selfFields = selections.filterIsInstance<GQLField>() + inlineFragments.filter { it.typeCondition.name == parentType }
-        .flatMap { it.selectionSet.selections }
-        .filterIsInstance<GQLField>()
+    val mergedCSelectionSets = (cSelectionSets + cSelectionSets.getChildCSelectionSets(parentType))
+    val selfCFields = mergedCSelectionSets.getCFields()
 
-    val ifields = selfFields
-        .groupBy { it.responseName() }
-        .values
-        .mapNotNull { gqlFieldList ->
-          val gqlFieldList = gqlFieldList.filter { it.directives.toCondition().simplify() != BooleanExpression.False }
-          val gqlField = gqlFieldList.firstOrNull()
-          if (gqlField == null) {
-            // edge case: this field is skipped all the time, remove it from the INode
-            return@mapNotNull null
-          }
+    val ifields = selfCFields
+        .map { cField ->
+          val gqlField = cField.gqlFields.first()
           val gqlFieldDefinition = gqlField.definitionFromScope(schema, schema.typeDefinition(parentType))!!
           buildIField(
-              gqlSelectionSets = gqlFieldList.mapNotNull { it.selectionSet },
+              gqlSelectionSets = cField.gqlFields.mapNotNull { gqlField.selectionSet },
               gqlField = gqlField,
-              gqlFieldDefinition = gqlFieldDefinition
+              gqlFieldDefinition = gqlFieldDefinition,
+              inlineFragmentsCondition = cField.condition
           )
         }
 
+    val inlineFragments = mergedCSelectionSets.flatMap { it.gqlSelectionSet.selections.filterIsInstance<GQLInlineFragment>() }
     /**
      * subtract parentType as we have merged the redundant inline fragments above
      */
     val typeConditions = inlineFragments.map { it.typeCondition.name }.toSet().subtract(setOf(parentType))
 
     val inodes = typeConditions.mapNotNull { typeCondition ->
-      buildINode(inlineFragments.filter { it.typeCondition.name == typeCondition }.map { it.selectionSet }, typeCondition)
+      buildINode(mergedCSelectionSets.getChildCSelectionSets(typeCondition), typeCondition)
     }
 
     return FrontendIr.INode(
@@ -460,6 +501,14 @@ internal class FrontendIrBuilder(
   }
 
   companion object {
+    /**
+     * This is guaranteed to return one of:
+     * - True
+     * - False
+     * - (!)Variable
+     * - (!)Variable & (!)Variable
+     *
+     */
     private fun List<GQLDirective>.toCondition(): BooleanExpression {
       val conditions = mapNotNull {
         it.toCondition()
@@ -473,7 +522,7 @@ internal class FrontendIrBuilder(
         // Having both @skip and @include is allowed
         // 3.13.2 In the case that both the @skip and @include directives are provided on the same field or fragment,
         // it must be queried only if the @skip condition is false and the @include condition is true.
-        BooleanExpression.And(conditions.toSet())
+        BooleanExpression.And(conditions.toSet()).simplify()
       }
     }
 

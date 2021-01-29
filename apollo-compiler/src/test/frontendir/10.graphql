@@ -1,0 +1,10 @@
+query GetAnimal($condition1: Boolean!) {
+  friend {
+    ... on Animal @include(if: $condition1){
+      ... on Cat  {
+        # name1 is not nullable but the enclosing inline fragment should make it nullable
+        name1
+      }
+    }
+  }
+}

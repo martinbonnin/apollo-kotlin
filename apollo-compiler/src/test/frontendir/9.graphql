@@ -1,0 +1,10 @@
+query GetAnimal($condition1: Boolean!) {
+  # inlineFragment with include conditions transfer their condition to child fields
+  ... on Query @include(if: $condition1){
+    number
+    # double will be merged with the parent 'double' and therefore be made non-nullable
+    double
+  }
+  double
+}
+

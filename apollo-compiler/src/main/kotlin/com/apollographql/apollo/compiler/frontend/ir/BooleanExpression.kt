@@ -30,7 +30,11 @@ sealed class BooleanExpression {
 
   data class Not(val booleanExpression: BooleanExpression): BooleanExpression() {
     override fun evaluate(variables: Set<String>, typeConditions: Set<String>) = !booleanExpression.evaluate(variables, typeConditions)
-    override fun simplify() = this
+    override fun simplify() = when(this.booleanExpression) {
+      is True -> False
+      is False -> True
+      else -> this
+    }
     override fun toString() = "!$booleanExpression"
   }
 

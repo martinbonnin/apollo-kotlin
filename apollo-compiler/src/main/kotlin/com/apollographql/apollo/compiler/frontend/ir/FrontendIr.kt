@@ -63,7 +63,7 @@ internal data class FrontendIr(
       val deprecationReason: String?,
       val responseName: String,
       val type: Type,
-      val canBeSkipped: Boolean
+      val mightBeSkipped: Boolean
   )
 
   data class IField(

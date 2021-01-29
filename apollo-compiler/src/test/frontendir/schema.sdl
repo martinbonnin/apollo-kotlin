@@ -46,6 +46,7 @@ type Query {
   random: Any
   number: Int!
   double: Float!
+  coinFlip: Boolean!
 }
 
 union Any = Cat | Lion | Turtle | Sea | Desert

@@ -53,7 +53,7 @@ private fun FrontendIr.INode.toTypeSpec(responseName: String): TypeSpec {
 
 private fun FrontendIr.FieldInfo.toPropertySpec(): PropertySpec {
   val typeName = type.toTypeName(responseName).let {
-    it.copy(nullable = it.isNullable || canBeSkipped)
+    it.copy(nullable = it.isNullable || mightBeSkipped)
   }
   val builder = PropertySpec.builder(responseName, typeName)
 
