@@ -1,0 +1,34 @@
+package com.example
+
+import _.CatFragmentFragment
+import kotlin.String
+
+interface GetAnimal {
+  interface QueryData {
+    val friend: _.AnimalFriend?
+
+    interface AnimalFriend {
+      val asPetFriend: _.PetFriend
+
+      val asCatFragmentFragment: CatFragmentFragment
+
+      val species: String
+
+      interface PetFriend {
+        val name: String
+      }
+    }
+  }
+}
+
+interface CatFragmentFragment {
+  interface CatData {
+    val name1: String
+
+    val habitat: _.HabitatHabitat
+
+    interface HabitatHabitat {
+      val description: String?
+    }
+  }
+}

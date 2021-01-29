@@ -21,7 +21,9 @@ internal fun FrontendIr.toSimpleModels(): String {
   operations.forEach {
     builder.addType(it.toTypeSpec())
   }
-
+  fragmentDefinitions.forEach {
+    builder.addType(it.toTypeSpec())
+  }
   builder.build().writeTo(stringBuilder)
 
   return stringBuilder.toString()
@@ -33,10 +35,24 @@ private fun FrontendIr.Operation.toTypeSpec(): TypeSpec {
   return builder.build()
 }
 
+private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
+  val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase() + "Fragment")
+  builder.addType(dataField.inode!!.toTypeSpec(dataField.info.responseName))
+  return builder.build()
+}
+
 
 private fun FrontendIr.INode.toTypeSpec(responseName: String): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(typeCondition.toUpperCamelCase() + responseName.toUpperCamelCase())
 
+  children.forEach {
+    val className = "${it.typeCondition.toUpperCamelCase()}${responseName.toUpperCamelCase()}"
+    builder.addProperty("as$className", ClassName("_", className))
+  }
+  namedFragments.forEach {
+    val className = "${it.name.toUpperCamelCase()}Fragment"
+    builder.addProperty("as$className", ClassName("_", className))
+  }
   ifields.forEach {
     builder.addProperty(it.info.toPropertySpec())
     if (it.inode != null) {

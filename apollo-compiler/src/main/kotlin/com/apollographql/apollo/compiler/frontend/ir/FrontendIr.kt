@@ -1,6 +1,7 @@
 package com.apollographql.apollo.compiler.frontend.ir
 
 import com.apollographql.apollo.compiler.frontend.GQLFragmentDefinition
+import com.apollographql.apollo.compiler.frontend.GQLFragmentSpread
 import com.apollographql.apollo.compiler.frontend.GQLOperationDefinition
 import com.apollographql.apollo.compiler.frontend.GQLTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLValue
@@ -80,6 +81,7 @@ internal data class FrontendIr(
       val typeCondition: String,
       val ifields: List<IField>,
       val children: List<INode>,
+      val namedFragments: List<GQLFragmentSpread>
   )
 
   data class DField(

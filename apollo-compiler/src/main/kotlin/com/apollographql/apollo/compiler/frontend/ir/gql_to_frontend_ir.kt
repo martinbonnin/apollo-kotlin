@@ -267,7 +267,8 @@ internal class FrontendIrBuilder(
     return FrontendIr.INode(
         typeCondition = parentType,
         ifields = ifields,
-        children = inodes
+        children = inodes,
+        namedFragments = mergedCSelectionSets.flatMap { it.gqlSelectionSet.selections.filterIsInstance<GQLFragmentSpread>() }
     )
   }
 

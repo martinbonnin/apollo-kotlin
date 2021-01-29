@@ -1,0 +1,16 @@
+query GetAnimal {
+  friend {
+    species
+    ...catFragment
+    ... on Pet {
+      name
+    }
+  }
+}
+
+fragment catFragment on Cat {
+  name1
+  habitat {
+    description
+  }
+}

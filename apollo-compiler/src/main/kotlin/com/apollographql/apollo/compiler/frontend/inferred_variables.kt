@@ -1,5 +1,7 @@
 package com.apollographql.apollo.compiler.frontend
 
+import java.lang.IllegalStateException
+
 /**
  * Infer variables from the given selectionSet. This currently does not check type be cause we don't know the expected type
  */
@@ -25,13 +27,14 @@ internal class InferVariablesScope(val schema: Schema, val allGQLFragmentDefinit
   private fun GQLInlineFragment.inferredVariables() = selectionSet.inferredVariables(schema.typeDefinition(typeCondition.name))
 
   private fun GQLFragmentSpread.inferredVariables(): Map<String, GQLType> {
-    val fragmentDefinition = allGQLFragmentDefinitions[name]!!
+    val fragmentDefinition = allGQLFragmentDefinitions[name] ?: return emptyMap()
 
     return fragmentDefinition.selectionSet.inferredVariables(schema.typeDefinition(fragmentDefinition.typeCondition.name))
   }
 
   private fun GQLField.inferredVariables(typeDefinitionInScope: GQLTypeDefinition): Map<String, GQLType> {
-    val fieldDefinition = definitionFromScope(schema, typeDefinitionInScope)!!
+    // fieldDefinition might be null since this is called during validation
+    val fieldDefinition = definitionFromScope(schema, typeDefinitionInScope) ?: return emptyMap()
 
     val argumentVariables = (arguments?.arguments?.mapNotNull { argument ->
       if (argument.value is GQLVariableValue) {
