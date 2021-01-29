@@ -1,5 +1,7 @@
 package com.apollographql.apollo.compiler.frontend
 
+import com.apollographql.apollo.compiler.frontend.ir.FrontendIr
+
 /**
  * @param fragmentDefinitions: all the fragments in the current compilation unit. This is required to check the type conditions as well as fields merging
  */
@@ -211,6 +213,18 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
     }
 
     selectionSet.validate(this, rootTypeDefinition)
+
+    // XXX: This will traverse the tree another time, not sure how much of an issue this is. If it becomes one, we can move
+    // to a visitor pattern
+    val inferredVariables = inferVariables(selectionSet, rootTypeDefinition, schema, fragmentDefinitions).map { it.key }.toSet()
+    variableDefinitions.forEach {
+      if(!inferredVariables.contains(it.name)) {
+        issues.add(Issue.ValidationError(
+            message = "Variable `${it.name}` is unused",
+            sourceLocation = it.sourceLocation
+        ))
+      }
+    }
   }
 
   private fun GQLSelectionSet.validate(operation: GQLOperationDefinition?, typeDefinitionInScope: GQLTypeDefinition) {
@@ -512,7 +526,7 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
 
     // 5.6.2 Input Object Field Names
     // Note that this does not modify the document, it calls validateAndCoerce because it's easier
-    // to do both at the same time but the coerced resul is not used here
+    // to do both at the same time but the coerced result is not used here
     issues.addAll(value.validateAndCoerce(schemaArgument.type, schema, operation).issues)
   }
 

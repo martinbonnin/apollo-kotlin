@@ -1,5 +1,5 @@
-# Test showing an INode coming both from a field and an inline fragment
-query GetAnimal {
+# @include directive mark some fields as optional
+query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
   # field INode here
   friend {
     # field INode here
