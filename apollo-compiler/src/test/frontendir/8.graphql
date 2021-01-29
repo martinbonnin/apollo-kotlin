@@ -1,5 +1,7 @@
-# @include directive mark some fields as optional
 query GetAnimal($condition1: Boolean!) {
+  # number should be marked optional
   number @include(if: $condition1)
+  # double shouldn't be in the models
+  double @include(if: false)
 }
 

@@ -4,6 +4,6 @@ import kotlin.Int
 
 interface GetAnimal {
   interface QueryData {
-    val number: Int
+    val number: Int?
   }
 }

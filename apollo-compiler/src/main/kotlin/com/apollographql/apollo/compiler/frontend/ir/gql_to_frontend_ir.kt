@@ -152,6 +152,7 @@ internal class FrontendIrBuilder(
       type = gqlFieldDefinition.type.toIr(),
       description = gqlFieldDefinition.description,
       deprecationReason = gqlFieldDefinition.directives.findDeprecationReason(),
+      canBeSkipped = gqlField.directives.toCondition() != BooleanExpression.True
   )
 
   private fun buildIField(
@@ -198,8 +199,13 @@ internal class FrontendIrBuilder(
     val ifields = selfFields
         .groupBy { it.responseName() }
         .values
-        .map { gqlFieldList ->
-          val gqlField = gqlFieldList.first()
+        .mapNotNull { gqlFieldList ->
+          val gqlFieldList = gqlFieldList.filter { it.directives.toCondition().simplify() != BooleanExpression.False }
+          val gqlField = gqlFieldList.firstOrNull()
+          if (gqlField == null) {
+            // edge case: this field is skipped all the time, remove it from the INode
+            return@mapNotNull null
+          }
           val gqlFieldDefinition = gqlField.definitionFromScope(schema, schema.typeDefinition(parentType))!!
           buildIField(
               gqlSelectionSets = gqlFieldList.mapNotNull { it.selectionSet },

@@ -6,6 +6,10 @@ package com.apollographql.apollo.compiler.frontend.ir
  */
 sealed class BooleanExpression {
   abstract fun evaluate(variables: Set<String>, typeConditions: Set<String>): Boolean
+
+  /**
+   * This is not super well defined but works well enought for our simple use cases
+   */
   abstract fun simplify(): BooleanExpression
 
   fun or(vararg other: BooleanExpression) = Or((other.toList() + this).toSet())

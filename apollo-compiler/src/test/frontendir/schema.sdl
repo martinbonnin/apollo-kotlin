@@ -45,6 +45,7 @@ type Query {
   friend: Animal
   random: Any
   number: Int!
+  double: Float!
 }
 
 union Any = Cat | Lion | Turtle | Sea | Desert
