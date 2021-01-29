@@ -1,0 +1,21 @@
+package com.example
+
+import kotlin.String
+
+interface GetAnimal {
+  interface QueryData {
+    val friend: _.AnimalFriend?
+
+    interface AnimalFriend {
+      val habitat: _.HabitatHabitat
+
+      interface HabitatHabitat {
+        val description: String?
+      }
+
+      interface PetFriend {
+        val name: String
+      }
+    }
+  }
+}
