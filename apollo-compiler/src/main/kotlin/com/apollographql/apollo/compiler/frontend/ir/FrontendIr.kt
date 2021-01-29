@@ -30,35 +30,19 @@ internal data class FrontendIr(
       val typeDefinition: GQLTypeDefinition,
       val variables: List<Variable>,
       val description: String?,
-      val shapes: Shapes,
+      val dataField: Field,
       val sourceWithFragments: String,
       val gqlOperationDefinition: GQLOperationDefinition
   )
 
-  /**
-   * A "shape" that will ultimately be converted to Kotlin
-   *
-   * @param implementedFragments: the fragments implemented by this shape
-   * @param fieldSetConditions: the condition satisfied by this FieldSet.
-   */
-  data class FieldSet(
-      val implementedFragments: List<String>,
-      val fields: List<Field>,
-      val fieldSetConditions: Set<FieldSetCondition>
-  ) {
-    /**
-     * Outputs a name from a set of conditions
-     */
-    val name: String = fieldSetConditions.toList().sortedByDescending {
+  private fun Set<FieldSetCondition>.toName(): String {
+    return toList().sortedByDescending {
       it.vars.size
     }.map {
       it.vars.mapNotNull { it.takeIf { it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() } +
           it.vars.mapNotNull { it.takeIf { !it.isType }?.name }.sorted().joinToString("") { it.toUpperCamelCase() }
     }.joinToString("Or")
-
-    override fun toString() = name
   }
-
 
   /**
    * A shorter version of [BooleanExpression]
@@ -67,41 +51,60 @@ internal data class FrontendIr(
 
   data class Var(val name: String, val isType: Boolean)
 
-  /**
-   *
-   */
-  data class Shapes(val commonFields: List<Field>, val fieldSets: List<FieldSet>)
+  data class Interfaces(
+      val name: String,
+      )
 
   /**
-   * A Field
-   *
-   * @param type: the GraphQL type
-   * @param canBeSkipped: whether this field is forced nullable because it has an @include/@skip directive
-   * or it belongs to an inline fragment that has one.
+   * used for codegen
    */
-  data class Field(
-      val alias: String?,
-      val name: String,
-      val booleanExpression: BooleanExpression,
-      val type: Type,
-      val arguments: List<Argument>,
+  data class FieldInfo(
       val description: String?,
       val deprecationReason: String?,
-      val shapes: Shapes,
+      val responseName: String,
+      val type: Type,
       val canBeSkipped: Boolean
-  ) {
-    val responseName = alias ?: name
+  )
 
-    /**
-     * Whether the type will be nullable in the final Kotlin model
-     */
-    val nullable = canBeSkipped || type !is Type.NonNull
-  }
+  data class InterfaceField(
+      val info: FieldInfo,
+      val iface: InterfaceShapes?
+  )
+
+  data class InterfaceVariant(
+      val typeCondition: String,
+      val interfaceFields: List<InterfaceField>
+  )
+  data class InterfaceShapes(
+      val variants: List<InterfaceVariant>
+  )
+
+  data class Field(
+      val fieldInfo: FieldInfo,
+      /**
+       * used for cache
+       */
+      val name: String,
+      val alias: String?,
+      val arguments: List<Argument>,
+      val condition: BooleanExpression,
+      /**
+       * can be null for scalar types
+       */
+      val interfaceShapes: InterfaceShapes?,
+      val implementations: List<Implementation>,
+  )
+
+  data class Implementation(
+      val fieldSetConditions: Set<FieldSetCondition>,
+      val interfaceShapes: List<InterfaceShapes>,
+      val fields: List<Field>,
+  )
 
   data class NamedFragmentDefinition(
       val name: String,
       val description: String?,
-      val shapes: Shapes,
+      val dataField: Field,
       /**
        * Fragments do not have variables per-se but we can infer them from the document
        * Default values will always be null for those

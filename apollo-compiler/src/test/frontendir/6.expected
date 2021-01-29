@@ -3,31 +3,23 @@ package com.example
 import kotlin.String
 
 interface GetAnimal {
-  interface Query {
-    val randomAnimal: com.example.Animal?
+  interface QueryData {
+    val random: _.AnyRandom?
 
-    interface AnimalCatPet : PetFragment {
+    interface AnyRandom
+
+    interface PetRandom {
       val name: String
+    }
 
+    interface CatRandom {
       val name1: String
+
+      val habitat: _.HabitatHabitat
+
+      interface HabitatHabitat {
+        val description: String?
+      }
     }
-
-    interface AnimalPet : PetFragment {
-      val name: String
-    }
-
-    interface Animal : PetFragment
-  }
-}
-
-interface PetFragment {
-  interface CatPet {
-    val name: String
-
-    val name1: String
-  }
-
-  interface Pet {
-    val name: String
   }
 }

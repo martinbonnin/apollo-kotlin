@@ -2,11 +2,9 @@ package com.apollographql.apollo.compiler.frontend.ir
 
 import com.apollographql.apollo.compiler.frontend.GQLEnumTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLInterfaceTypeDefinition
-import com.apollographql.apollo.compiler.frontend.GQLObjectField
 import com.apollographql.apollo.compiler.frontend.GQLObjectTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLScalarTypeDefinition
 import com.apollographql.apollo.compiler.frontend.GQLUnionTypeDefinition
-import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder.Companion.extractVariables
 import com.apollographql.apollo.compiler.toUpperCamelCase
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
@@ -34,44 +32,45 @@ internal fun FrontendIr.toSimpleModels(): String {
 
 private fun FrontendIr.Operation.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  shapes.fieldSets.forEach {
-    builder.addType(it.toTypeSpec())
-  }
+  builder.addTypes(dataField.interfaceShapes?.toTypeSpecs(dataField.name) ?: emptyList())
   return builder.build()
 }
 
 private fun FrontendIr.NamedFragmentDefinition.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  shapes.fieldSets.forEach {
-    builder.addType(it.toTypeSpec())
-  }
   return builder.build()
 }
 
+private fun FrontendIr.Field.toTypeSpec(): TypeSpec {
+  val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
 
-
-private fun FrontendIr.FieldSet.toTypeSpec() : TypeSpec{
-  val builder = TypeSpec.interfaceBuilder(name)
-
-  implementedFragments.forEach {
-    builder.addSuperinterface(ClassName("com.example", it.toUpperCamelCase()))
-  }
-
-  fields.forEach { field ->
-    builder.addProperty(field.toPropertySpec())
-  }
-
-  fields.forEach { field ->
-    field.shapes.fieldSets.forEach {
-      builder.addType(it.toTypeSpec())
-    }
-  }
+  builder.addTypes(interfaceShapes?.toTypeSpecs(name) ?: emptyList())
 
   return builder.build()
 }
 
-private fun FrontendIr.Field.toPropertySpec(): PropertySpec {
-  val typeName = type.toTypeName().let {
+private fun FrontendIr.InterfaceShapes.toTypeSpecs(fieldName: String): List<TypeSpec> {
+  return variants.map {
+    it.toTypeSpec(fieldName)
+  }
+}
+
+private fun FrontendIr.InterfaceVariant.toTypeSpec(fieldName: String): TypeSpec {
+  val builder = TypeSpec.interfaceBuilder(typeCondition.toUpperCamelCase() + fieldName.toUpperCamelCase())
+
+  interfaceFields.map { it.info }.forEach {
+    builder.addProperty(it.toPropertySpec())
+  }
+  interfaceFields.forEach {
+
+    builder.addTypes(it.iface?.toTypeSpecs(it.info.responseName) ?: emptyList())
+  }
+
+  return builder.build()
+}
+
+private fun FrontendIr.FieldInfo.toPropertySpec(): PropertySpec {
+  val typeName = type.toTypeName(responseName).let {
     it.copy(nullable = it.isNullable || canBeSkipped)
   }
   val builder = PropertySpec.builder(responseName, typeName)
@@ -79,10 +78,10 @@ private fun FrontendIr.Field.toPropertySpec(): PropertySpec {
   return builder.build()
 }
 
-private fun FrontendIr.Type.toTypeName(): TypeName = when(this) {
-  is FrontendIr.Type.NonNull -> ofType.toTypeName().copy(nullable = false)
+private fun FrontendIr.Type.toTypeName(responseName: String): TypeName = when (this) {
+  is FrontendIr.Type.NonNull -> ofType.toTypeName(responseName).copy(nullable = false)
   is FrontendIr.Type.List -> ClassName("kotlin.collections", "List")
-      .parameterizedBy(ofType.toTypeName())
+      .parameterizedBy(ofType.toTypeName(responseName))
       .copy(nullable = true)
   is FrontendIr.Type.Named -> when {
     typeDefinition.name == "String" -> String::class.asClassName()
@@ -90,11 +89,14 @@ private fun FrontendIr.Type.toTypeName(): TypeName = when(this) {
     typeDefinition.name == "Float" -> Float::class.asClassName()
     typeDefinition.name == "Int" -> Int::class.asClassName()
     typeDefinition.name == "Boolean" -> Boolean::class.asClassName()
-    typeDefinition is GQLEnumTypeDefinition -> ClassName("com.example", this.typeDefinition.name.toUpperCase() + "Enum")
+    typeDefinition is GQLEnumTypeDefinition -> ClassName("_", this.typeDefinition.name.toUpperCase() + "Enum")
     typeDefinition is GQLScalarTypeDefinition -> Any::class.asClassName()
     typeDefinition is GQLUnionTypeDefinition ||
         typeDefinition is GQLObjectTypeDefinition ||
-        typeDefinition is GQLInterfaceTypeDefinition-> ClassName("com.example", this.typeDefinition.name.toUpperCamelCase())
+        typeDefinition is GQLInterfaceTypeDefinition -> {
+      // In a real world, we want the full package name here but for testing we don't mind
+      ClassName("_", this.typeDefinition.name.toUpperCamelCase() + responseName.toUpperCamelCase())
+    }
     else -> error("Not sure what to do with ${typeDefinition.name}")
   }.copy(nullable = true)
 }
