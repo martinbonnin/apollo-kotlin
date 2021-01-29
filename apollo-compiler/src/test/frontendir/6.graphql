@@ -1,3 +1,4 @@
+# Test for INode and inline fragments
 query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
   random {
     ... on Pet {

@@ -1,0 +1,15 @@
+# Test showing an INode coming both from a field and an inline fragment
+query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
+  # field INode here
+  friend {
+    # field INode here
+    habitat {
+      description
+    }
+    # inline fragment INode here
+    ... on Pet {
+      name
+    }
+  }
+}
+

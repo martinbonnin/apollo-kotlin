@@ -42,7 +42,7 @@ type Lion implements Animal {
 }
 
 type Query {
-  randomAnimal: Animal
+  friend: Animal
   random: Any
 }
 

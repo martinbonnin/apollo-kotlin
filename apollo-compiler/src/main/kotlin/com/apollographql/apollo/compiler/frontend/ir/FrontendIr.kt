@@ -71,7 +71,11 @@ internal data class FrontendIr(
       val inode: INode?
   )
 
-  // Represents a node in the fragment hierarchy (not the type hierarchy)
+  // Represents a list of fields and associated condition
+  // This is the building block of different interfaces
+  // It can correspond to
+  // - subfields of a fields
+  // - named and inline fragments
   data class INode(
       val typeCondition: String,
       val ifields: List<IField>,
