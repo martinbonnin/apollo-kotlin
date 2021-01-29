@@ -42,10 +42,9 @@ internal class InferVariablesScope(val schema: Schema, val allGQLFragmentDefinit
       }
     }?.toMap() ?: emptyMap())
 
-    val subVariables = selectionSet?.inferredVariables(schema.typeDefinition(fieldDefinition.type.leafType().name)) ?: emptyMap()
+    val childVariables = selectionSet?.inferredVariables(schema.typeDefinition(fieldDefinition.type.leafType().name)) ?: emptyMap()
 
-    val directivesVariables = directives.fold()
-    return argumentVariables + subVariables
+    return argumentVariables + childVariables
   }
 
   fun infer(gqlSelectionSet: GQLSelectionSet, typeDefinitionInScope: GQLTypeDefinition): Map<String, GQLType> {
