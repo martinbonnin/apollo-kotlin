@@ -44,6 +44,7 @@ type Lion implements Animal {
 type Query {
   friend: Animal
   random: Any
+  number: Int
 }
 
 union Any = Cat | Lion | Turtle | Sea | Desert

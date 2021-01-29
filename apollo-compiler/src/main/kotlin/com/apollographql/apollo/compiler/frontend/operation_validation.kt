@@ -215,10 +215,11 @@ private class ExecutableDocumentValidator(val schema: Schema, val fragmentDefini
     selectionSet.validate(this, rootTypeDefinition)
 
     // XXX: This will traverse the tree another time, not sure how much of an issue this is. If it becomes one, we can move
-    // to a visitor pattern
+    // to a visitor pattern.
     val inferredVariables = inferVariables(selectionSet, rootTypeDefinition, schema, fragmentDefinitions).map { it.key }.toSet()
     variableDefinitions.forEach {
-      if(!inferredVariables.contains(it.name)) {
+      // This is disabled right now because we don't visit directives, activate later
+      if(false && !inferredVariables.contains(it.name)) {
         issues.add(Issue.ValidationError(
             message = "Variable `${it.name}` is unused",
             sourceLocation = it.sourceLocation

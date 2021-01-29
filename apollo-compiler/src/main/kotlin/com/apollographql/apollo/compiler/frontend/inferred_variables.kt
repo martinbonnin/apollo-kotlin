@@ -1,5 +1,8 @@
 package com.apollographql.apollo.compiler.frontend
 
+/**
+ * Infer variables from the given selectionSet. This currently does not check type be cause we don't know the expected type
+ */
 internal fun inferVariables(
     gqlSelectionSet: GQLSelectionSet,
     typeDefinitionInScope: GQLTypeDefinition,
@@ -30,14 +33,19 @@ internal class InferVariablesScope(val schema: Schema, val allGQLFragmentDefinit
   private fun GQLField.inferredVariables(typeDefinitionInScope: GQLTypeDefinition): Map<String, GQLType> {
     val fieldDefinition = definitionFromScope(schema, typeDefinitionInScope)!!
 
-    return (arguments?.arguments?.mapNotNull { argument ->
+    val argumentVariables = (arguments?.arguments?.mapNotNull { argument ->
       if (argument.value is GQLVariableValue) {
         val type = fieldDefinition.arguments.first { it.name == argument.name }.type
         argument.name to type
       } else {
         null
       }
-    }?.toMap() ?: emptyMap()) + (selectionSet?.inferredVariables(schema.typeDefinition(fieldDefinition.type.leafType().name)) ?: emptyMap())
+    }?.toMap() ?: emptyMap())
+
+    val subVariables = selectionSet?.inferredVariables(schema.typeDefinition(fieldDefinition.type.leafType().name)) ?: emptyMap()
+
+    val directivesVariables = directives.fold()
+    return argumentVariables + subVariables
   }
 
   fun infer(gqlSelectionSet: GQLSelectionSet, typeDefinitionInScope: GQLTypeDefinition): Map<String, GQLType> {

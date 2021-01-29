@@ -4,7 +4,7 @@
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$/.." />
       <option name="externalSystemIdString" value="GRADLE" />
-      <option name="scriptParameters" value="--tests &quot;com.apollographql.apollo.compiler.FrontendIRTest&quot; -DupdateTestFixtures=true -DtestFilter=7" />
+      <option name="scriptParameters" value="--tests &quot;com.apollographql.apollo.compiler.FrontendIRTest&quot; -DupdateTestFixtures=true -DtestFilter=8" />
       <option name="taskDescriptions">
         <list />
       </option>

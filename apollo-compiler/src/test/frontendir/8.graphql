@@ -1,15 +1,5 @@
 # @include directive mark some fields as optional
-query GetAnimal($condition1: Boolean!, $condition2: Boolean!) {
-  # field INode here
-  friend {
-    # field INode here
-    habitat {
-      description
-    }
-    # inline fragment INode here
-    ... on Pet {
-      name
-    }
-  }
+query GetAnimal($condition1: Boolean!) {
+  number @include(if: $condition1)
 }
 
