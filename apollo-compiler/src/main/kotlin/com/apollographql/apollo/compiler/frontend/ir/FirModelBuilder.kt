@@ -24,11 +24,12 @@ internal fun FIR.toSimpleModels(): String {
 
 private fun Operation.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
-  builder.addType(selectionSet.toTypeSpec(typeCondition, "data"))
+  builder.addType(selectionSet.toInterfacesTypeSpec(typeCondition, "data"))
+  builder.addType(selectionSet.toImplementationTypeSpecs(typeCondition, "data"))
   return builder.build()
 }
 
-private fun SelectionSet.toTypeSpec(typeCondition: String, responseName: String): TypeSpec {
+private fun SelectionSet.toInterfacesTypeSpec(typeCondition: String, responseName: String): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(typeCondition.toUpperCamelCase() + responseName.toUpperCamelCase())
 
   selections.forEach {
@@ -36,14 +37,14 @@ private fun SelectionSet.toTypeSpec(typeCondition: String, responseName: String)
       is Field -> {
         builder.addProperty(it.toPropertySpec())
         if (it.selectionSet.selections.isNotEmpty()) {
-          builder.addType(it.selectionSet.toTypeSpec(it.type.leafName, it.responseName))
+          builder.addType(it.selectionSet.toInterfacesTypeSpec(it.type.leafName, it.responseName))
         }
       }
       is InlineFragment -> {
         val className = "${it.typeCondition.toUpperCamelCase()}${responseName.toUpperCamelCase()}"
         builder.addProperty("as$className", ClassName("_", className))
 
-        builder.addType(it.selectionSet.toTypeSpec(it.typeCondition, responseName))
+        builder.addType(it.selectionSet.toInterfacesTypeSpec(it.typeCondition, responseName))
       }
       is FragmentSpread -> {
         val className = "${it.name.toUpperCamelCase()}Fragment"

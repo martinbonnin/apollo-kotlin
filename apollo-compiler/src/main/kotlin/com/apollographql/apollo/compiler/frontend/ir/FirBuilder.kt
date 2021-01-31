@@ -33,6 +33,7 @@ import com.apollographql.apollo.compiler.frontend.GQLVariableValue
 import com.apollographql.apollo.compiler.frontend.Schema
 import com.apollographql.apollo.compiler.frontend.definitionFromScope
 import com.apollographql.apollo.compiler.frontend.findDeprecationReason
+import com.apollographql.apollo.compiler.frontend.inferVariables
 import com.apollographql.apollo.compiler.frontend.leafType
 import com.apollographql.apollo.compiler.frontend.rootTypeDefinition
 import com.apollographql.apollo.compiler.frontend.toBooleanExpression
@@ -48,15 +49,50 @@ class FirBuilder(
 ) {
   private val allGQLFragmentDefinitions = (metadataFragmentDefinitions + fragmentDefinitions).associateBy { it.name }
 
+  private val namedFragmentDefinitions = mutableMapOf<String, NamedFragmentDefinition>()
+
   internal fun build(): FIR {
     return FIR(
         operations = operationDefinitions.map { it.toFir() },
-        allFragmentDefinitions = emptyMap(),
-        fragmentDefinitions = emptyList()
+        fragmentDefinitions = fragmentDefinitions.map {
+          val definition = namedFragmentDefinitions[it.name]
+          if (definition == null) {
+            println("Unused fragment '${it.name}'?")
+            it.toFir()
+          } else {
+            definition
+          }
+        }
     )
   }
 
+  private fun getNamedFragmentDefinition(name: String): NamedFragmentDefinition {
+    if (namedFragmentDefinitions[name] != null) {
+      return namedFragmentDefinitions[name]!!
+    }
+
+    val gqlFragmentDefinition = allGQLFragmentDefinitions[name] ?: error("Cannot find fragment '$name'")
+
+    return gqlFragmentDefinition.toFir().also {
+      namedFragmentDefinitions[name] = it
+    }
+  }
+
   private fun firOperationType(operationType: String) = OperationType.valueOf(operationType.capitalize())
+
+  private fun GQLFragmentDefinition.toFir(): NamedFragmentDefinition {
+    val variables = inferVariables(selectionSet, schema.typeDefinition(typeCondition.name), schema, allGQLFragmentDefinitions)
+    return NamedFragmentDefinition(
+        name = name,
+        description = description,
+        typeCondition = typeCondition.name,
+        source = toUtf8WithIndents(),
+        selectionSet = selectionSet.toFir(typeCondition.name, BooleanExpression.True),
+        variables = variables.map {
+          Variable(name = it.key, type = it.value.toFir(), defaultValue = null)
+        }
+    )
+  }
 
   private fun GQLOperationDefinition.toFir(): Operation {
     val typeDefinition = rootTypeDefinition(schema)
@@ -165,9 +201,12 @@ class FirBuilder(
       }
       is GQLFragmentSpread -> {
         val selfCondition = parentCondition.and(directives.toBooleanExpression()).simplify()
+        val namedFragmentDefinition = getNamedFragmentDefinition(name)
         FragmentSpread(
             name = name,
-            condition = selfCondition
+            condition = selfCondition,
+            typeCondition = namedFragmentDefinition.typeCondition,
+            selectionSet = namedFragmentDefinition.selectionSet
         )
       }
     }

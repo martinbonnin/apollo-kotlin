@@ -14,7 +14,6 @@ package com.apollographql.apollo.compiler.frontend.ir
 internal data class FIR(
     val operations: List<Operation>,
     val fragmentDefinitions: List<NamedFragmentDefinition>,
-    val allFragmentDefinitions: Map<String, NamedFragmentDefinition>
 )
 
 data class Operation(
@@ -77,7 +76,10 @@ data class InlineFragment(
 
 data class FragmentSpread(
     val name: String,
-    val condition: BooleanExpression
+    val condition: BooleanExpression,
+    val typeCondition: String,
+    // A link to the fragment selectionSet
+    val selectionSet: SelectionSet
 ) : Selection()
 
 data class Variable(val name: String, val defaultValue: Value?, val type: Type)
