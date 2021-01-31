@@ -7,8 +7,16 @@ interface GetAnimal {
     val random: _.AnyRandom?
 
     interface AnyRandom {
+      val asPetRandom: _.PetRandom
+
+      val asCatRandom: _.CatRandom
+
       interface PetRandom {
         val name: String
+
+        val asCatRandom: _.CatRandom
+
+        val asTurtleRandom: _.TurtleRandom
 
         interface CatRandom {
           val name2: String
@@ -23,6 +31,8 @@ interface GetAnimal {
         val name1: String
 
         val habitat: _.HabitatHabitat
+
+        val asPetRandom: _.PetRandom
 
         interface HabitatHabitat {
           val description: String?

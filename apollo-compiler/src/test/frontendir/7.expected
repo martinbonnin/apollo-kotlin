@@ -9,6 +9,8 @@ interface GetAnimal {
     interface AnimalFriend {
       val habitat: _.HabitatHabitat
 
+      val asPetFriend: _.PetFriend
+
       interface HabitatHabitat {
         val description: String?
       }

@@ -3,13 +3,21 @@ package com.example
 import kotlin.String
 
 interface GetAnimal {
-  interface Query {
-    val randomAnimal: com.example.Animal?
+  interface QueryData {
+    val friend: _.AnimalFriend?
 
-    interface Animal
+    interface AnimalFriend {
+      val asCatFriend: _.CatFriend
 
-    interface AnimalCatOrAnimalLion {
-      val species: String
+      val asLionFriend: _.LionFriend
+
+      interface CatFriend {
+        val species: String
+      }
+
+      interface LionFriend {
+        val species: String
+      }
     }
   }
 }

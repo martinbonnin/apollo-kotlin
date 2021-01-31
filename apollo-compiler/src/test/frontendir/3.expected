@@ -1,38 +1,16 @@
 package com.example
 
-import kotlin.Float
+import _.CatFragmentFragment
 import kotlin.String
 
 interface GetAnimal {
-  interface Query {
-    val randomAnimal: com.example.Animal?
+  interface QueryData {
+    val friend: _.AnimalFriend?
 
-    interface AnimalCatCondition : CatFragment {
+    interface AnimalFriend {
       val species: String
 
-      val name: String
-
-      val habitat: com.example.Habitat
-
-      interface Habitat {
-        val temperature: Float?
-      }
-    }
-
-    interface Animal {
-      val species: String
-    }
-  }
-}
-
-interface CatFragment {
-  interface Cat {
-    val name: String
-
-    val habitat: com.example.Habitat
-
-    interface Habitat {
-      val temperature: Float?
+      val asCatFragmentFragment: CatFragmentFragment
     }
   }
 }

@@ -7,6 +7,8 @@ interface GetAnimal {
     val friend: _.AnimalFriend?
 
     interface AnimalFriend {
+      val asCatFriend: _.CatFriend
+
       interface CatFriend {
         val name1: String?
       }

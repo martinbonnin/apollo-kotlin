@@ -5,8 +5,8 @@ import kotlin.Int
 
 interface GetAnimal {
   interface QueryData {
-    val double: Float
-
     val number: Int?
+
+    val double: Float
   }
 }

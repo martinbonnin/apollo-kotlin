@@ -8,27 +8,15 @@ interface GetAnimal {
     val friend: _.AnimalFriend?
 
     interface AnimalFriend {
-      val asPetFriend: _.PetFriend
+      val species: String
 
       val asCatFragmentFragment: CatFragmentFragment
 
-      val species: String
+      val asPetFriend: _.PetFriend
 
       interface PetFriend {
         val name: String
       }
-    }
-  }
-}
-
-interface CatFragmentFragment {
-  interface CatData {
-    val name1: String
-
-    val habitat: _.HabitatHabitat
-
-    interface HabitatHabitat {
-      val description: String?
     }
   }
 }

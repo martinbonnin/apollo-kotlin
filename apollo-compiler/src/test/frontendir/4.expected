@@ -1,45 +1,19 @@
 package com.example
 
+import _.CatFragment1Fragment
+import _.CatFragment2Fragment
 import kotlin.String
 
 interface GetAnimal {
-  interface Query {
-    val randomAnimal: com.example.Animal?
+  interface QueryData {
+    val friend: _.AnimalFriend?
 
-    interface AnimalCatCondition1 : CatFragment1 {
+    interface AnimalFriend {
       val species: String
 
-      val name1: String
+      val asCatFragment1Fragment: CatFragment1Fragment
+
+      val asCatFragment2Fragment: CatFragment2Fragment
     }
-
-    interface AnimalCatCondition2 : CatFragment2 {
-      val species: String
-
-      val name2: String
-    }
-
-    interface AnimalCatCondition1Condition2 : CatFragment1, CatFragment2 {
-      val species: String
-
-      val name1: String
-
-      val name2: String
-    }
-
-    interface Animal {
-      val species: String
-    }
-  }
-}
-
-interface CatFragment1 {
-  interface Cat {
-    val name1: String
-  }
-}
-
-interface CatFragment2 {
-  interface Cat {
-    val name2: String
   }
 }

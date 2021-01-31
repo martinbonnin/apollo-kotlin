@@ -5,6 +5,7 @@ import com.apollographql.apollo.compiler.TestUtils.testParametersForGraphQLFiles
 import com.apollographql.apollo.compiler.frontend.GQLFragmentDefinition
 import com.apollographql.apollo.compiler.frontend.GQLOperationDefinition
 import com.apollographql.apollo.compiler.frontend.GraphQLParser
+import com.apollographql.apollo.compiler.frontend.ir.FirBuilder
 import com.apollographql.apollo.compiler.frontend.ir.FrontendIrBuilder
 import com.apollographql.apollo.compiler.frontend.ir.toSimpleModels
 import org.junit.Test
@@ -21,7 +22,7 @@ class FrontendIRTest(name: String, private val graphQLFile: File) {
       "cannot find schema for ${graphQLFile.path}"
     }
     val document = GraphQLParser.parseOperations(graphQLFile, schema).orThrow()
-    val ir = FrontendIrBuilder(
+    val ir = FirBuilder(
         schema = schema,
         metadataFragmentDefinitions = emptyList(),
         operationDefinitions = document.definitions.filterIsInstance<GQLOperationDefinition>(),

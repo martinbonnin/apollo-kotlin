@@ -1,6 +1,6 @@
 # Animal and AnimalCat have the same shape (only species) and should merge
 query GetAnimal($condition: Boolean!) {
-  randomAnimal {
+  friend {
     species
     ...catFragment @include(if: $condition)
   }
