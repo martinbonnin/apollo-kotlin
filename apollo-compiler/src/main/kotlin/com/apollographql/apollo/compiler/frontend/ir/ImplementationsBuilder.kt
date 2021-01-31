@@ -4,7 +4,7 @@ import com.squareup.kotlinpoet.TypeSpec
 
 fun SelectionSet.toImplementationTypeSpecs(parentType: String, responseName: String): List<TypeSpec> {
   val typeConditions = selections.flatMap { it.collectTypeConditions() }.toSet()
-
+  return emptyList()
 
 }
 

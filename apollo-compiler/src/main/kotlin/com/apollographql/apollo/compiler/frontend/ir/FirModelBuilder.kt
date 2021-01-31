@@ -25,7 +25,7 @@ internal fun FIR.toSimpleModels(): String {
 private fun Operation.toTypeSpec(): TypeSpec {
   val builder = TypeSpec.interfaceBuilder(name.toUpperCamelCase())
   builder.addType(selectionSet.toInterfacesTypeSpec(typeCondition, "data"))
-  builder.addType(selectionSet.toImplementationTypeSpecs(typeCondition, "data"))
+  builder.addTypes(selectionSet.toImplementationTypeSpecs(typeCondition, "data"))
   return builder.build()
 }
 
