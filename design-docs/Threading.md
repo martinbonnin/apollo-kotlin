@@ -1,29 +1,101 @@
-## Thoughts for threading and concurrency 
+# Thoughts on Android threading and concurrency 
+
+A tentative high level overview of what threads are used and why we came to this. K/N makes the whole thing more complex than what it would have been on the JVM so this document tries to keep track of the various decisions
+
+### Goals
+* JVM should be at least as fast as 2.x 
+* Minimize number of threads and context changes
+
+### Non-goals
+* Atomic cache requests (see the [detailed explanation](#non-goal-atomic-cached-requests) at the end of this document). 
+* Multi-threaded coroutines on native.
+* JS is out of scope so far. It _should_ be easier since it's single threaded but it's left out for now.
+* Linux/Windows is also out of scope. 
 
 
-### Threads
+At a high level, Apollo-Android does multiple things:
+* HTTP requests 
+* Json deserialization (for data)
+* Json serialization (for variables)
+* Normalization
+* De-normalization  
+* Cache reading
+* Cache writing
+* Plumbing: the work of connecting the above steps together
 
-**Request threads:** 
+Most of the above steps need to happen in a background thread as they are potentially CPU expensive (normalization), IO expensive (HTTP) or both (SQLite), except maybe the plumbing that is just passing plates around. That being said, running the plumbing in the main thread means that we have to pay the price of a context switch every time we need to perform an operation. So it makes sense to run the plumbing on the same thread as was previously executing to avoid the context switch.  
 
-In general Apollo Android will run each `ApolloRequest` in a separate thread. What thread it is depends on the provided `ApolloCoroutineDispatcher`. By default it will be `Dispatchers.IO` on the JVM and `Dispatchers.Default` on iOS. This is made because on iOS/Android, the default dispatcher will be `Dispatcher.Main` most of the time, and we don't want to run the requests there. There will be a `ApolloCoroutineDispatcher(null)` to let the `Flow` use the Dispatcher from the current context without forcing a new one for the users that want this behaviour.  
+## Mutable, shared state that requires synchronization
 
-**HTTP threads:**
+If everything were immutable, we could run each request on a separate thread and let them execute concurrently. Unfortunately, there is some state that requires synchronization:
 
-NSUrlSession and OkHttp both have their own threadpool. We might want to execute the OkHttp calls synchronously to save some Threads creation and context switching.
-
-**SQLite threads:**
-
-We might want to serialize all accesses to the SQLite database. For K/N this would have the nice side effect of containing all mutable state in the same thread, like [Stately](https://github.com/touchlab/Stately) does. For JVM, this can be a elegant way to make writing to the cache asynchronous since the write operation could become a 'fire & forget' thing and all subsequent reads will be naturally serialized. On top of that, there's a slight probability (but I'm still unsure about that) that the Android SQLite implementation has a big lock serializing all accesses so the performance impact might not be that bad. 
-
-### Mutable & shared state
-
+* Normalized cache
 * Store listeners
-* Normalized cache 
-* HTTP2 connection: OkHttp locks accesses to the HTTP2 connection so that messages are interleaved properly
+* Websocket IDLE timeout
+* HTTP2 connection state with HTTP2 multiplexing, some state is needed there
 * ResponseAdapterCache: This currently caches the `ResponseAdapters` so that they don't have to lookup their field `ResponseAdapters`. The fact that this is mutable and that it doesn't work for recursive models encourages to remove that behaviour and look up the custom scalar adapters every time.
-* More?
 
-### Implementation notes
+**On the JVM**, synchronization is typically done using locks (or read-write locks for better granularity). 
+
+**On native**, that doesn't work as mutable data cannot be touched by multiple threads. Synchronization is usually done using a separate isolated thread as in [Stately](https://github.com/touchlab/Stately) or using the primitive [AtomicReference](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.native.concurrent/-atomic-reference/) (or the higher level [atomicfu](https://github.com/Kotlin/kotlinx.atomicfu) that works in multiplatform code). 
+
+The section below discuss what to use in what situation, starting the bigger constraints.
+
+## Why coroutines in interceptors?
+
+We want to expose a `<Flow>` API so coroutines are definitely a must there. Internally, that isn't required though. Libraries like OkHttp or SqlDelight do most of their work without coroutines and expose a coroutine API at the very last moment, before returning to the user. We decided to go with coroutines in interceptors because:
+* it handles cancellation automatically.
+* more importantly, it doesn't keep a thread waiting while another operation like an Async HTTP request is executing (more on that [below](#sync-vs-async-http-requests)).
+
+That last point is important. While cancellation could be implemented manually, implementing a state machine that waits on HTTP requests would be way harder and error-prone
+
+## Sync vs Async HTTP requests
+
+**On iOS**, there isn't much choice as NSURLSession only has an async API. While that could theoretically be made synchronous using semaphores, it is hard to do so because that would most likely have to be written in Objective-C. Also that would mean that we pay the context switching price in all cases and also that keeps a thread waiting just doing nothing so a coroutine is way more efficient there. 
+
+The `NSURLSession` takes a queue to dispatch to as a parameter. If we want to use a coroutine to wait on the call, that means the coroutine will have to execute on that queue (because coroutines cannot change thread sunless using `coroutines-mt`, which is out of scope so far). An easy to use queue is the main queue. Doing this means **the request coroutine will run on the main thread on iOS**
+
+**On the JVM**, there are less restrictions. OkHttp has as `synchronous` API that could potentially avoid a context switch. One pitfall is cancellation as it would have to happen from a separate thread but that might actually work. Not reusing the OkHttp threadpool means that it won't be able to be shared with other OkHttp clients but since GraphQL usually connects to a single host, it's not clear what would be shared there.
+
+## Sync vs Async Cache
+
+**On iOS**, here as well, there isn't much choice as the cache is fundamentally mutable and will need to be run from its own thread. The difference with NSURLSession is that we have more control over where the callback happens. We can decide the thread where the work and callback happen. So we're theoretically not limited to main thread (but since HTTP forces the coroutine to run on the main thread, it will happen there.
+
+**On the JVM**, the traditional way to do this would involve ReadWriteLock. ReadWriteLock allow:
+* concurrent reads to the DB
+* don't switch contexts
+
+On the other hand,
+
+* it's not clear if Android's SQLiteOpenHelper allows concurrent reads
+* there's a price to take the lock. It would need to be measured how much it is. In high load, this might also keep threads waiting
+
+**On the JVM**, using the async version would remove all contention on the database. It would also allow to handle cache writes asynchronously as a "Fire & Forget" thing. At this stage it's not clear which one would perform better so it should be configurable. Also we might need to debounce/read the previous value in which case we definitely need the return value.
+
+## Conclusion
+
+There are still questions:
+* Can a synchronous OkHttp call be cancelled?
+* Does Android allow concurrent SQLite reads?
+* Do we need the return value from `cache.write()` or can this be debounced later on?
+
+With all that, the typical flows should be:
+
+* iOS (6 context changes)
+  * Callsite (Main) -> CacheRead (Cache) -> Plumbing (Main) -> HTTP (NSURLSession) -> Plumbing (Main) -> CacheWrite (Cache) -> Response (Main) 
+* JVM-synccache-asynchttp (4 context changes): 
+  * Callsite (Main) -> CacheRead (IO) -> Plumbing (IO) -> HTTP (OkHttp) -> Plumbing (IO) -> CacheWrite (IO) -> Response (Main)
+* JVM-synccache-synchttp (2 context changes): 
+  * Callsite (Main) -> CacheRead (IO) -> Plumbing (IO) -> HTTP (IO) -> Plumbing (IO) -> CacheWrite (IO) -> Response (Main)
+* JVM-asynccache-asynchttp (6 context changes):
+    * Callsite (Main) -> CacheRead (Cache) -> Plumbing (IO) -> HTTP (OkHttp) -> Plumbing (IO) -> CacheWrite (Cache) -> Response (Main)
+* JVM-asynccache-synchttp (4 context changes):
+    * Callsite (Main) -> CacheRead (Cache) -> Plumbing (IO) -> HTTP (IO) -> Plumbing (IO) -> CacheWrite (Cache) -> Response (Main)
+    
+Note that plumbing above contains potentially not-cheap operations like normalization or serializing variables.
+
+
+## Appendix-1 Implementation notes
 
 On K/N, the `Stately Isolate` pattern seems to be the way to go. See https://dev.to/touchlab/kotlin-native-isolated-state-50l1 for more details. It has a certain cost and doesn't allow ReadWrite locks for an example so we might want to delegate to something else on the JVM:
 
@@ -80,7 +152,7 @@ class NativeSerialSharedState<T>(producer: () -> T): SharedState<T> {
 
 
 
-### Non-goal: Atomic Cached Requests
+## Appendix-2 Non-goal: Atomic Cached Requests
 
 
 Apollo Android has no concept of "Atomic request". Launching the same request twice in a row will most likely end up in the request being sent to the network twice even if the first one will ultimately cache it (but this is not guaranteed either):
