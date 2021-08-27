@@ -2,7 +2,7 @@ package com.apollographql.apollo3.compiler.codegen.kotlin
 
 import com.apollographql.apollo3.compiler.PackageNameGenerator
 import com.apollographql.apollo3.compiler.APOLLO_VERSION
-import com.apollographql.apollo3.compiler.codegen.CgLayout
+import com.apollographql.apollo3.compiler.codegen.CodegenLayout
 import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo3.compiler.operationoutput.findOperationId
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.TypesBuilder
@@ -44,7 +44,7 @@ class KotlinCodeGen(
     private val flattenNamesInOrder: Boolean,
 ) {
   fun write(outputDir: File) {
-    val layout = CgLayout(
+    val layout = CodegenLayout(
         useSemanticNaming = useSemanticNaming,
         packageNameGenerator = packageNameGenerator,
         schemaPackageName = schemaPackageName

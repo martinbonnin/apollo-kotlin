@@ -20,7 +20,7 @@ import com.apollographql.apollo3.compiler.singularize
  *
  */
 
-class CgLayout(
+class CodegenLayout(
     private val packageNameGenerator: PackageNameGenerator,
     schemaPackageName: String,
     private val useSemanticNaming: Boolean,

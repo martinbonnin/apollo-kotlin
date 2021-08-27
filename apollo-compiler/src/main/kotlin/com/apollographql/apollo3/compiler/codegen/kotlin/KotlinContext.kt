@@ -1,8 +1,8 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin
 
-import com.apollographql.apollo3.compiler.codegen.CgLayout
+import com.apollographql.apollo3.compiler.codegen.CodegenLayout
 
 class KotlinContext(
-    val layout : CgLayout,
+    val layout : CodegenLayout,
     val resolver: KotlinResolver
 )

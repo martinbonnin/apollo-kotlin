@@ -8,8 +8,8 @@ import com.apollographql.apollo3.ast.GQLFragmentSpread
 import com.apollographql.apollo3.ast.GQLInlineFragment
 import com.apollographql.apollo3.ast.GQLSelection
 import com.apollographql.apollo3.ast.Schema
-import com.apollographql.apollo3.compiler.codegen.CgLayout.Companion.modelName
-import com.apollographql.apollo3.compiler.codegen.CgLayout.Companion.upperCamelCaseIgnoringNonLetters
+import com.apollographql.apollo3.compiler.codegen.CodegenLayout.Companion.modelName
+import com.apollographql.apollo3.compiler.codegen.CodegenLayout.Companion.upperCamelCaseIgnoringNonLetters
 
 internal class ResponseBasedModelGroupBuilder(
     schema: Schema,
