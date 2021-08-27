@@ -1,7 +1,7 @@
 package com.apollographql.apollo3.compiler
 
 import com.apollographql.apollo3.api.QueryDocumentMinifier
-import com.apollographql.apollo3.compiler.codegen.KotlinCodeGen
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinCodeGen
 import com.apollographql.apollo3.compiler.operationoutput.OperationDescriptor
 import com.apollographql.apollo3.ast.*
 import com.apollographql.apollo3.ast.transformation.addRequiredFields
