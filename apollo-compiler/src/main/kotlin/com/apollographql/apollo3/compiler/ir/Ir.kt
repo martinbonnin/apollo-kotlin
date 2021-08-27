@@ -17,10 +17,6 @@ import com.apollographql.apollo3.ast.Schema
 * - registers used types and fragments
 * - compute the packageName
 * - more generally removes all references to the GraphQL AST and "embeds" type definitions/field definitions
-*
-* @param metadataFragments: the metadata fragments carried over from the previous step so that the final codegen step does not generate them
-* @param metadataEnums: the metadata enums carried over from the previous step so that the final codegen step does not generate them
-* @param metadataInputObjects: the metadata input objects carried over from the previous step so that the final codegen step does not generate them
 */
 data class Ir(
     val operations: List<IrOperation>,
