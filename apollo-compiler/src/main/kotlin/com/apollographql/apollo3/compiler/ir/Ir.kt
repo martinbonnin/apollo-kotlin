@@ -49,7 +49,7 @@ data class IrEnum(
 /**
  * An input field
  *
- * Note: [IrInputField],  and [IrVariable] are all very similar since they all share
+ * Note: [IrInputField], and [IrVariable] are all very similar since they all share
  * the [com.apollographql.apollo3.ast.GQLInputValueDefinition] type but they also
  * have differences which is why they are different IR models:
  * - [IrVariable] doesn't have a description
