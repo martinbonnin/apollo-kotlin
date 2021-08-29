@@ -15,7 +15,7 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.codeBlock
 import com.apollographql.apollo3.compiler.ir.IrModel
-import com.apollographql.apollo3.compiler.ir.IrModelId
+import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrModelType
 import com.apollographql.apollo3.compiler.ir.IrNonNullType
 import com.apollographql.apollo3.compiler.ir.IrOptionalType
@@ -165,7 +165,7 @@ internal fun readFromResponseCodeBlock(
       .build()
 }
 
-private fun IrType.modelId(): IrModelId {
+private fun IrType.modelId(): IrId {
   return when (this) {
     is IrNonNullType -> ofType.modelId()
     is IrModelType -> id

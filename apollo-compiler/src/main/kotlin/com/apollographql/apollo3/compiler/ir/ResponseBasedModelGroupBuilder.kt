@@ -52,16 +52,16 @@ private data class ResponseField(
     val override: Boolean,
     val condition: BooleanExpression<BVariable>,
     val responseFieldSets: List<ResponseFieldSet>,
-    val modelId: IrModelId?,
+    val modelId: IrId?,
 )
 
 private data class ResponseFieldSet(
-    val id: IrModelId,
+    val id: IrId,
     val typeSet: TypeSet,
     val responseFields: List<ResponseField>,
     val possibleTypes: Set<String>,
     val accessors: List<IrAccessor>,
-    val implements: List<IrModelId>,
+    val implements: List<IrId>,
     val rawTypename: String,
     /**
      * Needed for ordering the type specs as well as naming the models
@@ -117,10 +117,8 @@ private class FieldNodeBuilder(
       rawTypeName: String,
       operationName: String,
   ): ResponseField {
-    val root = IrModelRoot(
-        IrRootKind.OperationData,
-        operationName
-    )
+    val root = IrKind.OperationData
+
     val info = IrFieldInfo(
         responseName = "data",
         description = null,
@@ -130,7 +128,7 @@ private class FieldNodeBuilder(
 
     return buildFieldNode(
         root = root,
-        path = "",
+        path = operationName,
         info = info,
         selections = selections,
         rawTypename = rawTypeName,
@@ -143,10 +141,7 @@ private class FieldNodeBuilder(
   fun buildFragmentInterface(name: String): ResponseField {
     return cachedFragmentFieldNodes.getOrPut(name) {
       val fragment = allFragmentDefinitions[name] ?: error("Cannot find fragment $name")
-      val root = IrModelRoot(
-          IrRootKind.FragmentInterface,
-          name
-      )
+      val root = IrKind.FragmentInterface
 
       val info = IrFieldInfo(
           responseName = name,
@@ -157,7 +152,7 @@ private class FieldNodeBuilder(
 
       return buildFieldNode(
           root = root,
-          path = "",
+          path = name,
           info = info,
           selections = fragment.selectionSet.selections,
           rawTypename = fragment.typeCondition.name,
@@ -172,10 +167,7 @@ private class FieldNodeBuilder(
     val ifaceFieldNode = buildFragmentInterface(name)
     val fragment = allFragmentDefinitions[name] ?: error("Cannot find fragment $name")
 
-    val root = IrModelRoot(
-        IrRootKind.FragmentData,
-        name
-    )
+    val root = IrKind.FragmentData
 
     val info = IrFieldInfo(
         responseName = "data",
@@ -186,7 +178,7 @@ private class FieldNodeBuilder(
 
     return buildFieldNode(
         root = root,
-        path = "",
+        path = name,
         info = info,
         selections = fragment.selectionSet.selections,
         rawTypename = fragment.typeCondition.name,
@@ -200,7 +192,7 @@ private class FieldNodeBuilder(
       val superResponseFields: List<ResponseField>,
       val fragmentResponseFields: List<ResponseField>,
       val info: IrFieldInfo,
-      val root: IrModelRoot,
+      val kind: IrKind,
       val modelDescriptors: Set<ModelDescriptor>,
       val path: String,
       val selections: List<GQLSelection>,
@@ -209,7 +201,7 @@ private class FieldNodeBuilder(
     val cachedFieldSetNodes = mutableMapOf<ModelDescriptor, ResponseFieldSet>()
   }
 
-  private fun getModelId(models: Collection<ResponseFieldSet>, typeSet: TypeSet): IrModelId {
+  private fun getModelId(models: Collection<ResponseFieldSet>, typeSet: TypeSet): IrId {
     return models.filter { it.typeSet == typeSet }.let {
       val ret = it.firstOrNull { it.isInterface } ?: it.firstOrNull()
       check(ret != null) {
@@ -234,7 +226,7 @@ private class FieldNodeBuilder(
    * 2. we can build the "Other" fields
    */
   private fun buildFieldNode(
-      root: IrModelRoot,
+      root: IrKind,
       path: String,
       info: IrFieldInfo,
       condition: BooleanExpression<BVariable>,
@@ -279,7 +271,7 @@ private class FieldNodeBuilder(
     val fieldState = FieldState(
         superResponseFields = superResponseFields,
         fragmentResponseFields = fragmentFieldNodes,
-        root = root,
+        kind = root,
         info = info,
         modelDescriptors = modelDescriptors.toSet(),
         path = path,
@@ -376,11 +368,11 @@ private class FieldNodeBuilder(
 
     val path = subpath(state.path, state.info, typeSet, isOther)
     val fieldSetNode = ResponseFieldSet(
-        id = IrModelId(state.root, path),
+        id = IrId(state.kind, path),
         accessors = emptyList(),
         responseFields = mergedFields.map { mergedField ->
           buildFieldNode(
-              root = state.root,
+              root = state.kind,
               path = path,
               info = mergedField.info,
               condition = mergedField.condition,

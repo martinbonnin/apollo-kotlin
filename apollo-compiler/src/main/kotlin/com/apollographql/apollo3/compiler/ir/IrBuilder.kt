@@ -216,7 +216,7 @@ internal class IrBuilder(
     if (type !is GQLNonNullType || coercedDefaultValue != null) {
       /**
        * Contrary to [IrVariable], we default to making input fields optional as they are out of control of the user and
-       * we don't want to force users to fill input all values to define an input object
+       * we don't want to force users to fill all values to define an input object
        */
       irType = irType.makeOptional()
     }
@@ -592,7 +592,7 @@ internal fun IrFieldInfo.maybeNullable(makeNullable: Boolean): IrFieldInfo {
   )
 }
 
-internal fun IrType.replacePlaceholder(newId: IrModelId): IrType {
+internal fun IrType.replacePlaceholder(newId: IrId): IrType {
   return when (this) {
     is IrNonNullType -> IrNonNullType(ofType = ofType.replacePlaceholder(newId))
     is IrListType -> IrListType(ofType = ofType.replacePlaceholder(newId))

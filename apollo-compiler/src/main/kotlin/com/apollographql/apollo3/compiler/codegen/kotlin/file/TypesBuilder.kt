@@ -40,7 +40,7 @@ class TypesBuilder(
   private val packageName = layout.typePackageName()
 
   /**
-   * Unions go last as they depend of objects
+   * Unions go last as they depend on objects
    */
   private val allTypes = (customScalars + enums + interfaces + objects + unions)
 

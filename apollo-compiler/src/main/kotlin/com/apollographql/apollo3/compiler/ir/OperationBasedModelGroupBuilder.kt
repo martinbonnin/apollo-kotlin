@@ -25,10 +25,7 @@ internal class OperationBasedModelGroupBuilder(
 ) : ModelGroupBuilder {
 
   override fun buildOperationData(selections: List<GQLSelection>, rawTypeName: String, operationName: String): IrModelGroup {
-    val root = IrModelRoot(
-        IrRootKind.OperationData,
-        operationName
-    )
+    val root = IrKind.OperationData
     val info = IrFieldInfo(
         responseName = "data",
         description = null,
@@ -42,8 +39,8 @@ internal class OperationBasedModelGroupBuilder(
       selections
     }
     return buildField(
-        root = root,
-        path = "",
+        kind = root,
+        path = operationName,
         info = info,
         selections = mergedSelections.map { SelectionWithParent(it, rawTypeName) },
         condition = BooleanExpression.True,
@@ -56,10 +53,13 @@ internal class OperationBasedModelGroupBuilder(
   }
 
   override fun buildFragmentData(fragmentName: String): IrModelGroup {
-    val root = IrModelRoot(
-        IrRootKind.FragmentData,
-        fragmentName
-    )
+    val kind = IrKind.FragmentData
+
+    /**
+     * XXX: because we want the model to be named after the fragment (and not data), we use
+     * fragmentName below. This means the id for the very first model is going to be
+     * FragmentName.FragmentName unlike operations where it's OperationName.Data
+     */
     val info = IrFieldInfo(
         responseName = fragmentName,
         description = null,
@@ -76,8 +76,8 @@ internal class OperationBasedModelGroupBuilder(
     }
 
     return buildField(
-        root = root,
-        path = "",
+        kind = kind,
+        path = fragmentName,
         info = info,
         selections = mergedSelections.map { SelectionWithParent(it, fragmentDefinition.typeCondition.name) },
         condition = BooleanExpression.True,
@@ -111,7 +111,7 @@ internal class OperationBasedModelGroupBuilder(
   private class SelectionWithParent(val selection: GQLSelection, val parent: String)
 
   /**
-   * @param root the [IrModelRoot] used to identify the resulting model
+   * @param kind the [IrKind] used to identify the resulting model
    * @param path the path up to but not including this field
    * @param info information about this field
    * @param selections the sub-selections of this fields. If [collectAllInlineFragmentFields] is true, might contain parent fields that
@@ -121,7 +121,7 @@ internal class OperationBasedModelGroupBuilder(
    *
    */
   private fun buildField(
-      root: IrModelRoot,
+      kind: IrKind,
       path: String,
       info: IrFieldInfo,
       selections: List<SelectionWithParent>,
@@ -154,7 +154,7 @@ internal class OperationBasedModelGroupBuilder(
       val childInfo = mergedField.info.maybeNullable(mergedField.condition != BooleanExpression.True)
 
       buildField(
-          root = root,
+          kind = kind,
           path = selfPath,
           info = childInfo,
           selections = mergedField.selections.map { SelectionWithParent(it, mergedField.rawTypeName) },
@@ -249,7 +249,7 @@ internal class OperationBasedModelGroupBuilder(
                 }
 
                 buildField(
-                    root = root,
+                    kind = kind,
                     path = selfPath,
                     info = childInfo,
                     selections = childSelections,
@@ -295,7 +295,7 @@ internal class OperationBasedModelGroupBuilder(
               .and(childCondition)
               .simplify()
 
-          val fragmentModelId = IrModelId(IrModelRoot(IrRootKind.FragmentData, first.name), "." + first.name)
+          val fragmentModelId = IrId(IrKind.FragmentData, first.name + "." + first.name)
 
           var type: IrType = IrModelType(fragmentModelId)
           if (childCondition == BooleanExpression.True) {
@@ -315,7 +315,7 @@ internal class OperationBasedModelGroupBuilder(
             selfPath
           }
           buildField(
-              root = root,
+              kind = kind,
               path = p,
               info = childInfo,
               selections = emptyList(), // Don't create a model for fragments spreads
@@ -328,7 +328,7 @@ internal class OperationBasedModelGroupBuilder(
       val childPath = "$selfPath.$FRAGMENTS_SYNTHETIC_FIELD"
 
       val fragmentsFieldSet = OperationFieldSet(
-          id = IrModelId(root, childPath),
+          id = IrId(kind, childPath),
           fields = listOf(hiddenTypenameField) + fragmentSpreadFields
       )
 
@@ -352,7 +352,7 @@ internal class OperationBasedModelGroupBuilder(
       fragmentSpreadFields
     }
     val fieldSet = OperationFieldSet(
-        id = IrModelId(root, selfPath),
+        id = IrId(kind, selfPath),
         fields = fields + inlineFragmentsFields + fragmentsFields
     )
 
@@ -398,7 +398,7 @@ private class OperationField(
 )
 
 private data class OperationFieldSet(
-    val id: IrModelId,
+    val id: IrId,
     val fields: List<OperationField>,
 )
 

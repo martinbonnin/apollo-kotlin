@@ -17,7 +17,7 @@ import com.apollographql.apollo3.compiler.ir.IrIdType
 import com.apollographql.apollo3.compiler.ir.IrInputObjectType
 import com.apollographql.apollo3.compiler.ir.IrIntType
 import com.apollographql.apollo3.compiler.ir.IrListType
-import com.apollographql.apollo3.compiler.ir.IrModelId
+import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrModelType
 import com.apollographql.apollo3.compiler.ir.IrNonNullType
 import com.apollographql.apollo3.compiler.ir.IrOptionalType
@@ -113,18 +113,18 @@ class KotlinResolver {
 
   private fun nullableScalarAdapter(name: String) = CodeBlock.of("%M", MemberName("com.apollographql.apollo3.api", name))
 
-  private val models = mutableMapOf<IrModelId, ClassName>()
-  fun registerModel(type: IrModelId, className: ClassName) {
+  private val models = mutableMapOf<IrId, ClassName>()
+  fun registerModel(type: IrId, className: ClassName) {
     models.put(type, className)
   }
-  fun resolveModel(type: IrModelId): ClassName {
+  fun resolveModel(type: IrId): ClassName {
     return models.get(type) ?: error("Cannot resolve model '$type'")
   }
-  private val modelAdapters = mutableMapOf<IrModelId, ClassName>()
-  fun registerModelAdapter(id: IrModelId, className: ClassName) {
+  private val modelAdapters = mutableMapOf<IrId, ClassName>()
+  fun registerModelAdapter(id: IrId, className: ClassName) {
     modelAdapters.put(id, className)
   }
-  fun resolveModelAdapter(id: IrModelId): ClassName {
+  fun resolveModelAdapter(id: IrId): ClassName {
     return modelAdapters.get(id) ?: error("Cannot resolve model adapter '$id'")
   }
   private val enumAdapters = mutableMapOf<String, ClassName>()

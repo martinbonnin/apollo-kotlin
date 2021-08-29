@@ -119,17 +119,17 @@ data class IrFieldInfo(
 )
 
 sealed class IrAccessor {
-  abstract val returnedModelId: IrModelId
+  abstract val returnedModelId: IrId
 }
 
 data class IrFragmentAccessor(
     val fragmentName: String,
-    override val returnedModelId: IrModelId,
+    override val returnedModelId: IrId,
 ) : IrAccessor()
 
 data class IrSubtypeAccessor(
     val typeSet: TypeSet,
-    override val returnedModelId: IrModelId,
+    override val returnedModelId: IrId,
 ) : IrAccessor()
 
 /**
@@ -137,7 +137,7 @@ data class IrSubtypeAccessor(
  */
 data class IrModel(
     val modelName: String,
-    val id: IrModelId,
+    val id: IrId,
     /**
      * The typeSet of this model.
      * Used by the adapters for ordering/making the code look nice
@@ -150,7 +150,7 @@ data class IrModel(
      */
     val possibleTypes: Set<String>,
     val accessors: List<IrAccessor>,
-    val implements: List<IrModelId>,
+    val implements: List<IrId>,
     /**
      * Nested models. Might be empty if the models are flattened
      */
@@ -176,7 +176,7 @@ data class IrProperty(
 )
 
 data class IrModelGroup(
-    val baseModelId: IrModelId,
+    val baseModelId: IrId,
     val models: List<IrModel>,
 )
 
@@ -278,7 +278,7 @@ object IrAnyType : IrType()
 data class IrCustomScalarType(val name: String) : IrType()
 data class IrInputObjectType(val name: String) : IrType()
 data class IrEnumType(val name: String) : IrType()
-data class IrModelType(val id: IrModelId) : IrType()
+data class IrModelType(val id: IrId) : IrType()
 
 fun IrType.makeOptional(): IrType = IrNonNullType(IrOptionalType(this))
 fun IrType.makeNullable(): IrType = if (this is IrNonNullType) {
@@ -296,15 +296,24 @@ fun IrType.isOptional() = (this is IrNonNullType) && (this.ofType is IrOptionalT
 /**
  * A placeholder for compound types until we assign them an id
  */
-val IrUnknownModelId = IrModelId(IrModelRoot(IrRootKind.OperationData, "?"), "?")
+val IrUnknownModelId = IrId(IrKind.Unknown, "?")
 
 /**
- * A unique, stable id identifying a model
+ * A unique, stable id for Ir types that can be referenced in the target language.
  */
-data class IrModelId(val root: IrModelRoot, val id: String)
-data class IrModelRoot(val kind: IrRootKind, val name: String)
-enum class IrRootKind {
+
+data class IrId(val root: IrKind, val id: String)
+
+enum class IrKind {
   FragmentInterface,
   FragmentData,
-  OperationData
+  OperationData,
+  Unknown
+//  Enum,
+//  Union,
+//  InputObject,
+//  CustomScalar,
+//  Fragment,
+//  Operation,
+//  Unknown
 }
