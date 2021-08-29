@@ -1,6 +1,7 @@
 package com.apollographql.apollo3.compiler.codegen
 
 internal object Identifier {
+  const val type = "type"
   const val customScalarAdapters = "customScalarAdapters"
   const val value = "value"
   const val reader = "reader"

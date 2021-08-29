@@ -7,7 +7,6 @@ package com.example.subscriptions.type
 
 import com.apollographql.apollo3.api.CompiledNamedType
 import com.apollographql.apollo3.api.CompiledType
-import com.apollographql.apollo3.api.EnumType
 import com.apollographql.apollo3.api.ObjectType
 import kotlin.collections.List
 
@@ -16,16 +15,6 @@ import kotlin.collections.List
  * schema. Input objects are left out because they are generated separately
  */
 public object Types {
-  /**
-   * A list of options for the sort order of the feed
-   */
-  public val FeedType: EnumType = EnumType("FeedType")
-
-  /**
-   * The type of vote to record, when submitting a vote
-   */
-  public val VoteType: EnumType = EnumType("VoteType")
-
   /**
    * A comment about an entry, submitted by a user
    */
@@ -60,7 +49,7 @@ public object Types {
   public val Vote: ObjectType = ObjectType(name = "Vote")
 
   public val all: List<CompiledType> = listOf(
-        FeedType, VoteType, Comment, Entry, Mutation, Query, Repository, Subscription, User, Vote)
+        Comment, Entry, Mutation, Query, Repository, Subscription, User, Vote)
 
 
   public fun possibleTypes(type: CompiledNamedType): List<ObjectType> =

@@ -21,10 +21,6 @@ import kotlin.collections.List
 public object Types {
   public val Long: CustomScalarType = CustomScalarType("Long", "kotlin.Any")
 
-  public val Sport: EnumType = EnumType("Sport")
-
-  public val Episode: EnumType = EnumType("Episode")
-
   public val Race: EnumType = EnumType("Race")
 
   public val Character: InterfaceType = InterfaceType(name = "Character")
@@ -65,8 +61,8 @@ public object Types {
   public val Anything: UnionType = UnionType("Anything", Human, Wookie, Droid, Ship)
 
   public val all: List<CompiledType> = listOf(
-        Long, Sport, Episode, Race, Character, Thing, Being, Alien, AbstractWookie, Droid, Human,
-            Wookie, Ship, TypeWithAllSortsOfFields, MerlinQuery, MerlinHomesPdpResponse,
+        Long, Race, Character, Thing, Being, Alien, AbstractWookie, Droid, Human, Wookie, Ship,
+            TypeWithAllSortsOfFields, MerlinQuery, MerlinHomesPdpResponse,
             MerlinPdpListingDetailForNativeResponse, MerlinPdpListingDescriptionNestedWithinListing,
             Query, Mutation, Anything)
 

@@ -1,13 +1,11 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin
 
-import com.apollographql.apollo3.compiler.PackageNameGenerator
 import com.apollographql.apollo3.compiler.APOLLO_VERSION
+import com.apollographql.apollo3.compiler.PackageNameGenerator
 import com.apollographql.apollo3.compiler.codegen.CodegenLayout
-import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
-import com.apollographql.apollo3.compiler.operationoutput.findOperationId
-import com.apollographql.apollo3.compiler.codegen.kotlin.file.TypesBuilder
-import com.apollographql.apollo3.compiler.codegen.kotlin.file.EnumBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.adapter.EnumResponseAdapterBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.file.CustomScalarBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.file.EnumBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.FragmentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.FragmentModelsBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.FragmentResponseAdapterBuilder
@@ -15,11 +13,16 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.file.FragmentSelections
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.FragmentVariablesAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.InputObjectAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.InputObjectBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.file.InterfaceBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.file.ObjectBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.OperationBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.OperationResponseAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.OperationSelectionsBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.OperationVariablesAdapterBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.file.UnionBuilder
 import com.apollographql.apollo3.compiler.ir.Ir
+import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
+import com.apollographql.apollo3.compiler.operationoutput.findOperationId
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.TypeSpec
@@ -40,13 +43,9 @@ class KotlinCodeGen(
     private val generateFilterNotNull: Boolean,
     private val generateFragmentImplementations: Boolean,
     private val generateQueryDocument: Boolean,
-    private val fragmentsToSkip: Set<String>,
-    private val enumsToSkip: Set<String>,
-    private val inputObjectsToSkip: Set<String>,
-    private val generateSchema: Boolean,
     /**
      * Whether to flatten the models. This decision is left to the codegen. For fragments for an example, we
-     * want to flatten at depth 1 to avoid nameclashes but it's ok to flatten fragment response adapters at
+     * want to flatten at depth 1 to avoid name clashes, but it's ok to flatten fragment response adapters at
      * depth 0 for an example
      */
     private val flatten: Boolean,
@@ -64,42 +63,28 @@ class KotlinCodeGen(
         resolver = KotlinResolver()
     )
     val builders = mutableListOf<CgFileBuilder>()
-    val ignoredBuilders = mutableListOf<CgFileBuilder>()
-
-    val typesBuilder = TypesBuilder(
-        context,
-        ir.customScalars,
-        ir.objects,
-        ir.interfaces,
-        ir.unions,
-        ir.allEnums
-    )
-
-    builders.add(typesBuilder)
-    if (!generateSchema) {
-      ignoredBuilders.add(typesBuilder)
-    }
 
     ir.inputObjects.forEach {
       builders.add(InputObjectBuilder(context, it))
-      if (inputObjectsToSkip.contains(it.name)) {
-        ignoredBuilders.add(builders.last())
-      }
       builders.add(InputObjectAdapterBuilder(context, it))
-      if (inputObjectsToSkip.contains(it.name)) {
-        ignoredBuilders.add(builders.last())
-      }
     }
 
     ir.enums.forEach { enum ->
       builders.add(EnumBuilder(context, enum))
-      if (enumsToSkip.contains(enum.name)) {
-        ignoredBuilders.add(builders.last())
-      }
       builders.add(EnumResponseAdapterBuilder(context, enum))
-      if (enumsToSkip.contains(enum.name)) {
-        ignoredBuilders.add(builders.last())
-      }
+    }
+
+    ir.objects.forEach { obj ->
+      builders.add(ObjectBuilder(context, obj))
+    }
+    ir.interfaces.forEach { iface ->
+      builders.add(InterfaceBuilder(context, iface))
+    }
+    ir.unions.forEach { union ->
+      builders.add(UnionBuilder(context, union))
+    }
+    ir.customScalars.forEach { customScalar ->
+      builders.add(CustomScalarBuilder(context, customScalar))
     }
 
     ir.fragments.forEach { fragment ->
@@ -113,20 +98,11 @@ class KotlinCodeGen(
               flattenNamesInOrder
           )
       )
-      if (fragmentsToSkip.contains(fragment.name)) {
-        ignoredBuilders.add(builders.last())
-      }
 
       builders.add(FragmentSelectionsBuilder(context, fragment, ir.schema, ir.allFragmentDefinitions))
-      if (fragmentsToSkip.contains(fragment.name)) {
-        ignoredBuilders.add(builders.last())
-      }
 
       if (generateFragmentImplementations || fragment.interfaceModelGroup == null) {
         builders.add(FragmentResponseAdapterBuilder(context, fragment, flatten, flattenNamesInOrder))
-        if (fragmentsToSkip.contains(fragment.name)) {
-          ignoredBuilders.add(builders.last())
-        }
       }
 
       if (generateFragmentImplementations) {
@@ -139,14 +115,8 @@ class KotlinCodeGen(
                 flattenNamesInOrder
             )
         )
-        if (fragmentsToSkip.contains(fragment.name)) {
-          ignoredBuilders.add(builders.last())
-        }
         if (fragment.variables.isNotEmpty()) {
           builders.add(FragmentVariablesAdapterBuilder(context, fragment))
-          if (fragmentsToSkip.contains(fragment.name)) {
-            ignoredBuilders.add(builders.last())
-          }
         }
       }
     }
@@ -174,12 +144,8 @@ class KotlinCodeGen(
 
     builders.forEach { it.prepare() }
     builders
-        .mapNotNull {
-          if (!ignoredBuilders.contains(it)) {
-            it.build()
-          } else {
-            null
-          }
+        .map {
+          it.build()
         }.forEach {
           val builder = FileSpec.builder(
               packageName = it.packageName,

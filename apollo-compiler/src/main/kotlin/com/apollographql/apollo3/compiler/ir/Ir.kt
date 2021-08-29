@@ -23,13 +23,12 @@ data class Ir(
     val fragments: List<IrNamedFragment>,
     val inputObjects: List<IrInputObject>,
     val enums: List<IrEnum>,
-    val allEnums: List<IrEnum>,
     val customScalars: List<IrCustomScalar>,
     val objects: List<IrObject>,
     val unions: List<IrUnion>,
     val interfaces: List<IrInterface>,
     val allFragmentDefinitions: Map<String, GQLFragmentDefinition>,
-    val schema: Schema
+    val schema: Schema,
 )
 
 data class IrEnum(
@@ -172,7 +171,7 @@ data class IrProperty(
     val condition: BooleanExpression<BTerm>,
     val isSynthetic: Boolean,
     val requiresBuffering: Boolean,
-    val hidden: Boolean
+    val hidden: Boolean,
 )
 
 data class IrModelGroup(
@@ -286,34 +285,31 @@ fun IrType.makeNullable(): IrType = if (this is IrNonNullType) {
 } else {
   this
 }
+
 fun IrType.makeNonNull(): IrType = if (this is IrNonNullType) {
   this
 } else {
   IrNonNullType(this)
 }
-fun IrType.isOptional() = (this is IrNonNullType) && (this.ofType is IrOptionalType)
 
-/**
- * A placeholder for compound types until we assign them an id
- */
-val IrUnknownModelId = IrId(IrKind.Unknown, "?")
+fun IrType.isOptional() = (this is IrNonNullType) && (this.ofType is IrOptionalType)
 
 /**
  * A unique, stable id for Ir types that can be referenced in the target language.
  */
-
-data class IrId(val root: IrKind, val id: String)
-
-enum class IrKind {
-  FragmentInterface,
-  FragmentData,
-  OperationData,
-  Unknown
-//  Enum,
-//  Union,
-//  InputObject,
-//  CustomScalar,
-//  Fragment,
-//  Operation,
-//  Unknown
+sealed class IrId {
+  data class Object(val name: String) : IrId()
+  data class Interface(val name: String) : IrId()
+  data class Union(val name: String) : IrId()
+  data class Enum(val name: String) : IrId()
+  data class CustomScalar(val name: String) : IrId()
+  data class InputObject(val name: String) : IrId()
+  data class FragmentInterfaceModel(val path: String) : IrId()
+  data class FragmentDataModel(val path: String) : IrId()
+  data class OperationDataModel(val path: String) : IrId()
+  /**
+   * A placeholder for compound types until we assign them an id
+   */
+  object Unknown : IrId()
 }
+

@@ -232,4 +232,11 @@ class KotlinResolver {
   fun resolveInputObject(name: String): ClassName {
     return inputObjects.get(name) ?: error("cannot resolve input object '$name'")
   }
+
+  class Ref(val packageName: String, val simpleNames: List<String>)
+
+  private var classNames = mutableMapOf<IrId, Ref>()
+  fun registerId(id: IrId, packageName: String, vararg simpleNames: String) {
+    classNames.put(id, Ref(packageName, simpleNames.toList()))
+  }
 }

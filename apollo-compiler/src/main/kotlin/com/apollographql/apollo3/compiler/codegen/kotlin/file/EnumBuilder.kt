@@ -1,10 +1,14 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin.file
 
+import com.apollographql.apollo3.api.CompiledNamedType
+import com.apollographql.apollo3.api.EnumType
 import com.apollographql.apollo3.compiler.applyIf
+import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinContext
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.deprecatedAnnotation
+import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDeprecation
 import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDescription
 import com.squareup.kotlinpoet.ClassName
@@ -13,6 +17,7 @@ import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asTypeName
 
 class EnumBuilder(
     private val context: KotlinContext,
@@ -31,6 +36,8 @@ class EnumBuilder(
         )
     )
   }
+
+
   override fun build(): CgFile {
     return CgFile(
         packageName = packageName,
@@ -43,13 +50,21 @@ class EnumBuilder(
     return TypeSpec
         .classBuilder(simpleName)
         .maybeAddDescription(description)
+        // XXX: can an enum be made deprecated (and not only its values) ?
         .addModifiers(KModifier.SEALED)
         .primaryConstructor(primaryConstructorWithOverriddenParamSpec)
         .addProperty(rawValuePropertySpec)
+        .addType(companionTypeSpec())
         .addTypes(values.map { value ->
           value.toObjectTypeSpec(ClassName("", layout.enumName(name)))
         })
         .addType(unknownValueTypeSpec())
+        .build()
+  }
+
+  private fun IrEnum.companionTypeSpec(): TypeSpec {
+    return TypeSpec.companionObjectBuilder()
+        .addProperty(typePropertySpec())
         .build()
   }
 

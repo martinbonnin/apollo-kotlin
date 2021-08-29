@@ -148,7 +148,6 @@ internal class IrBuilder(
         fragments = fragments,
         inputObjects = inputObjects,
         enums = enums,
-        allEnums = allEnums,
         customScalars = customScalars,
         objects = objects,
         interfaces = interfaces,

@@ -40,16 +40,6 @@ public object Types {
   public val Episode: EnumType = EnumType("Episode")
 
   /**
-   * Lower case enum type name
-   */
-  public val Hero_type: EnumType = EnumType("hero_type")
-
-  /**
-   * Units of height
-   */
-  public val LengthUnit: EnumType = EnumType("LengthUnit")
-
-  /**
    * For testing fragment type coercion
    */
   public val Bar: InterfaceType = InterfaceType(name = "Bar")
@@ -128,9 +118,9 @@ public object Types {
   public val SearchResult: UnionType = UnionType("SearchResult", Human, Droid, Starship)
 
   public val all: List<CompiledType> = listOf(
-        Date, UnsupportedType, URL, Episode, Hero_type, LengthUnit, Bar, Character, Foo, BarObject,
-            Droid, FooBar, FooObject, FriendsConnection, FriendsEdge, Human, Mutation, PageInfo,
-            Query, Review, Starship, Tree, TypeWithGraphQLKeywords, SearchResult)
+        Date, UnsupportedType, URL, Episode, Bar, Character, Foo, BarObject, Droid, FooBar,
+            FooObject, FriendsConnection, FriendsEdge, Human, Mutation, PageInfo, Query, Review,
+            Starship, Tree, TypeWithGraphQLKeywords, SearchResult)
 
 
   public fun possibleTypes(type: CompiledNamedType): List<ObjectType> =

@@ -8,7 +8,6 @@ package com.example.union_fragment.type
 import com.apollographql.apollo3.api.CompiledNamedType
 import com.apollographql.apollo3.api.CompiledType
 import com.apollographql.apollo3.api.CustomScalarType
-import com.apollographql.apollo3.api.EnumType
 import com.apollographql.apollo3.api.InterfaceType
 import com.apollographql.apollo3.api.ObjectType
 import com.apollographql.apollo3.api.UnionType
@@ -33,21 +32,6 @@ public object Types {
    * URL for testing
    */
   public val URL: CustomScalarType = CustomScalarType("URL", "kotlin.Any")
-
-  /**
-   * The episodes in the Star Wars trilogy
-   */
-  public val Episode: EnumType = EnumType("Episode")
-
-  /**
-   * Lower case enum type name
-   */
-  public val Hero_type: EnumType = EnumType("hero_type")
-
-  /**
-   * Units of height
-   */
-  public val LengthUnit: EnumType = EnumType("LengthUnit")
 
   /**
    * For testing fragment type coercion
@@ -128,9 +112,9 @@ public object Types {
   public val SearchResult: UnionType = UnionType("SearchResult", Human, Droid, Starship)
 
   public val all: List<CompiledType> = listOf(
-        Date, UnsupportedType, URL, Episode, Hero_type, LengthUnit, Bar, Character, Foo, BarObject,
-            Droid, FooBar, FooObject, FriendsConnection, FriendsEdge, Human, Mutation, PageInfo,
-            Query, Review, Starship, Tree, TypeWithGraphQLKeywords, SearchResult)
+        Date, UnsupportedType, URL, Bar, Character, Foo, BarObject, Droid, FooBar, FooObject,
+            FriendsConnection, FriendsEdge, Human, Mutation, PageInfo, Query, Review, Starship,
+            Tree, TypeWithGraphQLKeywords, SearchResult)
 
 
   public fun possibleTypes(type: CompiledNamedType): List<ObjectType> =
