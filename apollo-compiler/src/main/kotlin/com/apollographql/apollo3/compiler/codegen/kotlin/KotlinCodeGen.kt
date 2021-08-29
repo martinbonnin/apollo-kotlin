@@ -32,6 +32,10 @@ class KotlinCodeGen(
     private val useSemanticNaming: Boolean,
     private val packageNameGenerator: PackageNameGenerator,
     private val schemaPackageName: String,
+    /**
+     * The operation id cannot be set in [IrOperation] because it needs access to [IrOperation.sourceWithFragments]
+     * So we do this in the codegen step
+     */
     private val operationOutput: OperationOutput,
     private val generateFilterNotNull: Boolean,
     private val generateFragmentImplementations: Boolean,
@@ -40,6 +44,11 @@ class KotlinCodeGen(
     private val enumsToSkip: Set<String>,
     private val inputObjectsToSkip: Set<String>,
     private val generateSchema: Boolean,
+    /**
+     * Whether to flatten the models. This decision is left to the codegen. For fragments for an example, we
+     * want to flatten at depth 1 to avoid nameclashes but it's ok to flatten fragment response adapters at
+     * depth 0 for an example
+     */
     private val flatten: Boolean,
     private val flattenNamesInOrder: Boolean,
 ) {
