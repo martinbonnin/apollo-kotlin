@@ -7,6 +7,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDepreca
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrUnion
+import com.apollographql.apollo3.compiler.ir.IrUnionType
 import com.squareup.kotlinpoet.TypeSpec
 
 class UnionBuilder(
@@ -18,7 +19,7 @@ class UnionBuilder(
   private val simpleName = layout.compiledTypeName(name = union.name)
 
   override fun prepare() {
-    context.resolver.registerId(IrId.Union(union.name), packageName, simpleName)
+    context.resolver.registerIrType(IrUnionType(union.name), packageName, simpleName)
   }
 
   override fun build(): CgFile {

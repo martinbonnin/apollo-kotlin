@@ -7,6 +7,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDepreca
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrObject
+import com.apollographql.apollo3.compiler.ir.IrObjectType
 import com.squareup.kotlinpoet.TypeSpec
 
 class ObjectBuilder(
@@ -18,7 +19,7 @@ class ObjectBuilder(
   private val simpleName = layout.compiledTypeName(name = obj.name)
 
   override fun prepare() {
-    context.resolver.registerId(IrId.Object(obj.name), packageName, simpleName)
+    context.resolver.registerIrType(IrObjectType(obj.name), packageName, simpleName)
   }
 
   override fun build(): CgFile {

@@ -7,6 +7,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDepreca
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrInterface
+import com.apollographql.apollo3.compiler.ir.IrInterfaceType
 import com.squareup.kotlinpoet.TypeSpec
 
 class InterfaceBuilder(
@@ -18,7 +19,7 @@ class InterfaceBuilder(
   private val simpleName = layout.compiledTypeName(name = iface.name)
 
   override fun prepare() {
-    context.resolver.registerId(IrId.Interface(iface.name), packageName, simpleName)
+    context.resolver.registerIrType(IrInterfaceType(iface.name), packageName, simpleName)
   }
 
   override fun build(): CgFile {
