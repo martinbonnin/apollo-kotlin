@@ -161,7 +161,7 @@ interface Service {
    *
    * - $packageName/SomeQuery.kt
    * - $packageName/fragment/SomeFragment.kt
-   * - $packageName/type/Types.kt
+   * - $packageName/type/CustomScalar.kt
    * - $packageName/type/SomeInputObject.kt
    * - $packageName/type/SomeEnum.kt
    *

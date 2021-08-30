@@ -237,7 +237,8 @@ abstract class ApolloGenerateSourcesTask : DefaultTask() {
     if (metadataOutputFile != null) {
       ApolloMetadata(
           commonMetadata = outputCommonMetadata,
-          compilerMetadata = outputCompilerMetadata
+          compilerMetadata = outputCompilerMetadata,
+          moduleName = project.name
       ).writeTo(metadataOutputFile)
     }
   }
