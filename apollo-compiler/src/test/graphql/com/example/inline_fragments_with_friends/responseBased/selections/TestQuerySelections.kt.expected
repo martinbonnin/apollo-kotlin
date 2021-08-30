@@ -13,16 +13,15 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.inline_fragments_with_friends.type.Types
-import com.example.inline_fragments_with_friends.type.Types.Character
-import com.example.inline_fragments_with_friends.type.Types.Episode
+import com.example.inline_fragments_with_friends.type.Character
+import com.example.inline_fragments_with_friends.type.Episode
 import kotlin.collections.List
 
 public object TestQuerySelections {
   private val friends: List<CompiledSelection> = listOf(
         CompiledField(
           name = "appearsIn",
-          type = Episode.list().notNull()
+          type = Episode.type.list().notNull()
         )
       )
 
@@ -33,7 +32,7 @@ public object TestQuerySelections {
         ),
         CompiledField(
           name = "friends",
-          type = Character.list(),
+          type = Character.type.list(),
           selections = friends
         )
       )
@@ -52,7 +51,7 @@ public object TestQuerySelections {
         ),
         CompiledField(
           name = "friends",
-          type = Character.list(),
+          type = Character.type.list(),
           selections = friends1
         )
       )
@@ -79,7 +78,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

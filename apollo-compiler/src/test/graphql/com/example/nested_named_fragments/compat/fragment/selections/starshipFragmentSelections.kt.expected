@@ -12,9 +12,9 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.nested_named_fragments.type.Types.Person
-import com.example.nested_named_fragments.type.Types.StarshipPilotsConnection
-import com.example.nested_named_fragments.type.Types.StarshipPilotsEdge
+import com.example.nested_named_fragments.type.Person
+import com.example.nested_named_fragments.type.StarshipPilotsConnection
+import com.example.nested_named_fragments.type.StarshipPilotsEdge
 import kotlin.collections.List
 
 public object starshipFragmentSelections {
@@ -32,7 +32,7 @@ public object starshipFragmentSelections {
   private val edges: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Person,
+          type = Person.type,
           selections = node
         )
       )
@@ -40,7 +40,7 @@ public object starshipFragmentSelections {
   private val pilotConnection: List<CompiledSelection> = listOf(
         CompiledField(
           name = "edges",
-          type = StarshipPilotsEdge.list(),
+          type = StarshipPilotsEdge.type.list(),
           selections = edges
         )
       )
@@ -56,7 +56,7 @@ public object starshipFragmentSelections {
         ),
         CompiledField(
           name = "pilotConnection",
-          type = StarshipPilotsConnection,
+          type = StarshipPilotsConnection.type,
           selections = pilotConnection
         )
       )

@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.CompiledField
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.CompiledVariable
-import com.example.antlr_tokens.type.Types.TypeWithGraphQLKeywords
+import com.example.antlr_tokens.type.TypeWithGraphQLKeywords
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -42,7 +42,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "typeWithGraphQLKeywords",
-          type = TypeWithGraphQLKeywords,
+          type = TypeWithGraphQLKeywords.type,
           selections = typeWithGraphQLKeywords
         )
       )

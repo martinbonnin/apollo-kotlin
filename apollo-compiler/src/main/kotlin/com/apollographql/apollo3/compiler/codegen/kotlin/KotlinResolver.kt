@@ -75,10 +75,9 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       is IrBooleanType -> Boolean::class.asTypeName()
       is IrIdType -> String::class.asTypeName()
       is IrAnyType -> Any::class.asTypeName()
-      is IrModelType -> resolve(ResolverKeyKind.Model, type.path)
-          ?: error("Cannot resolve $type")
-      is IrNamedType -> resolve(ResolverKeyKind.SchemaType, type.name)
-          ?: error("Cannot resolve $type")
+      is IrModelType -> resolveAndAssert(ResolverKeyKind.Model, type.path)
+      is IrCustomScalarType -> resolveAndAssert(ResolverKeyKind.CustomScalarTarget, type.name)
+      is IrNamedType -> resolveAndAssert(ResolverKeyKind.SchemaType, type.name)
       else -> error("$type is not a schema type")
     }.copy(nullable = true)
   }
@@ -108,6 +107,12 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       "Float" -> MemberName("com.apollographql.apollo3.api", "CompiledFloatType")
       "Boolean" -> MemberName("com.apollographql.apollo3.api", "CompiledBooleanType")
       "ID" -> MemberName("com.apollographql.apollo3.api", "CompiledIDType")
+      "__Schema" -> MemberName("com.apollographql.apollo3.api", "CompiledSchemaType")
+      "__Type" -> MemberName("com.apollographql.apollo3.api", "CompiledTypeType")
+      "__Field" -> MemberName("com.apollographql.apollo3.api", "CompiledFieldType")
+      "__InputValue" -> MemberName("com.apollographql.apollo3.api", "CompiledInputValueType")
+      "__EnumValue" -> MemberName("com.apollographql.apollo3.api", "CompiledEnumValueType")
+      "__Directive" -> MemberName("com.apollographql.apollo3.api", "CompiledDirectiveType")
       else -> null
     }
 
@@ -115,7 +120,7 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       return CodeBlock.of("%M", builtin)
     }
 
-    return CodeBlock.of("%T.$type", resolve(ResolverKeyKind.SchemaType, name) ?: error("Cannot find compiled type for $name"))
+    return CodeBlock.of("%T.$type", resolveAndAssert(ResolverKeyKind.SchemaType, name))
   }
 
   private fun nonNullableAdapterInitializer(type: IrType, requiresBuffering: Boolean): CodeBlock {
@@ -139,7 +144,8 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       }
       is IrCustomScalarType -> {
         CodeBlock.of(
-            "$customScalarAdapters.responseAdapterFor(%L)",
+            "$customScalarAdapters.responseAdapterFor<%T>(%L)",
+            resolveIrType(IrNonNullType(type)),
             resolveCompiledType(type.name)
         )
       }
@@ -199,4 +205,5 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
   fun resolveSchemaType(name: String) = resolveAndAssert(ResolverKeyKind.SchemaType, name)
   fun registerSchemaType(name: String, className: ClassName) = register(ResolverKeyKind.SchemaType, name, className)
   fun registerModel(path: String, className: ClassName) = register(ResolverKeyKind.Model, path, className)
+  fun registerCustomScalar(name: String, className: ClassName) = register(ResolverKeyKind.CustomScalarTarget, name, className)
 }

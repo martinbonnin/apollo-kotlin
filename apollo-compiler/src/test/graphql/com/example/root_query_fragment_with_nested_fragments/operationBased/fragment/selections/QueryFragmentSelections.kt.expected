@@ -11,9 +11,9 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.root_query_fragment_with_nested_fragments.type.Types.Character
-import com.example.root_query_fragment_with_nested_fragments.type.Types.Droid
-import com.example.root_query_fragment_with_nested_fragments.type.Types.Human
+import com.example.root_query_fragment_with_nested_fragments.type.Character
+import com.example.root_query_fragment_with_nested_fragments.type.Droid
+import com.example.root_query_fragment_with_nested_fragments.type.Human
 import kotlin.collections.List
 
 public object QueryFragmentSelections {
@@ -68,12 +68,12 @@ public object QueryFragmentSelections {
         ),
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         ),
         CompiledField(
           name = "droid",
-          type = Droid,
+          type = Droid.type,
           arguments = listOf(
             CompiledArgument("id", 1)
           ),
@@ -81,7 +81,7 @@ public object QueryFragmentSelections {
         ),
         CompiledField(
           name = "human",
-          type = Human,
+          type = Human.type,
           arguments = listOf(
             CompiledArgument("id", 1)
           ),

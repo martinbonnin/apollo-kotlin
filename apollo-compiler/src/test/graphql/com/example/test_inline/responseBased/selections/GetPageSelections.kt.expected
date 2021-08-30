@@ -11,9 +11,8 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.test_inline.type.Types
-import com.example.test_inline.type.Types.Collection
-import com.example.test_inline.type.Types.Item
+import com.example.test_inline.type.Collection
+import com.example.test_inline.type.Item
 import kotlin.collections.List
 
 public object GetPageSelections {
@@ -45,7 +44,7 @@ public object GetPageSelections {
   private val onParticularCollection: List<CompiledSelection> = listOf(
         CompiledField(
           name = "items",
-          type = Item.notNull().list().notNull(),
+          type = Item.type.notNull().list().notNull(),
           selections = items1
         )
       )
@@ -57,7 +56,7 @@ public object GetPageSelections {
         ),
         CompiledField(
           name = "items",
-          type = Item.notNull().list().notNull(),
+          type = Item.type.notNull().list().notNull(),
           selections = items
         ),
         CompiledFragment(
@@ -69,7 +68,7 @@ public object GetPageSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "collection",
-          type = Collection.notNull(),
+          type = Collection.type.notNull(),
           selections = collection
         )
       )

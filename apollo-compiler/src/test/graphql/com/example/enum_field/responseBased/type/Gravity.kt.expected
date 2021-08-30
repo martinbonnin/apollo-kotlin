@@ -5,12 +5,17 @@
 //
 package com.example.enum_field.type
 
+import com.apollographql.apollo3.api.EnumType
 import kotlin.Deprecated
 import kotlin.String
 
 public sealed class Gravity(
   public val rawValue: String
 ) {
+  public companion object {
+    public val type: EnumType = EnumType("Gravity")
+  }
+
   public object TOP : Gravity(rawValue = "TOP")
 
   public object CENTER : Gravity(rawValue = "CENTER")

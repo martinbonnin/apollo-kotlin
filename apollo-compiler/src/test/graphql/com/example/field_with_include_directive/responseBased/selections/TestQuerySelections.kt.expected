@@ -11,8 +11,8 @@ import com.apollographql.apollo3.api.CompiledIntType
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.field_with_include_directive.type.Types.Character
-import com.example.field_with_include_directive.type.Types.FriendsConnection
+import com.example.field_with_include_directive.type.Character
+import com.example.field_with_include_directive.type.FriendsConnection
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -31,7 +31,7 @@ public object TestQuerySelections {
         ),
         CompiledField(
           name = "friendsConnection",
-          type = FriendsConnection.notNull(),
+          type = FriendsConnection.type.notNull(),
           condition = listOf(CompiledCondition("skipFriends", true)),
           selections = friendsConnection
         )
@@ -40,7 +40,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

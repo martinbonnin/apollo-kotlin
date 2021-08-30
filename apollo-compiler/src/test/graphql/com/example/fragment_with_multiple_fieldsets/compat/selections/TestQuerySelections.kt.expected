@@ -11,7 +11,7 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
 import com.example.fragment_with_multiple_fieldsets.fragment.selections.iFragmentSelections
-import com.example.fragment_with_multiple_fieldsets.type.Types.I
+import com.example.fragment_with_multiple_fieldsets.type.I
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -29,7 +29,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "i",
-          type = I,
+          type = I.type,
           selections = i
         )
       )

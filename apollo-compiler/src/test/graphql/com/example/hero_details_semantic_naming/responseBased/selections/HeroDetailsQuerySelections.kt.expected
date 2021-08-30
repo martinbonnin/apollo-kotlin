@@ -11,10 +11,9 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.hero_details_semantic_naming.type.Types
-import com.example.hero_details_semantic_naming.type.Types.Character
-import com.example.hero_details_semantic_naming.type.Types.FriendsConnection
-import com.example.hero_details_semantic_naming.type.Types.FriendsEdge
+import com.example.hero_details_semantic_naming.type.Character
+import com.example.hero_details_semantic_naming.type.FriendsConnection
+import com.example.hero_details_semantic_naming.type.FriendsEdge
 import kotlin.collections.List
 
 public object HeroDetailsQuerySelections {
@@ -28,7 +27,7 @@ public object HeroDetailsQuerySelections {
   private val edges: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Character,
+          type = Character.type,
           selections = node
         )
       )
@@ -40,7 +39,7 @@ public object HeroDetailsQuerySelections {
         ),
         CompiledField(
           name = "edges",
-          type = FriendsEdge.list(),
+          type = FriendsEdge.type.list(),
           selections = edges
         )
       )
@@ -52,7 +51,7 @@ public object HeroDetailsQuerySelections {
         ),
         CompiledField(
           name = "friendsConnection",
-          type = FriendsConnection.notNull(),
+          type = FriendsConnection.type.notNull(),
           selections = friendsConnection
         )
       )
@@ -60,7 +59,7 @@ public object HeroDetailsQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

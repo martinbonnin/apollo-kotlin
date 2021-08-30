@@ -5,6 +5,7 @@
 //
 package com.example.hero_name_query_long_name.type
 
+import com.apollographql.apollo3.api.EnumType
 import kotlin.Deprecated
 import kotlin.String
 
@@ -14,6 +15,10 @@ import kotlin.String
 public sealed class Episode(
   public val rawValue: String
 ) {
+  public companion object {
+    public val type: EnumType = EnumType("Episode")
+  }
+
   /**
    * Star Wars Episode IV: A New Hope, released in 1977.
    */

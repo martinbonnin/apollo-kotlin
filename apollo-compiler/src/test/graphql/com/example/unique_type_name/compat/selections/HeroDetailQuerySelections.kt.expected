@@ -13,9 +13,8 @@ import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
 import com.example.unique_type_name.fragment.selections.HeroDetailsSelections
-import com.example.unique_type_name.type.Types
-import com.example.unique_type_name.type.Types.Character
-import com.example.unique_type_name.type.Types.Episode
+import com.example.unique_type_name.type.Character
+import com.example.unique_type_name.type.Episode
 import kotlin.collections.List
 
 public object HeroDetailQuerySelections {
@@ -40,11 +39,11 @@ public object HeroDetailQuerySelections {
   private val friends1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "appearsIn",
-          type = Episode.list().notNull()
+          type = Episode.type.list().notNull()
         ),
         CompiledField(
           name = "friends",
-          type = Character.list(),
+          type = Character.type.list(),
           selections = friends2
         )
       )
@@ -56,7 +55,7 @@ public object HeroDetailQuerySelections {
         ),
         CompiledField(
           name = "friends",
-          type = Character.list(),
+          type = Character.type.list(),
           selections = friends1
         )
       )
@@ -72,7 +71,7 @@ public object HeroDetailQuerySelections {
         ),
         CompiledField(
           name = "friends",
-          type = Character.list(),
+          type = Character.type.list(),
           selections = friends
         ),
         CompiledFragment(
@@ -84,7 +83,7 @@ public object HeroDetailQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "heroDetailQuery",
-          type = Character,
+          type = Character.type,
           selections = heroDetailQuery
         )
       )

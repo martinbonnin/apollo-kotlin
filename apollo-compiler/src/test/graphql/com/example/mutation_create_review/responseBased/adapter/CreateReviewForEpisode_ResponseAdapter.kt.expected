@@ -74,7 +74,7 @@ internal object CreateReviewForEpisode_ResponseAdapter {
                 customScalarAdapters)
             3 -> listOfListOfEnum = Episode_ResponseAdapter.list().list().nullable().fromJson(reader,
                 customScalarAdapters)
-            4 -> listOfListOfCustom = customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Types.Date).list().list().nullable().fromJson(reader,
+            4 -> listOfListOfCustom = customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Date.type).list().list().nullable().fromJson(reader,
                 customScalarAdapters)
             5 -> listOfListOfObject = ListOfListOfObject.obj().list().list().nullable().fromJson(reader,
                 customScalarAdapters)
@@ -112,7 +112,7 @@ internal object CreateReviewForEpisode_ResponseAdapter {
             value.listOfListOfEnum)
 
         writer.name("listOfListOfCustom")
-        customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Types.Date).list().list().nullable().toJson(writer,
+        customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Date.type).list().list().nullable().toJson(writer,
             customScalarAdapters, value.listOfListOfCustom)
 
         writer.name("listOfListOfObject")

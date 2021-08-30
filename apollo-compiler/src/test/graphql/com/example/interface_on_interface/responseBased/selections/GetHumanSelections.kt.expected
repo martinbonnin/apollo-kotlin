@@ -12,8 +12,8 @@ import com.apollographql.apollo3.api.CompiledIDType
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.interface_on_interface.type.Types.Human
-import com.example.interface_on_interface.type.Types.Node
+import com.example.interface_on_interface.type.Human
+import com.example.interface_on_interface.type.Node
 import kotlin.collections.List
 
 public object GetHumanSelections {
@@ -53,12 +53,12 @@ public object GetHumanSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "human",
-          type = Human.notNull(),
+          type = Human.type.notNull(),
           selections = human
         ),
         CompiledField(
           name = "node",
-          type = Node.notNull(),
+          type = Node.type.notNull(),
           selections = node
         )
       )

@@ -5,6 +5,7 @@
 //
 package com.example.hero_details.type
 
+import com.apollographql.apollo3.api.EnumType
 import kotlin.String
 
 /**
@@ -13,6 +14,10 @@ import kotlin.String
 public sealed class hero_type(
   public val rawValue: String
 ) {
+  public companion object {
+    public val type: EnumType = EnumType("hero_type")
+  }
+
   public object human : hero_type(rawValue = "human")
 
   public object droid : hero_type(rawValue = "droid")

@@ -24,6 +24,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.file.UnionBuilder
 import com.apollographql.apollo3.compiler.ir.Ir
 import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo3.compiler.operationoutput.findOperationId
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.TypeSpec
@@ -73,6 +74,12 @@ class KotlinCodeGen(
         resolver = KotlinResolver(emptyList(), upstreamResolver)
     )
     val builders = mutableListOf<CgFileBuilder>()
+
+    ir.customScalars.forEach {
+      if (it.kotlinName != null) {
+        context.resolver.registerCustomScalar(it.name, ClassName.bestGuess(it.kotlinName))
+      }
+    }
 
     ir.inputObjects
         .filter { !context.resolver.canResolveSchemaType(it.name) }

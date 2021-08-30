@@ -25,12 +25,11 @@ enum class ResolverKeyKind {
   ModelAdapter,
   Operation,
   OperationVariablesAdapter,
-  OperationAdapter,
-  FragmentAdapter,
   OperationSelections,
   Fragment,
   FragmentVariablesAdapter,
-  FragmentSelections
+  FragmentSelections,
+  CustomScalarTarget
 }
 
 @JsonClass(generateAdapter = true)

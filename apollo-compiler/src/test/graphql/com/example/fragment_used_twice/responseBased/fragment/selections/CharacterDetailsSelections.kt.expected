@@ -9,7 +9,7 @@ import com.apollographql.apollo3.api.CompiledField
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.fragment_used_twice.type.Types.Date
+import com.example.fragment_used_twice.type.Date
 import kotlin.collections.List
 
 public object CharacterDetailsSelections {
@@ -20,7 +20,7 @@ public object CharacterDetailsSelections {
         ),
         CompiledField(
           name = "birthDate",
-          type = Date.notNull()
+          type = Date.type.notNull()
         )
       )
 }

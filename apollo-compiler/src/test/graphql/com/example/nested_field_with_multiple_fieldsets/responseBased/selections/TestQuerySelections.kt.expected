@@ -10,9 +10,8 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.nested_field_with_multiple_fieldsets.type.Types
-import com.example.nested_field_with_multiple_fieldsets.type.Types.Iface1
-import com.example.nested_field_with_multiple_fieldsets.type.Types.Iface2
+import com.example.nested_field_with_multiple_fieldsets.type.Iface1
+import com.example.nested_field_with_multiple_fieldsets.type.Iface2
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -48,7 +47,7 @@ public object TestQuerySelections {
   private val onIface1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "iface2",
-          type = Iface2,
+          type = Iface2.type,
           selections = iface2
         )
       )
@@ -85,7 +84,7 @@ public object TestQuerySelections {
   private val onImpl1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "iface2",
-          type = Iface2,
+          type = Iface2.type,
           selections = iface21
         )
       )
@@ -108,7 +107,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "iface1",
-          type = Iface1,
+          type = Iface1.type,
           selections = iface1
         )
       )

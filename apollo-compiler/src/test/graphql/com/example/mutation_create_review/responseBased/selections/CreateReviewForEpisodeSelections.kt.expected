@@ -13,10 +13,10 @@ import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.CompiledVariable
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.mutation_create_review.type.Types.Character
-import com.example.mutation_create_review.type.Types.Date
-import com.example.mutation_create_review.type.Types.Episode
-import com.example.mutation_create_review.type.Types.Review
+import com.example.mutation_create_review.type.Character
+import com.example.mutation_create_review.type.Date
+import com.example.mutation_create_review.type.Episode
+import com.example.mutation_create_review.type.Review
 import kotlin.collections.List
 
 internal object CreateReviewForEpisodeSelections {
@@ -42,15 +42,15 @@ internal object CreateReviewForEpisodeSelections {
         ),
         CompiledField(
           name = "listOfListOfEnum",
-          type = Episode.notNull().list().notNull().list()
+          type = Episode.type.notNull().list().notNull().list()
         ),
         CompiledField(
           name = "listOfListOfCustom",
-          type = Date.notNull().list().notNull().list()
+          type = Date.type.notNull().list().notNull().list()
         ),
         CompiledField(
           name = "listOfListOfObject",
-          type = Character.notNull().list().notNull().list(),
+          type = Character.type.notNull().list().notNull().list(),
           selections = listOfListOfObject
         )
       )
@@ -58,7 +58,7 @@ internal object CreateReviewForEpisodeSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "createReview",
-          type = Review,
+          type = Review.type,
           arguments = listOf(
             CompiledArgument("episode", CompiledVariable("ep")),
             CompiledArgument("review", CompiledVariable("review"))

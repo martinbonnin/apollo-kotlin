@@ -72,7 +72,7 @@ internal class OperationBasedModelGroupBuilder(
     }
 
     return buildField(
-        path = fragmentName,
+        path = "${MODEL_FRAGMENT_DATA}.$fragmentName",
         info = info,
         selections = mergedSelections.map { SelectionWithParent(it, fragmentDefinition.typeCondition.name) },
         condition = BooleanExpression.True,

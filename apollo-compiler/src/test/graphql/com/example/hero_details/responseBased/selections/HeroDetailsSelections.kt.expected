@@ -11,11 +11,10 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.hero_details.type.Types
-import com.example.hero_details.type.Types.Character
-import com.example.hero_details.type.Types.FriendsConnection
-import com.example.hero_details.type.Types.FriendsEdge
-import com.example.hero_details.type.Types.Hero_type
+import com.example.hero_details.type.Character
+import com.example.hero_details.type.FriendsConnection
+import com.example.hero_details.type.FriendsEdge
+import com.example.hero_details.type.hero_type
 import kotlin.collections.List
 
 public object HeroDetailsSelections {
@@ -29,7 +28,7 @@ public object HeroDetailsSelections {
   private val edges: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Character,
+          type = Character.type,
           selections = node
         )
       )
@@ -41,7 +40,7 @@ public object HeroDetailsSelections {
         ),
         CompiledField(
           name = "edges",
-          type = FriendsEdge.list(),
+          type = FriendsEdge.type.list(),
           selections = edges
         )
       )
@@ -49,7 +48,7 @@ public object HeroDetailsSelections {
   private val hero: List<CompiledSelection> = listOf(
         CompiledField(
           name = "type",
-          type = Hero_type.notNull()
+          type = hero_type.type.notNull()
         ),
         CompiledField(
           name = "name",
@@ -57,7 +56,7 @@ public object HeroDetailsSelections {
         ),
         CompiledField(
           name = "friendsConnection",
-          type = FriendsConnection.notNull(),
+          type = FriendsConnection.type.notNull(),
           selections = friendsConnection
         )
       )
@@ -65,7 +64,7 @@ public object HeroDetailsSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

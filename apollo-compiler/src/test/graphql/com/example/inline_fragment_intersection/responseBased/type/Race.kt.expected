@@ -5,11 +5,16 @@
 //
 package com.example.inline_fragment_intersection.type
 
+import com.apollographql.apollo3.api.EnumType
 import kotlin.String
 
 public sealed class Race(
   public val rawValue: String
 ) {
+  public companion object {
+    public val type: EnumType = EnumType("Race")
+  }
+
   public object WOOKIE : Race(rawValue = "WOOKIE")
 
   public object GUMGAN : Race(rawValue = "GUMGAN")

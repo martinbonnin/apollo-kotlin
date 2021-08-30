@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.nested_named_fragments.type.Types.Planet
+import com.example.nested_named_fragments.type.Planet
 import kotlin.collections.List
 
 public object pilotFragmentSelections {
@@ -32,7 +32,7 @@ public object pilotFragmentSelections {
         ),
         CompiledField(
           name = "homeworld",
-          type = Planet,
+          type = Planet.type,
           selections = homeworld
         )
       )

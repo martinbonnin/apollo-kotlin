@@ -12,7 +12,7 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.CompiledVariable
 import com.apollographql.apollo3.api.notNull
-import com.example.input_object_type.type.Types.Review
+import com.example.input_object_type.type.Review
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -30,7 +30,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "createReview",
-          type = Review,
+          type = Review.type,
           arguments = listOf(
             CompiledArgument("episode", CompiledVariable("ep")),
             CompiledArgument("review", CompiledVariable("review"))

@@ -12,7 +12,7 @@ import com.apollographql.apollo3.api.CompiledIDType
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.inline_fragment_with_include_directive.type.Types.Character
+import com.example.inline_fragment_with_include_directive.type.Character
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -75,7 +75,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

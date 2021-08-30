@@ -61,8 +61,7 @@ internal class IrBuilder(
     private val customScalarToKotlinName: Map<String, String>,
     codegenModels: String,
 ) : FieldMerger {
-  private val usedTypes = mutableSetOf<String>()
-  private val inputObjectsToGenerate = mutableListOf<String>()
+  private val usedTypes = mutableListOf<String>()
 
   private val modelGroupBuilder: ModelGroupBuilder = when (codegenModels) {
     MODELS_RESPONSE_BASED -> ResponseBasedModelGroupBuilder(
@@ -95,60 +94,38 @@ internal class IrBuilder(
     val operations = operationDefinitions.map { it.toIr() }
     val fragments = fragments.map { it.toIr() }
 
-    val visitedInputObjects = mutableSetOf<String>()
-
-    // Input objects contain (possible reentrant) references so build them before enums as they could add some
-    val extraInputObjects = schema.typeDefinitions.values.filterIsInstance<GQLInputObjectTypeDefinition>()
-        .map { it.name }
-        .filter { shouldAlwaysGenerate(it) }
-    inputObjectsToGenerate.addAll(extraInputObjects)
+    val visitedTypes = mutableSetOf<String>()
+    val enums = mutableListOf<IrEnum>()
     val inputObjects = mutableListOf<IrInputObject>()
-    while (inputObjectsToGenerate.isNotEmpty()) {
-      val name = inputObjectsToGenerate.removeAt(0)
-      if (visitedInputObjects.contains(name)) {
+    val objects = mutableListOf<IrObject>()
+    val interfaces = mutableListOf<IrInterface>()
+    val unions = mutableListOf<IrUnion>()
+    val customScalars = mutableListOf<IrCustomScalar>()
+
+    // inject extra types
+    usedTypes.addAll(schema.typeDefinitions.keys.filter { shouldAlwaysGenerate(it) })
+    // Input objects and Interfaces contain (possible reentrant) references so we need to loop here
+    while (usedTypes.isNotEmpty()) {
+      val name = usedTypes.removeAt(0)
+      if (visitedTypes.contains(name)) {
         continue
       }
-      visitedInputObjects.add(name)
-      inputObjects.add((schema.typeDefinition(name) as GQLInputObjectTypeDefinition).toIr())
+      visitedTypes.add(name)
+      val typeDefinition = schema.typeDefinition(name)
+      if (typeDefinition.isBuiltIn()) {
+        // We don't generate builtin types
+        continue
+      }
+
+      when (typeDefinition) {
+        is GQLEnumTypeDefinition -> enums.add(typeDefinition.toIr())
+        is GQLObjectTypeDefinition -> objects.add(typeDefinition.toIr())
+        is GQLUnionTypeDefinition -> unions.add(typeDefinition.toIr())
+        is GQLInterfaceTypeDefinition -> interfaces.add(typeDefinition.toIr())
+        is GQLScalarTypeDefinition -> customScalars.add(typeDefinition.toIr())
+        is GQLInputObjectTypeDefinition -> inputObjects.add(typeDefinition.toIr())
+      }
     }
-
-    val enums = schema.typeDefinitions.values
-        .filterIsInstance<GQLEnumTypeDefinition>()
-        .filter { !it.isBuiltIn() && (usedTypes.contains(it.name) || shouldAlwaysGenerate(it.name)) }
-        .map {
-          it.toIr()
-        }
-
-    val customScalars = schema.typeDefinitions.values
-        .filterIsInstance<GQLScalarTypeDefinition>()
-        .filter { !it.isBuiltIn() && (usedTypes.contains(it.name) || shouldAlwaysGenerate(it.name)) }
-        .map {
-          it.toIr()
-        }
-
-    val objects = schema.typeDefinitions.values
-        .filterIsInstance<GQLObjectTypeDefinition>()
-        .filter { !it.isBuiltIn() && (usedTypes.contains(it.name) || shouldAlwaysGenerate(it.name)) }
-        .map {
-          it.toIr()
-        }
-
-    /**
-     * XXX: do we want to always generate all objects implementing interfaces and enmus?
-     */
-    val interfaces = schema.typeDefinitions.values
-        .filterIsInstance<GQLInterfaceTypeDefinition>()
-        .filter { !it.isBuiltIn() && (usedTypes.contains(it.name) || shouldAlwaysGenerate(it.name)) }
-        .map {
-          it.toIr()
-        }
-
-    val unions = schema.typeDefinitions.values
-        .filterIsInstance<GQLUnionTypeDefinition>()
-        .filter { !it.isBuiltIn() && (usedTypes.contains(it.name) || shouldAlwaysGenerate(it.name)) }
-        .map {
-          it.toIr()
-        }
 
     return Ir(
         operations = operations,
@@ -164,8 +141,10 @@ internal class IrBuilder(
     )
   }
 
-
   private fun GQLObjectTypeDefinition.toIr(): IrObject {
+    // Needed to build the compiled type
+    usedTypes.addAll(implementsInterfaces)
+
     return IrObject(
         name = name,
         implements = implementsInterfaces,
@@ -176,6 +155,9 @@ internal class IrBuilder(
   }
 
   private fun GQLInterfaceTypeDefinition.toIr(): IrInterface {
+    // Needed to build the compiled type
+    usedTypes.addAll(implementsInterfaces)
+
     return IrInterface(
         name = name,
         implements = implementsInterfaces,
@@ -186,6 +168,9 @@ internal class IrBuilder(
   }
 
   private fun GQLUnionTypeDefinition.toIr(): IrUnion {
+    // Needed to build the compiled type
+    usedTypes.addAll(memberTypes.map { it.name })
+
     return IrUnion(
         name = name,
         members = memberTypes.map { it.name },
@@ -376,7 +361,7 @@ internal class IrBuilder(
       is GQLListType -> IrListType(ofType = type.toIr())
       is GQLNamedType -> {
         usedTypes.add(name)
-        when (schema.typeDefinition(name)) {
+        when (val type = schema.typeDefinition(name)) {
           is GQLScalarTypeDefinition -> {
             when (name) {
               "String" -> IrStringType
@@ -397,13 +382,17 @@ internal class IrBuilder(
             IrEnumType(name = name)
           }
           is GQLInputObjectTypeDefinition -> {
-            inputObjectsToGenerate.add(name)
             IrInputObjectType(name)
           }
-          is GQLObjectTypeDefinition,
-          is GQLInterfaceTypeDefinition,
-          is GQLUnionTypeDefinition,
-          -> IrModelType(MODEL_UNKNOWN)
+          is GQLObjectTypeDefinition -> {
+            IrModelType(MODEL_UNKNOWN)
+          }
+          is GQLInterfaceTypeDefinition -> {
+            IrModelType(MODEL_UNKNOWN)
+          }
+          is GQLUnionTypeDefinition -> {
+            IrModelType(MODEL_UNKNOWN)
+          }
         }
       }
     }

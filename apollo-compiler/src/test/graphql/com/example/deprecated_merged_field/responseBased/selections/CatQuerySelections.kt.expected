@@ -11,7 +11,7 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
 import com.example.deprecated_merged_field.fragment.selections.AnimalFragmentSelections
-import com.example.deprecated_merged_field.type.Types.Cat
+import com.example.deprecated_merged_field.type.Cat
 import kotlin.collections.List
 
 public object CatQuerySelections {
@@ -29,7 +29,7 @@ public object CatQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "cat",
-          type = Cat,
+          type = Cat.type,
           selections = cat
         )
       )

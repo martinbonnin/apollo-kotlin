@@ -5,12 +5,17 @@
 //
 package com.example.case_sensitive_enum.type
 
+import com.apollographql.apollo3.api.EnumType
 import kotlin.Deprecated
 import kotlin.String
 
 public sealed class Enum(
   public val rawValue: String
 ) {
+  public companion object {
+    public val type: EnumType = EnumType("Enum")
+  }
+
   @Deprecated(message = "No longer supported")
   public object north : Enum(rawValue = "north")
 

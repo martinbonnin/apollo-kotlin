@@ -11,11 +11,10 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.inline_fragment_merge_fields.type.Types
-import com.example.inline_fragment_merge_fields.type.Types.Character
-import com.example.inline_fragment_merge_fields.type.Types.FriendsConnection
-import com.example.inline_fragment_merge_fields.type.Types.FriendsEdge
-import com.example.inline_fragment_merge_fields.type.Types.URL
+import com.example.inline_fragment_merge_fields.type.Character
+import com.example.inline_fragment_merge_fields.type.FriendsConnection
+import com.example.inline_fragment_merge_fields.type.FriendsEdge
+import com.example.inline_fragment_merge_fields.type.URL
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -29,7 +28,7 @@ public object TestQuerySelections {
   private val edges: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Character,
+          type = Character.type,
           selections = node
         )
       )
@@ -37,7 +36,7 @@ public object TestQuerySelections {
   private val friendsConnection: List<CompiledSelection> = listOf(
         CompiledField(
           name = "edges",
-          type = FriendsEdge.list(),
+          type = FriendsEdge.type.list(),
           selections = edges
         )
       )
@@ -52,7 +51,7 @@ public object TestQuerySelections {
   private val edges1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Character,
+          type = Character.type,
           selections = node1
         )
       )
@@ -60,7 +59,7 @@ public object TestQuerySelections {
   private val friendsConnection1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "edges",
-          type = FriendsEdge.list(),
+          type = FriendsEdge.type.list(),
           selections = edges1
         )
       )
@@ -72,11 +71,11 @@ public object TestQuerySelections {
         ),
         CompiledField(
           name = "profileLink",
-          type = URL.notNull()
+          type = URL.type.notNull()
         ),
         CompiledField(
           name = "friendsConnection",
-          type = FriendsConnection.notNull(),
+          type = FriendsConnection.type.notNull(),
           selections = friendsConnection1
         )
       )
@@ -92,7 +91,7 @@ public object TestQuerySelections {
         ),
         CompiledField(
           name = "friendsConnection",
-          type = FriendsConnection.notNull(),
+          type = FriendsConnection.type.notNull(),
           selections = friendsConnection
         ),
         CompiledFragment(
@@ -104,7 +103,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "hero",
-          type = Character,
+          type = Character.type,
           selections = hero
         )
       )

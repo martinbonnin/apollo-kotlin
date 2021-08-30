@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.inline_fragment_type_coercion.type.Types.Foo
+import com.example.inline_fragment_type_coercion.type.Foo
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -39,7 +39,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "foo",
-          type = Foo,
+          type = Foo.type,
           selections = foo
         )
       )

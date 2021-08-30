@@ -13,8 +13,8 @@ import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.CompiledVariable
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.named_fragment_with_variables.type.Types.Organization
-import com.example.named_fragment_with_variables.type.Types.User
+import com.example.named_fragment_with_variables.type.Organization
+import com.example.named_fragment_with_variables.type.User
 import kotlin.collections.List
 
 public object QueryFragmentSelections {
@@ -36,7 +36,7 @@ public object QueryFragmentSelections {
         ),
         CompiledField(
           name = "user",
-          type = User.notNull().list().notNull(),
+          type = User.type.notNull().list().notNull(),
           arguments = listOf(
             CompiledArgument("query", CompiledVariable("query"))
           ),
@@ -47,7 +47,7 @@ public object QueryFragmentSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "organization",
-          type = Organization,
+          type = Organization.type,
           arguments = listOf(
             CompiledArgument("id", CompiledVariable("organizationId"))
           ),

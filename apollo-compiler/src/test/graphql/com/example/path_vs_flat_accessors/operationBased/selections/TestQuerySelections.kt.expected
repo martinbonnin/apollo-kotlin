@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.path_vs_flat_accessors.type.Types.C
+import com.example.path_vs_flat_accessors.type.C
 import kotlin.collections.List
 
 public object TestQuerySelections {
@@ -57,7 +57,7 @@ public object TestQuerySelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "root",
-          type = C,
+          type = C.type,
           selections = root1
         )
       )

@@ -13,10 +13,9 @@ import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.list
 import com.apollographql.apollo3.api.notNull
-import com.example.inline_fragment_intersection.type.Types
-import com.example.inline_fragment_intersection.type.Types.Anything
-import com.example.inline_fragment_intersection.type.Types.Being
-import com.example.inline_fragment_intersection.type.Types.Race
+import com.example.inline_fragment_intersection.type.Anything
+import com.example.inline_fragment_intersection.type.Being
+import com.example.inline_fragment_intersection.type.Race
 import kotlin.collections.List
 
 public object TestOperationSelections {
@@ -45,7 +44,7 @@ public object TestOperationSelections {
   private val onWookie1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "race",
-          type = Race.notNull()
+          type = Race.type.notNull()
         )
       )
 
@@ -71,7 +70,7 @@ public object TestOperationSelections {
         ),
         CompiledField(
           name = "friends",
-          type = Being.notNull().list().notNull(),
+          type = Being.type.notNull().list().notNull(),
           selections = friends1
         )
       )
@@ -87,7 +86,7 @@ public object TestOperationSelections {
         ),
         CompiledField(
           name = "friends",
-          type = Being.notNull().list().notNull(),
+          type = Being.type.notNull().list().notNull(),
           selections = friends
         ),
         CompiledFragment(
@@ -106,11 +105,11 @@ public object TestOperationSelections {
   private val onWookie2: List<CompiledSelection> = listOf(
         CompiledField(
           name = "race",
-          type = Race.notNull()
+          type = Race.type.notNull()
         ),
         CompiledField(
           name = "friends",
-          type = Being.notNull().list().notNull(),
+          type = Being.type.notNull().list().notNull(),
           selections = friends2
         )
       )
@@ -136,7 +135,7 @@ public object TestOperationSelections {
   private val onBeing1: List<CompiledSelection> = listOf(
         CompiledField(
           name = "friends",
-          type = Being.notNull().list().notNull(),
+          type = Being.type.notNull().list().notNull(),
           selections = friends3
         )
       )
@@ -163,7 +162,7 @@ public object TestOperationSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "random",
-          type = Anything.notNull(),
+          type = Anything.type.notNull(),
           selections = random
         )
       )

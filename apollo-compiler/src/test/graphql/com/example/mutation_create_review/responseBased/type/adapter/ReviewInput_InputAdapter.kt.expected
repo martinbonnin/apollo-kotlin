@@ -63,12 +63,12 @@ internal object ReviewInput_InputAdapter : Adapter<ReviewInput> {
     }
     if (value.listOfCustomScalar is Optional.Present) {
       writer.name("listOfCustomScalar")
-      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Types.Date).nullable().list().nullable().optional().toJson(writer,
+      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Date.type).nullable().list().nullable().optional().toJson(writer,
           customScalarAdapters, value.listOfCustomScalar)
     }
     if (value.customScalar is Optional.Present) {
       writer.name("customScalar")
-      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Types.Date).nullable().optional().toJson(writer,
+      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Date.type).nullable().optional().toJson(writer,
           customScalarAdapters, value.customScalar)
     }
     if (value.listOfEnums is Optional.Present) {
@@ -115,7 +115,7 @@ internal object ReviewInput_InputAdapter : Adapter<ReviewInput> {
     }
     if (value.listOfListOfCustom is Optional.Present) {
       writer.name("listOfListOfCustom")
-      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Types.Date).list().list().nullable().optional().toJson(writer,
+      customScalarAdapters.responseAdapterFor<Date>(com.example.mutation_create_review.type.Date.type).list().list().nullable().optional().toJson(writer,
           customScalarAdapters, value.listOfListOfCustom)
     }
     if (value.listOfListOfObject is Optional.Present) {

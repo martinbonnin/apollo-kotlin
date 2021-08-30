@@ -118,6 +118,6 @@ internal fun IrUnion.typePropertySpec(resolver: KotlinResolver): PropertySpec {
       .builder(type, UnionType::class)
       .maybeAddDescription(description)
       .maybeAddDeprecation(deprecationReason)
-      .initializer("%T(%S%L)", UnionType::class.asTypeName(), name, builder.build())
+      .initializer("%T(%S, %L)", UnionType::class.asTypeName(), name, builder.build())
       .build()
 }

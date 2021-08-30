@@ -10,7 +10,7 @@ import com.apollographql.apollo3.api.CompiledFragment
 import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledStringType
 import com.apollographql.apollo3.api.notNull
-import com.example.multiple_fragments.type.Types.Node
+import com.example.multiple_fragments.type.Node
 import kotlin.collections.List
 
 public object aFragmentSelections {
@@ -32,7 +32,7 @@ public object aFragmentSelections {
   public val root: List<CompiledSelection> = listOf(
         CompiledField(
           name = "node",
-          type = Node,
+          type = Node.type,
           selections = node
         )
       )

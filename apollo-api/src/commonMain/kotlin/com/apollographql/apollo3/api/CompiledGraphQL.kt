@@ -205,6 +205,18 @@ val CompiledFloatType = ScalarType("Float")
 val CompiledBooleanType = ScalarType("Boolean")
 @SharedImmutable
 val CompiledIDType = ScalarType("ID")
+@SharedImmutable
+val CompiledSchemaType = ObjectType("__Schema")
+@SharedImmutable
+val CompiledTypeType = ObjectType("__Type")
+@SharedImmutable
+val CompiledFieldType = ObjectType("__Field")
+@SharedImmutable
+val CompiledInputValueType = ObjectType("__InputValue")
+@SharedImmutable
+val CompiledEnumValueType = ObjectType("__EnumValue")
+@SharedImmutable
+val CompiledDirectiveType = ObjectType("__Directive")
 
 fun CompiledNamedType.isComposite(): Boolean {
   return when (this) {

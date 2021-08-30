@@ -273,6 +273,10 @@ object IrIntType : IrType()
 object IrFloatType : IrType()
 object IrBooleanType : IrType()
 object IrIdType : IrType()
+
+/**
+ * This is a special value 
+ */
 object IrAnyType : IrType()
 
 interface IrNamedType {
