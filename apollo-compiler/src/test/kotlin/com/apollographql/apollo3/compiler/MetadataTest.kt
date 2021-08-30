@@ -1,7 +1,8 @@
 package com.apollographql.apollo3.compiler
 
-import com.apollographql.apollo3.compiler.ApolloMetadata.Companion.merge
+import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.SourceAwareException
+import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.compiler.Options.Companion.defaultCustomScalarsMapping
 import com.google.common.truth.Truth
 import org.junit.Assert.fail
@@ -32,30 +33,51 @@ class MetadataTest {
       alwaysGenerateTypesMatching: Set<String> = emptySet(),
       metadataOutputFile: File,
   ) {
-    val incomingOptions = if (schemaFile != null) {
-      IncomingOptions.fromOptions(
-          schemaFiles = setOf(schemaFile),
-          customScalarsMapping = defaultCustomScalarsMapping,
-          codegenModels = MODELS_RESPONSE_BASED,
-          packageNameGenerator = PackageNameGenerator.Flat(""),
-          flattenModels = false
+    val schema: Schema
+    val customScalarsMapping: Map<String, String>
+    val codegenModels: String
+    var outputCommonMetadata: CommonMetadata? = null
+    var incomingCompilerMetadata: List<CompilerMetadata> = emptyList()
+    if (schemaFile != null) {
+      schema = schemaFile.toSchema()
+      customScalarsMapping = defaultCustomScalarsMapping
+      codegenModels = MODELS_RESPONSE_BASED
+
+      outputCommonMetadata = CommonMetadata(
+          schema = schema,
+          customScalarsMapping = customScalarsMapping,
+          codegenModels = codegenModels,
+          schemaPath = "",
+          pluginVersion = APOLLO_VERSION
       )
     } else {
-      val metadata = metadataFiles.map { ApolloMetadata.readFrom(it) }.merge()
-      check(metadata != null)
-      IncomingOptions.fromMetadata(metadata = metadata)
+      val metadata = metadataFiles.map { ApolloMetadata.readFrom(it) }
+      val commonMetadata = metadata.mapNotNull { it.commonMetadata }.single()
+      schema = commonMetadata.schema
+      customScalarsMapping = commonMetadata.customScalarsMapping
+      codegenModels = commonMetadata.codegenModels
+      incomingCompilerMetadata = metadata.map { it.compilerMetadata }
     }
 
-    GraphQLCompiler.write(
+    val compilerMetadata = GraphQLCompiler.write(
         Options(
             executableFiles = operationFiles,
             outputDir = outputDir,
-            alwaysGenerateTypesMatching = alwaysGenerateTypesMatching,
-            metadataOutputFile = metadataOutputFile,
+            schema = schema,
+            schemaPackageName = "",
+            codegenModels = codegenModels,
+            customScalarsMapping = customScalarsMapping,
             packageNameGenerator = PackageNameGenerator.Flat(""),
-            incomingOptions = incomingOptions,
+            alwaysGenerateTypesMatching = alwaysGenerateTypesMatching,
+            flattenModels = true,
+            incomingCompilerMetadata =incomingCompilerMetadata,
+            moduleName = "test"
         )
     )
+    ApolloMetadata(
+        commonMetadata = outputCommonMetadata,
+        compilerMetadata = compilerMetadata
+    ).writeTo(metadataOutputFile)
   }
 
   private fun alwaysGenerateTypesMatchingTest(alwaysGenerateTypesMatching: Set<String>) {
@@ -92,12 +114,13 @@ class MetadataTest {
     alwaysGenerateTypesMatchingTest(emptySet())
 
     // Only scalar types are generated in the root
-    rootSourcesDir.assertContents("Types.kt")
+    rootSourcesDir.assertContents()
 
     // Leaf contains its referenced types but not the unused ones
     leafSourcesDir.assertContents(
         "Body0.kt",
         "Body0_InputAdapter.kt",
+        "CustomScalar0.kt",
         "Encoding.kt",
         "Encoding_ResponseAdapter.kt",
         "MessageInput0.kt",
@@ -120,7 +143,6 @@ class MetadataTest {
     rootSourcesDir.assertContents(
         "Body1.kt",
         "Body1_InputAdapter.kt",
-        "Types.kt",
         "Encoding.kt",
         "Encoding_ResponseAdapter.kt",
         "MessageInput1.kt",
@@ -174,7 +196,6 @@ class MetadataTest {
     rootSourcesDir.assertContents(
         "CharacterFragment.kt",
         "CharacterFragmentSelections.kt",
-        "Types.kt",
         "Episode.kt",
         "Episode_ResponseAdapter.kt"
     )
@@ -220,7 +241,6 @@ class MetadataTest {
     rootSourcesDir.assertContents(
         "CharacterFragment.kt",
         "CharacterFragmentSelections.kt",
-        "Types.kt"
     )
 
     leafSourcesDir.assertContents(

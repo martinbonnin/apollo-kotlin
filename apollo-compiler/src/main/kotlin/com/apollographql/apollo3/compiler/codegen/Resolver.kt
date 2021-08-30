@@ -15,7 +15,7 @@ class ResolverMemberName(val className: ResolverClassName, val name: String)
 /**
  * Must be a data class because it is used as a key in resolvers
  */
-@JsonClass(generateAdapter = true, generator = "sealed:kind")
+@JsonClass(generateAdapter = true)
 data class ResolverKey(val kind: ResolverKeyKind, val id: String)
 
 enum class ResolverKeyKind {

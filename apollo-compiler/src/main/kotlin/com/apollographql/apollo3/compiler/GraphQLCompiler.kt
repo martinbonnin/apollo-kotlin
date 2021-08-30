@@ -16,8 +16,8 @@ object GraphQLCompiler {
   }
 
   fun write(
-      options: Options
-  ) {
+      options: Options,
+  ): CompilerMetadata {
     val executableFiles = options.executableFiles
     val outputDir = options.outputDir
     val debugDir = options.debugDir
@@ -36,7 +36,7 @@ object GraphQLCompiler {
     val definitions = mutableListOf<GQLDefinition>()
     val parseIssues = mutableListOf<Issue>()
     executableFiles.map { file ->
-      when(val parseResult = file.parseAsGQLDocument()) {
+      when (val parseResult = file.parseAsGQLDocument()) {
         is ParseResult.Success -> definitions.addAll(parseResult.value.definitions)
         is ParseResult.Error -> parseIssues.addAll(parseResult.issues)
       }
@@ -45,11 +45,13 @@ object GraphQLCompiler {
     // Parsing issues are fatal
     parseIssues.checkNoErrors()
 
+    val incomingFragments = options.incomingCompilerMetadata.flatMap { it.fragments }
+
     /**
      * Step 2, GraphQL validation
      */
     val validationIssues = GQLDocument(
-        definitions = definitions + options.metadataFragments.map { it.definition },
+        definitions = definitions + incomingFragments,
         filePath = null
     ).validateAsExecutable(options.schema)
 
@@ -73,7 +75,6 @@ object GraphQLCompiler {
     /**
      * Step 3, Modify the AST to add typename and key fields
      */
-    val incomingFragments = options.metadataFragments.map { it.definition }
 
     val fragments = definitions.filterIsInstance<GQLFragmentDefinition>().map {
       addRequiredFields(it, options.schema)
@@ -131,9 +132,9 @@ object GraphQLCompiler {
     /**
      * Write the generated models
      */
-    KotlinCodeGen(
+    val outputResolverInfo = KotlinCodeGen(
         ir = ir,
-        resolverInfos = options.enumsToSkip
+        resolverInfos = options.incomingCompilerMetadata.map { it.resolverInfo },
         generateAsInternal = options.generateAsInternal,
         operationOutput = operationOutput,
         useSemanticNaming = options.useSemanticNaming,
@@ -146,39 +147,10 @@ object GraphQLCompiler {
         flattenNamesInOrder = options.codegenModels != MODELS_COMPAT
     ).write(outputDir = outputDir)
 
-    /**
-     * Write the metadata
-     */
-    if (options.metadataOutputFile != null) {
-      options.metadataOutputFile.parentFile.mkdirs()
-      val outgoingSchema = if (options.generateTypes) {
-        options.schema
-      } else {
-        // There is already a schema defined in this tree
-        null
-      }
-
-      val outgoingMetadataFragments = fragments.map {
-        MetadataFragment(
-            name = it.name,
-            packageName = "${options.schemaPackageName}.fragment",
-            definition = it
-        )
-      }
-
-      ApolloMetadata(
-          schema = outgoingSchema,
-          customScalarsMapping = options.customScalarsMapping,
-          fragments = outgoingMetadataFragments,
-          generatedEnums = ir.enums.map { it.name }.toSet(),
-          generatedInputObjects = ir.inputObjects.map { it.name }.toSet(),
-          codegenModels = options.codegenModels,
-          flattenModels = options.flattenModels,
-          moduleName = options.moduleName,
-          pluginVersion = APOLLO_VERSION,
-          schemaPackageName = options.schemaPackageName
-      ).writeTo(options.metadataOutputFile)
-    }
+    return CompilerMetadata(
+        fragments = fragments,
+        resolverInfo = outputResolverInfo,
+    )
   }
 
   private fun checkCustomScalars(schema: Schema, customScalarsMapping: Map<String, String>) {

@@ -30,16 +30,11 @@ class Options(
      */
     val debugDir: File? = null,
     /**
-     * A file where to store the metadata associated with this compilation unit.
-     * Metadata are used in multimodule scenarios to share the output of a module with other modules
-     */
-    val metadataOutputFile: File?,
-    /**
      * the file where to write the operationOutput or null if no operationOutput is required
      * OperationOutput represents the modified operations as they are sent to the server. This is useful for whitelisting/
      * persisted queries
      */
-    val operationOutputFile: File?,
+    val operationOutputFile: File? = null,
     /**
      * The package name used as a base for input objects, fragments, enums and types
      */
@@ -49,33 +44,33 @@ class Options(
      */
     val packageNameGenerator: PackageNameGenerator,
     /**
-     * The fragments from upstream
-     */
-    val metadataFragments: List<MetadataFragment>,
-    /**
      * Additional enum/input types to generate.
      * For input types, this will recursively add all input fields types/enums.
      */
-    val alwaysGenerateTypesMatching: Set<String>,
+    val alwaysGenerateTypesMatching: Set<String> = defaultAlwaysGenerateTypesMatching,
     /**
      * the OperationOutputGenerator used to generate operation Ids
      */
-    val operationOutputGenerator: OperationOutputGenerator,
+    val operationOutputGenerator: OperationOutputGenerator = defaultOperationOutputGenerator,
+    /**
+     * The fragments from upstream
+     */
+    val incomingCompilerMetadata: List<CompilerMetadata> = emptyList(),
 
     //========== codegen options ============
-    val customScalarsMapping: Map<String, String>,
-    val codegenModels: String,
-    val flattenModels: Boolean,
-    val useSemanticNaming: Boolean,
-    val warnOnDeprecatedUsages: Boolean,
-    val failOnWarnings: Boolean,
-    val logger: GraphQLCompiler.Logger,
-    val generateAsInternal: Boolean,
+    val customScalarsMapping: Map<String, String> = defaultCustomScalarsMapping,
+    val codegenModels: String = defaultCodegenModels,
+    val flattenModels: Boolean = defaultFlattenModels,
+    val useSemanticNaming: Boolean = defaultUseSemanticNaming,
+    val warnOnDeprecatedUsages: Boolean = defaultWarnOnDeprecatedUsages,
+    val failOnWarnings: Boolean = defaultFailOnWarnings,
+    val logger: GraphQLCompiler.Logger = defaultLogger,
+    val generateAsInternal: Boolean = defaultGenerateAsInternal,
     /**
      * Kotlin native will generate [Any?] for optional types
      * Setting generateFilterNotNull will generate extra `filterNotNull` functions that will help keep the type information
      */
-    val generateFilterNotNull: Boolean,
+    val generateFilterNotNull: Boolean = defaultGenerateFilterNotNull,
 
     //========== on/off flags to switch some codegen off ============
 
@@ -85,18 +80,18 @@ class Options(
      *
      * Set to true if you need to read/write fragments from the cache or if you need to instantiate fragments
      */
-    val generateFragmentImplementations: Boolean,
+    val generateFragmentImplementations: Boolean = defaultGenerateFragmentImplementations,
     /**
      * Whether to generate the compiled selections used to read/write from the normalized cache.
      * Disable this option if you don't use the normalized cache to save some bytecode
      */
-    val generateResponseFields: Boolean,
+    val generateResponseFields: Boolean = defaultGenerateResponseFields,
     /**
      * Whether to embed the query document in the [com.apollographql.apollo3.api.Operation]s. By default this is true as it is needed
      * to send the operations to the server.
      * If performance is critical and you have a way to whitelist/read the document from another place, disable this.
      */
-    val generateQueryDocument: Boolean,
+    val generateQueryDocument: Boolean = defaultGenerateQueryDocument,
     val moduleName: String,
 ) {
 
@@ -109,13 +104,8 @@ class Options(
       schemaFile: File,
       outputDir: File,
       debugDir: File? = null,
-      metadataOutputFile: File? = null,
       operationOutputFile: File? = null,
       packageName: String = "",
-      inputObjectsToSkip: Set<String> = emptySet(),
-      enumsToSkip: Set<String> = emptySet(),
-      metadataFragments: List<MetadataFragment> = emptyList(),
-      generateTypes: Boolean = true,
       alwaysGenerateTypesMatching: Set<String> = emptySet(),
       operationOutputGenerator: OperationOutputGenerator = defaultOperationOutputGenerator,
       customScalarsMapping: Map<String, String> = emptyMap(),
@@ -136,14 +126,10 @@ class Options(
       schema = schemaFile.toGQLDocument().toSchema(),
       outputDir = outputDir,
       debugDir = debugDir,
-      metadataOutputFile = metadataOutputFile,
       operationOutputFile = operationOutputFile,
       schemaPackageName = packageName,
       packageNameGenerator = PackageNameGenerator.Flat(packageName),
-      inputObjectsToSkip = inputObjectsToSkip,
-      enumsToSkip = enumsToSkip,
-      metadataFragments = metadataFragments,
-      generateTypes = generateTypes,
+      incomingCompilerMetadata = emptyList(),
       alwaysGenerateTypesMatching = alwaysGenerateTypesMatching,
       operationOutputGenerator = operationOutputGenerator,
       customScalarsMapping = customScalarsMapping,
@@ -159,60 +145,6 @@ class Options(
       generateResponseFields = generateResponseFields,
       generateQueryDocument = generateQueryDocument,
       moduleName = moduleName,
-  )
-
-
-  /**
-   * A shorthand version that takes incomingOptions as input
-   */
-  constructor(
-      executableFiles: Set<File>,
-      outputDir: File,
-      incomingOptions: IncomingOptions,
-      packageNameGenerator: PackageNameGenerator,
-      debugDir: File? = null,
-      metadataOutputFile: File? = null,
-      operationOutputFile: File? = null,
-      alwaysGenerateTypesMatching: Set<String> = emptySet(),
-      operationOutputGenerator: OperationOutputGenerator = defaultOperationOutputGenerator,
-      useSemanticNaming: Boolean = defaultUseSemanticNaming,
-      warnOnDeprecatedUsages: Boolean = defaultWarnOnDeprecatedUsages,
-      failOnWarnings: Boolean = defaultFailOnWarnings,
-      logger: GraphQLCompiler.Logger = defaultLogger,
-      generateAsInternal: Boolean = defaultGenerateAsInternal,
-      generateFilterNotNull: Boolean = defaultGenerateFilterNotNull,
-      generateFragmentImplementations: Boolean = defaultGenerateFragmentImplementations,
-      generateResponseFields: Boolean = defaultGenerateResponseFields,
-      generateQueryDocument: Boolean = defaultGenerateQueryDocument,
-      moduleName: String = defaultModuleName,
-  ) : this(
-      executableFiles = executableFiles,
-      outputDir = outputDir,
-      debugDir = debugDir,
-      metadataOutputFile = metadataOutputFile,
-      operationOutputFile = operationOutputFile,
-      alwaysGenerateTypesMatching = alwaysGenerateTypesMatching,
-      operationOutputGenerator = operationOutputGenerator,
-      useSemanticNaming = useSemanticNaming,
-      warnOnDeprecatedUsages = warnOnDeprecatedUsages,
-      failOnWarnings = failOnWarnings,
-      logger = logger,
-      generateAsInternal = generateAsInternal,
-      generateFilterNotNull = generateFilterNotNull,
-      generateFragmentImplementations = generateFragmentImplementations,
-      generateResponseFields = generateResponseFields,
-      generateQueryDocument = generateQueryDocument,
-      moduleName = moduleName,
-      packageNameGenerator = packageNameGenerator,
-      schema = incomingOptions.schema,
-      schemaPackageName = incomingOptions.schemaPackageName,
-      enumsToSkip = incomingOptions.metadataEnums,
-      inputObjectsToSkip = incomingOptions.metadataInputObjects,
-      generateTypes = !incomingOptions.isFromMetadata,
-      metadataFragments = incomingOptions.metadataFragments,
-      codegenModels = incomingOptions.codegenModels,
-      flattenModels = incomingOptions.flattenModels,
-      customScalarsMapping = incomingOptions.customScalarsMapping
   )
 
   companion object {
@@ -231,6 +163,7 @@ class Options(
     const val defaultGenerateQueryDocument = true
     const val defaultModuleName = "apollographql"
     const val defaultCodegenModels = MODELS_COMPAT
+    const val defaultFlattenModels = true
   }
 }
 

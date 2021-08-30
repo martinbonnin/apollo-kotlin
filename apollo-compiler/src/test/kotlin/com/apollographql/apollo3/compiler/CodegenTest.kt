@@ -252,18 +252,18 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
 
       return Options(
           executableFiles = graphqlFiles,
+          schemaFile = schemaFile,
           outputDir = File("build/generated/test/${folder.name}"),
+          packageName = "com.example.${folder.name}",
           operationOutputGenerator = operationOutputGenerator,
+          customScalarsMapping = customScalarsMapping,
+          codegenModels = codegenModels,
+          flattenModels = codegenModels == MODELS_COMPAT,
           useSemanticNaming = useSemanticNaming,
           generateAsInternal = generateAsInternal,
           generateFilterNotNull = true,
           generateFragmentImplementations = generateFragmentImplementations,
-          moduleName = folder.name,
-          schemaFile = schemaFile,
-          customScalarsMapping = customScalarsMapping,
-          codegenModels = codegenModels,
-          packageName = "com.example.${folder.name}",
-          flattenModels = codegenModels == MODELS_COMPAT
+          moduleName = folder.name
       )
     }
 
