@@ -48,7 +48,16 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
   private fun ResolverClassName.toKotlinPoetClassName() = ClassName(packageName, simpleNames)
 
   private fun resolve(kind: ResolverKeyKind, id: String) = resolve(ResolverKey(kind, id))
-  private fun resolveAndAssert(kind: ResolverKeyKind, id: String) = resolve(ResolverKey(kind, id)) ?: error("Cannot resolve $kind:$id")
+  private fun resolveAndAssert(kind: ResolverKeyKind, id: String): ClassName {
+    val result = resolve(ResolverKey(kind, id))
+
+    check(result != null) {
+      "Cannot resolve $kind($id)"
+    }
+    return result
+  }
+  fun canResolveSchemaType(name: String) = resolve(ResolverKey(ResolverKeyKind.SchemaType, name)) != null
+
   private fun register(kind: ResolverKeyKind, id: String, className: ClassName) = classNames.put(ResolverKey(kind, id), className)
 
   fun resolveIrType(type: IrType): TypeName {
@@ -92,7 +101,7 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
     return nonNullableAdapterInitializer(type.ofType, requiresBuffering)
   }
 
-  fun resolveCompiledType(name: String): MemberName {
+  fun resolveCompiledType(name: String): CodeBlock {
     val builtin = when (name) {
       "String" -> MemberName("com.apollographql.apollo3.api", "CompiledStringType")
       "Int" -> MemberName("com.apollographql.apollo3.api", "CompiledIntType")
@@ -103,13 +112,10 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
     }
 
     if (builtin != null) {
-      return builtin
+      return CodeBlock.of("%M", builtin)
     }
 
-    return MemberName(
-        enclosingClassName = resolve(ResolverKeyKind.SchemaType, name) ?: error("Cannot find compiled type for $name"),
-        simpleName = type
-    )
+    return CodeBlock.of("%T.$type", resolve(ResolverKeyKind.SchemaType, name) ?: error("Cannot find compiled type for $name"))
   }
 
   private fun nonNullableAdapterInitializer(type: IrType, requiresBuffering: Boolean): CodeBlock {
@@ -133,7 +139,7 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       }
       is IrCustomScalarType -> {
         CodeBlock.of(
-            "$customScalarAdapters.responseAdapterFor(%M)",
+            "$customScalarAdapters.responseAdapterFor(%L)",
             resolveCompiledType(type.name)
         )
       }
@@ -167,7 +173,10 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
       className: ClassName,
   ) = register(ResolverKeyKind.OperationVariablesAdapter, name, className)
 
-  fun resolveOperationVariablesAdapter(name: String) = resolveAndAssert(ResolverKeyKind.OperationVariablesAdapter, name)
+  /**
+   * Might be null if there are no variable
+   */
+  fun resolveOperationVariablesAdapter(name: String) = resolve(ResolverKeyKind.OperationVariablesAdapter, name)
 
   fun registerOperationSelections(name: String, className: ClassName) = register(ResolverKeyKind.OperationSelections, name, className)
   fun resolveOperationSelections(name: String) = resolveAndAssert(ResolverKeyKind.OperationSelections, name)
@@ -190,5 +199,4 @@ class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
   fun resolveSchemaType(name: String) = resolveAndAssert(ResolverKeyKind.SchemaType, name)
   fun registerSchemaType(name: String, className: ClassName) = register(ResolverKeyKind.SchemaType, name, className)
   fun registerModel(path: String, className: ClassName) = register(ResolverKeyKind.Model, path, className)
-  fun canResolveSchemaType(name: String) = classNames.contains(ResolverKey(ResolverKeyKind.SchemaType, name))
 }

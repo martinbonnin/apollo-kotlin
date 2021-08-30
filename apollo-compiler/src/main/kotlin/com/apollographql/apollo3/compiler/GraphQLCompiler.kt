@@ -100,6 +100,7 @@ object GraphQLCompiler {
     val ir = IrBuilder(
         schema = options.schema,
         operationDefinitions = operations,
+        fragments = fragments,
         allFragmentDefinitions = allFragmentDefinitions,
         alwaysGenerateTypesMatching = options.alwaysGenerateTypesMatching,
         customScalarToKotlinName = options.customScalarsMapping,

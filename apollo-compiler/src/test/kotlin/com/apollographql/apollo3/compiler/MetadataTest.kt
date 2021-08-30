@@ -143,6 +143,7 @@ class MetadataTest {
     rootSourcesDir.assertContents(
         "Body1.kt",
         "Body1_InputAdapter.kt",
+        "CustomScalar1.kt",
         "Encoding.kt",
         "Encoding_ResponseAdapter.kt",
         "MessageInput1.kt",
@@ -156,11 +157,12 @@ class MetadataTest {
     leafSourcesDir.assertContents(
         "Body0.kt",
         "Body0_InputAdapter.kt",
+        "CustomScalar0.kt",
         "MessageInput0.kt",
         "MessageInput0_InputAdapter.kt",
         "SendMessageMutation.kt",
-        "SendMessageMutation_ResponseAdapter.kt",
         "SendMessageMutationSelections.kt",
+        "SendMessageMutation_ResponseAdapter.kt",
         "SendMessageMutation_VariablesAdapter.kt",
         "User0.kt",
         "User0_InputAdapter.kt"
@@ -202,9 +204,10 @@ class MetadataTest {
 
     // Leaf contains the query but not the fragment
     leafSourcesDir.assertContents(
+        "Character.kt",
         "GetHeroQuery.kt",
+        "GetHeroQuerySelections.kt",
         "GetHeroQuery_ResponseAdapter.kt",
-        "GetHeroQuerySelections.kt"
     )
   }
 
@@ -244,13 +247,14 @@ class MetadataTest {
     )
 
     leafSourcesDir.assertContents(
+        "Character.kt",
         "Episode.kt",
         "Episode_ResponseAdapter.kt",
         "GetHeroQuery.kt",
-        "GetHeroQuery_ResponseAdapter.kt",
         "GetHeroQuerySelections.kt",
+        "GetHeroQuery_ResponseAdapter.kt",
         "HumanFragment.kt",
-        "HumanFragmentSelections.kt",
+        "HumanFragmentSelections.kt"
     )
   }
 

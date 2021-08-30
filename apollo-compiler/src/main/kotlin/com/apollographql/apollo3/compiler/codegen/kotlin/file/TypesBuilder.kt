@@ -63,7 +63,7 @@ private fun List<String>.implementsToCode(resolver: KotlinResolver): CodeBlock {
   val builder = CodeBlock.builder()
   builder.add("listOf(")
   builder.add("%L", sorted().map {
-    CodeBlock.of("%M", resolver.resolveCompiledType(it))
+    resolver.resolveCompiledType(it)
   }.joinToCode(", "))
   builder.add(")")
   return builder.build()
@@ -111,7 +111,7 @@ internal fun IrInterface.typePropertySpec(resolver: KotlinResolver): PropertySpe
 internal fun IrUnion.typePropertySpec(resolver: KotlinResolver): PropertySpec {
   val builder = CodeBlock.builder()
   builder.add(members.map {
-    CodeBlock.of("%T", resolver.resolveCompiledType(it))
+    resolver.resolveCompiledType(it)
   }.joinToCode(", "))
 
   return PropertySpec

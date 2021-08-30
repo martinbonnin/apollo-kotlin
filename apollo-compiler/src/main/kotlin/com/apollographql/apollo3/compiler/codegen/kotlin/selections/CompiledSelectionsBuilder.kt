@@ -268,20 +268,7 @@ class CompiledSelectionsBuilder(
         CodeBlock.of("%L.%M()", type.codeBlock(), listFun)
       }
       is GQLNamedType -> {
-        val memberType = context.resolver.resolveCompiledType(name)
-        if (memberType != null) {
-          CodeBlock.of("%M", memberType)
-        } else {
-          // Fallback case for the builtin types
-          val typeDefinition = schema.typeDefinition(name)
-
-          when (typeDefinition) {
-            is GQLUnionTypeDefinition -> error("Unknown union $name")
-            is GQLInterfaceTypeDefinition -> CodeBlock.of("%T(%S)", InterfaceType::class, name)
-            is GQLObjectTypeDefinition -> CodeBlock.of("%T(%S)", ObjectType::class, name)
-            else -> error("Unknown type $name")
-          }
-        }
+        context.resolver.resolveCompiledType(name)
       }
     }
   }

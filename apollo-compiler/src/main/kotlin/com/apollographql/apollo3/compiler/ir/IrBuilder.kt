@@ -55,6 +55,7 @@ import com.apollographql.apollo3.compiler.MODELS_RESPONSE_BASED
 internal class IrBuilder(
     private val schema: Schema,
     private val operationDefinitions: List<GQLOperationDefinition>,
+    private val fragments: List<GQLFragmentDefinition>,
     private val allFragmentDefinitions: Map<String, GQLFragmentDefinition>,
     private val alwaysGenerateTypesMatching: Set<String>,
     private val customScalarToKotlinName: Map<String, String>,
@@ -92,7 +93,7 @@ internal class IrBuilder(
 
   fun build(): Ir {
     val operations = operationDefinitions.map { it.toIr() }
-    val fragments = allFragmentDefinitions.values.map { it.toIr() }
+    val fragments = fragments.map { it.toIr() }
 
     val visitedInputObjects = mutableSetOf<String>()
 
