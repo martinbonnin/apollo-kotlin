@@ -3,6 +3,7 @@ package com.apollographql.apollo3.compiler.codegen.kotlin
 import com.apollographql.apollo3.compiler.APOLLO_VERSION
 import com.apollographql.apollo3.compiler.PackageNameGenerator
 import com.apollographql.apollo3.compiler.codegen.CodegenLayout
+import com.apollographql.apollo3.compiler.codegen.ResolverInfo
 import com.apollographql.apollo3.compiler.codegen.kotlin.adapter.EnumResponseAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.CustomScalarBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.file.EnumBuilder
@@ -31,6 +32,7 @@ import java.io.File
 
 class KotlinCodeGen(
     private val ir: Ir,
+    private val resolverInfos: List<ResolverInfo>,
     private val generateAsInternal: Boolean = false,
     private val useSemanticNaming: Boolean,
     private val packageNameGenerator: PackageNameGenerator,
@@ -46,12 +48,20 @@ class KotlinCodeGen(
     /**
      * Whether to flatten the models. This decision is left to the codegen. For fragments for an example, we
      * want to flatten at depth 1 to avoid name clashes, but it's ok to flatten fragment response adapters at
-     * depth 0 for an example
+     * depth 0
      */
     private val flatten: Boolean,
     private val flattenNamesInOrder: Boolean,
 ) {
-  fun write(outputDir: File) {
+  /**
+   * @param outputDir: the directory where to write the Kotlin files
+   * @return a ResolverInfo to be used by downstream modules
+   */
+  fun write(outputDir: File): ResolverInfo {
+    val upstreamResolver = resolverInfos.fold(null as KotlinResolver?) { acc, resolverInfo ->
+      KotlinResolver(resolverInfo.entries, acc)
+    }
+
     val layout = CodegenLayout(
         useSemanticNaming = useSemanticNaming,
         packageNameGenerator = packageNameGenerator,
@@ -60,87 +70,99 @@ class KotlinCodeGen(
 
     val context = KotlinContext(
         layout = layout,
-        resolver = KotlinResolver()
+        resolver = KotlinResolver(emptyList(), upstreamResolver)
     )
     val builders = mutableListOf<CgFileBuilder>()
 
-    ir.inputObjects.forEach {
-      builders.add(InputObjectBuilder(context, it))
-      builders.add(InputObjectAdapterBuilder(context, it))
-    }
-
-    ir.enums.forEach { enum ->
-      builders.add(EnumBuilder(context, enum))
-      builders.add(EnumResponseAdapterBuilder(context, enum))
-    }
-
-    ir.objects.forEach { obj ->
-      builders.add(ObjectBuilder(context, obj))
-    }
-    ir.interfaces.forEach { iface ->
-      builders.add(InterfaceBuilder(context, iface))
-    }
-    ir.unions.forEach { union ->
-      builders.add(UnionBuilder(context, union))
-    }
-    ir.customScalars.forEach { customScalar ->
-      builders.add(CustomScalarBuilder(context, customScalar))
-    }
-
-    ir.fragments.forEach { fragment ->
-      builders.add(
-          FragmentModelsBuilder(
-              context,
-              fragment,
-              (fragment.interfaceModelGroup ?: fragment.dataModelGroup),
-              fragment.interfaceModelGroup == null,
-              flatten,
-              flattenNamesInOrder
-          )
-      )
-
-      builders.add(FragmentSelectionsBuilder(context, fragment, ir.schema, ir.allFragmentDefinitions))
-
-      if (generateFragmentImplementations || fragment.interfaceModelGroup == null) {
-        builders.add(FragmentResponseAdapterBuilder(context, fragment, flatten, flattenNamesInOrder))
-      }
-
-      if (generateFragmentImplementations) {
-        builders.add(
-            FragmentBuilder(
-                context,
-                generateFilterNotNull,
-                fragment,
-                flatten,
-                flattenNamesInOrder
-            )
-        )
-        if (fragment.variables.isNotEmpty()) {
-          builders.add(FragmentVariablesAdapterBuilder(context, fragment))
+    ir.inputObjects
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach {
+          builders.add(InputObjectBuilder(context, it))
+          builders.add(InputObjectAdapterBuilder(context, it))
         }
-      }
-    }
+    ir.enums
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach { enum ->
+          builders.add(EnumBuilder(context, enum))
+          builders.add(EnumResponseAdapterBuilder(context, enum))
+        }
+    ir.objects
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach { obj ->
+          builders.add(ObjectBuilder(context, obj))
+        }
+    ir.interfaces
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach { iface ->
+          builders.add(InterfaceBuilder(context, iface))
+        }
+    ir.unions
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach { union ->
+          builders.add(UnionBuilder(context, union))
+        }
+    ir.customScalars
+        .filter { !context.resolver.canResolveSchemaType(it.name) }
+        .forEach { customScalar ->
+          builders.add(CustomScalarBuilder(context, customScalar))
+        }
 
-    ir.operations.forEach { operation ->
-      if (operation.variables.isNotEmpty()) {
-        builders.add(OperationVariablesAdapterBuilder(context, operation))
-      }
-
-      builders.add(OperationSelectionsBuilder(context, operation, ir.schema, ir.allFragmentDefinitions))
-      builders.add(OperationResponseAdapterBuilder(context, operation, flatten, flattenNamesInOrder))
-
-      builders.add(
-          OperationBuilder(
-              context,
-              generateFilterNotNull,
-              operationOutput.findOperationId(operation.name),
-              generateQueryDocument,
-              operation,
-              flatten,
-              flattenNamesInOrder
+    ir.fragments
+        .forEach { fragment ->
+          builders.add(
+              FragmentModelsBuilder(
+                  context,
+                  fragment,
+                  (fragment.interfaceModelGroup ?: fragment.dataModelGroup),
+                  fragment.interfaceModelGroup == null,
+                  flatten,
+                  flattenNamesInOrder
+              )
           )
-      )
-    }
+
+          builders.add(FragmentSelectionsBuilder(context, fragment, ir.schema, ir.allFragmentDefinitions))
+
+          if (generateFragmentImplementations || fragment.interfaceModelGroup == null) {
+            builders.add(FragmentResponseAdapterBuilder(context, fragment, flatten, flattenNamesInOrder))
+          }
+
+          if (generateFragmentImplementations) {
+            builders.add(
+                FragmentBuilder(
+                    context,
+                    generateFilterNotNull,
+                    fragment,
+                    flatten,
+                    flattenNamesInOrder
+                )
+            )
+            if (fragment.variables.isNotEmpty()) {
+              builders.add(FragmentVariablesAdapterBuilder(context, fragment))
+            }
+          }
+        }
+
+    ir.operations
+        .forEach { operation ->
+          if (operation.variables.isNotEmpty()) {
+            builders.add(OperationVariablesAdapterBuilder(context, operation))
+          }
+
+          builders.add(OperationSelectionsBuilder(context, operation, ir.schema, ir.allFragmentDefinitions))
+          builders.add(OperationResponseAdapterBuilder(context, operation, flatten, flattenNamesInOrder))
+
+          builders.add(
+              OperationBuilder(
+                  context,
+                  generateFilterNotNull,
+                  operationOutput.findOperationId(operation.name),
+                  generateQueryDocument,
+                  operation,
+                  flatten,
+                  flattenNamesInOrder
+              )
+          )
+        }
 
     builders.forEach { it.prepare() }
     builders
@@ -167,6 +189,12 @@ class KotlinCodeGen(
               .build()
               .writeTo(outputDir)
         }
+
+    return ResolverInfo(
+        magic = "KotlinCodegen",
+        version = APOLLO_VERSION,
+        entries = context.resolver.entries()
+    )
   }
 
   private fun TypeSpec.internal(generateAsInternal: Boolean): TypeSpec {

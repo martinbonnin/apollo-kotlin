@@ -28,7 +28,7 @@ class EnumBuilder(
   private val simpleName = layout.enumName(name = enum.name)
 
   override fun prepare() {
-    context.resolver.registerEnum(
+    context.resolver.registerSchemaType(
         enum.name,
         ClassName(
             packageName,

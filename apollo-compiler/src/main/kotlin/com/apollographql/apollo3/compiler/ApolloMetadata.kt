@@ -31,21 +31,14 @@ data class ApolloMetadata(
     /**
      * The fragments
      */
-    val generatedFragments: List<MetadataFragment>,
-    /**
-     * The generated input objects, enums
-     */
-    val generatedEnums: Set<String>,
-    val generatedInputObjects: Set<String>,
-    val schemaPackageName: String,
+    val fragments: List<GQLFragmentDefinition>,
     /**
      * The module name, for debug
      */
     val moduleName: String,
     val pluginVersion: String,
-    val customScalarsMapping: Map<String, String>,
-    val codegenModels: String,
-    val flattenModels: Boolean
+    val customScalarsMapping: Map<String, String>?,
+    val codegenModels: String?,
 ) {
   companion object {
 
@@ -110,10 +103,8 @@ data class ApolloMetadata(
 
       // no need to validate distinct fragment names, this will be done later when aggregating the Fragments
       return rootMetadata.copy(
-          generatedFragments = flatMap { it.generatedFragments },
+          fragments = flatMap { it.fragments },
           moduleName = "*",
-          generatedEnums = flatMap { it.generatedEnums }.toSet(),
-          generatedInputObjects = flatMap { it.generatedInputObjects }.toSet(),
       )
     }
 

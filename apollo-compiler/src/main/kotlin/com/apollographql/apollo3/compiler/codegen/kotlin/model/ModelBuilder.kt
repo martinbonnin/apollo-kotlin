@@ -51,7 +51,7 @@ class ModelBuilder(
     val properties = properties.filter { !it.hidden }.map {
       PropertySpec.builder(
           context.layout.propertyName(it.info.responseName),
-          context.resolver.resolveType(it.info.type)
+          context.resolver.resolveIrType(it.info.type)
       )
           .applyIf(it.override) { addModifiers(KModifier.OVERRIDE) }
           .maybeAddDescription(it.info.description)

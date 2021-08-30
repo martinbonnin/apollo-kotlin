@@ -7,6 +7,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDepreca
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.ir.IrCustomScalar
 import com.apollographql.apollo3.compiler.ir.IrCustomScalarType
+import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeSpec
 
 class CustomScalarBuilder(
@@ -18,7 +19,7 @@ class CustomScalarBuilder(
   private val simpleName = layout.compiledTypeName(name = customScalar.name)
 
   override fun prepare() {
-    context.resolver.registerIrType(IrCustomScalarType(customScalar.name), packageName, simpleName)
+    context.resolver.registerSchemaType(customScalar.name, ClassName(packageName, simpleName))
   }
 
   override fun build(): CgFile {

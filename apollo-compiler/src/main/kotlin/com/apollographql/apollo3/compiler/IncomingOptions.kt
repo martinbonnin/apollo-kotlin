@@ -35,7 +35,7 @@ class IncomingOptions(
           metadataInputObjects = metadata.generatedInputObjects,
           metadataEnums = metadata.generatedEnums,
           isFromMetadata = true,
-          metadataFragments = metadata.generatedFragments,
+          metadataFragments = metadata.fragments,
       )
     }
 

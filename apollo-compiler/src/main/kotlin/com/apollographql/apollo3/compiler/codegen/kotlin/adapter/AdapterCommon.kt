@@ -15,7 +15,6 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.codeBlock
 import com.apollographql.apollo3.compiler.ir.IrModel
-import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrModelType
 import com.apollographql.apollo3.compiler.ir.IrNonNullType
 import com.apollographql.apollo3.compiler.ir.IrOptionalType
@@ -56,7 +55,7 @@ internal fun readFromResponseCodeBlock(
     CodeBlock.of(
         "var·%L:·%T·=·%L",
         context.layout.variableName(property.info.responseName),
-        context.resolver.resolveType(property.info.type).copy(nullable = !property.info.type.isOptional()),
+        context.resolver.resolveIrType(property.info.type).copy(nullable = !property.info.type.isOptional()),
         variableInitializer
     )
   }.joinToCode(separator = "\n", suffix = "\n")
@@ -107,7 +106,7 @@ internal fun readFromResponseCodeBlock(
             add(
                 "var·%L:·%T·=·null\n",
                 context.layout.variableName(property.info.responseName),
-                context.resolver.resolveType(property.info.type).copy(nullable = !property.info.type.isOptional()),
+                context.resolver.resolveIrType(property.info.type).copy(nullable = !property.info.type.isOptional()),
             )
             beginControlFlow("if·(%L.%M(emptySet(),·$__typename))", property.condition.codeBlock(), evaluate)
           } else {
@@ -119,7 +118,7 @@ internal fun readFromResponseCodeBlock(
             CodeBlock.of(
                 "%L·=·%L.$fromJson($reader, $customScalarAdapters)\n",
                 context.layout.variableName(property.info.responseName),
-                context.resolver.resolveModelAdapter(property.info.type.modelId())
+                context.resolver.resolveModelAdapter(property.info.type.modelPath())
             )
         )
         .applyIf(property.condition != BooleanExpression.True) {
@@ -165,10 +164,10 @@ internal fun readFromResponseCodeBlock(
       .build()
 }
 
-private fun IrType.modelId(): IrId {
+private fun IrType.modelPath(): String {
   return when (this) {
-    is IrNonNullType -> ofType.modelId()
-    is IrModelType -> id
+    is IrNonNullType -> ofType.modelPath()
+    is IrModelType -> path
     else -> error("Synthetic field has an invalid type: $this")
   }
 }
@@ -189,7 +188,7 @@ private fun IrProperty.writeToResponseCodeBlock(context: KotlinContext): CodeBlo
         adapterInitializer
     )
   } else {
-    val adapterInitializer = context.resolver.resolveModelAdapter(info.type.modelId())
+    val adapterInitializer = context.resolver.resolveModelAdapter(info.type.modelPath())
 
     /**
      * Output types do not distinguish between null and absent

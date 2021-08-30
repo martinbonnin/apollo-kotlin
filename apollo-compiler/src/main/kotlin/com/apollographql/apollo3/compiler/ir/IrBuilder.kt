@@ -395,7 +395,7 @@ internal class IrBuilder(
         is GQLObjectTypeDefinition,
         is GQLInterfaceTypeDefinition,
         is GQLUnionTypeDefinition,
-        -> IrModelType(IrUnknownModelId)
+        -> IrModelType(MODEL_UNKNOWN)
       }
     }
   }
@@ -591,11 +591,11 @@ internal fun IrFieldInfo.maybeNullable(makeNullable: Boolean): IrFieldInfo {
   )
 }
 
-internal fun IrType.replacePlaceholder(newId: IrId): IrType {
+internal fun IrType.replacePlaceholder(newPath: String): IrType {
   return when (this) {
-    is IrNonNullType -> IrNonNullType(ofType = ofType.replacePlaceholder(newId))
-    is IrListType -> IrListType(ofType = ofType.replacePlaceholder(newId))
-    is IrModelType -> copy(id = newId)
+    is IrNonNullType -> IrNonNullType(ofType = ofType.replacePlaceholder(newPath))
+    is IrListType -> IrListType(ofType = ofType.replacePlaceholder(newPath))
+    is IrModelType -> copy(path = newPath)
     else -> error("Not a compound type?")
   }
 }

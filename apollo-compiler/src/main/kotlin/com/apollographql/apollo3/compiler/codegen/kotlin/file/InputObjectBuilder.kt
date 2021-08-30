@@ -27,7 +27,7 @@ class InputObjectBuilder(
   }
 
   override fun prepare() {
-    context.resolver.registerInputObject(
+    context.resolver.registerSchemaType(
         inputObject.name,
         ClassName(packageName, simpleName)
     )

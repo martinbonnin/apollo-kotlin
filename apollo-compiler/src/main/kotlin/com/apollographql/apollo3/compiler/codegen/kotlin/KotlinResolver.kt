@@ -7,6 +7,11 @@ import com.apollographql.apollo3.api.IntAdapter
 import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.api.StringAdapter
 import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapters
+import com.apollographql.apollo3.compiler.codegen.Identifier.type
+import com.apollographql.apollo3.compiler.codegen.ResolverClassName
+import com.apollographql.apollo3.compiler.codegen.ResolverEntry
+import com.apollographql.apollo3.compiler.codegen.ResolverKey
+import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
 import com.apollographql.apollo3.compiler.codegen.kotlin.adapter.obj
 import com.apollographql.apollo3.compiler.ir.IrAnyType
 import com.apollographql.apollo3.compiler.ir.IrBooleanType
@@ -17,8 +22,8 @@ import com.apollographql.apollo3.compiler.ir.IrIdType
 import com.apollographql.apollo3.compiler.ir.IrInputObjectType
 import com.apollographql.apollo3.compiler.ir.IrIntType
 import com.apollographql.apollo3.compiler.ir.IrListType
-import com.apollographql.apollo3.compiler.ir.IrId
 import com.apollographql.apollo3.compiler.ir.IrModelType
+import com.apollographql.apollo3.compiler.ir.IrNamedType
 import com.apollographql.apollo3.compiler.ir.IrNonNullType
 import com.apollographql.apollo3.compiler.ir.IrOptionalType
 import com.apollographql.apollo3.compiler.ir.IrStringType
@@ -32,29 +37,41 @@ import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.asTypeName
 
 
-class KotlinResolver {
-  fun resolveType(type: IrType): TypeName {
+class KotlinResolver(entries: List<ResolverEntry>, val next: KotlinResolver?) {
+  fun resolve(key: ResolverKey): ClassName? = classNames[key] ?: next?.resolve(key)
+
+  private var classNames = entries.associateBy(
+      keySelector = { it.key },
+      valueTransform = { it.className.toKotlinPoetClassName() }
+  ).toMutableMap()
+
+  private fun ResolverClassName.toKotlinPoetClassName() = ClassName(packageName, simpleNames)
+
+  private fun resolve(kind: ResolverKeyKind, id: String) = resolve(ResolverKey(kind, id))
+  private fun resolveAndAssert(kind: ResolverKeyKind, id: String) = resolve(ResolverKey(kind, id)) ?: error("Cannot resolve $kind:$id")
+  private fun register(kind: ResolverKeyKind, id: String, className: ClassName) = classNames.put(ResolverKey(kind, id), className)
+
+  fun resolveIrType(type: IrType): TypeName {
     if (type is IrNonNullType) {
-      return resolveType(type.ofType).copy(nullable = false)
+      return resolveIrType(type.ofType).copy(nullable = false)
     }
 
     return when (type) {
       is IrNonNullType -> error("") // make the compiler happy, this case is handled as a fast path
-      is IrListType -> List::class.asClassName().parameterizedBy(resolveType(type.ofType))
+      is IrOptionalType -> Optional::class.asClassName().parameterizedBy(resolveIrType(type.ofType))
+      is IrListType -> List::class.asClassName().parameterizedBy(resolveIrType(type.ofType))
       is IrStringType -> String::class.asTypeName()
       is IrFloatType -> Double::class.asTypeName()
       is IrIntType -> Int::class.asTypeName()
       is IrBooleanType -> Boolean::class.asTypeName()
       is IrIdType -> String::class.asTypeName()
       is IrAnyType -> Any::class.asTypeName()
-      is IrCustomScalarType -> customScalars.get(type.name)
-      is IrEnumType -> enums.get(type.name)
-      is IrInputObjectType -> inputObjects.get(type.name)
-      is IrModelType -> {
-        models.get(type.id)
-      }
-      is IrOptionalType -> Optional::class.asClassName().parameterizedBy(resolveType(type.ofType))
-    }?.copy(nullable = true)?: error("Cannot resolve $type")
+      is IrModelType -> resolve(ResolverKeyKind.Model, type.path)
+          ?: error("Cannot resolve $type")
+      is IrNamedType -> resolve(ResolverKeyKind.SchemaType, type.name)
+          ?: error("Cannot resolve $type")
+      else -> error("$type is not a schema type")
+    }.copy(nullable = true)
   }
 
   fun adapterInitializer(type: IrType, requiresBuffering: Boolean): CodeBlock {
@@ -75,6 +92,26 @@ class KotlinResolver {
     return nonNullableAdapterInitializer(type.ofType, requiresBuffering)
   }
 
+  fun resolveCompiledType(name: String): MemberName {
+    val builtin = when (name) {
+      "String" -> MemberName("com.apollographql.apollo3.api", "CompiledStringType")
+      "Int" -> MemberName("com.apollographql.apollo3.api", "CompiledIntType")
+      "Float" -> MemberName("com.apollographql.apollo3.api", "CompiledFloatType")
+      "Boolean" -> MemberName("com.apollographql.apollo3.api", "CompiledBooleanType")
+      "ID" -> MemberName("com.apollographql.apollo3.api", "CompiledIDType")
+      else -> null
+    }
+
+    if (builtin != null) {
+      return builtin
+    }
+
+    return MemberName(
+        enclosingClassName = resolve(ResolverKeyKind.SchemaType, name) ?: error("Cannot find compiled type for $name"),
+        simpleName = type
+    )
+  }
+
   private fun nonNullableAdapterInitializer(type: IrType, requiresBuffering: Boolean): CodeBlock {
     return when (type) {
       is IrNonNullType -> error("")
@@ -89,154 +126,69 @@ class KotlinResolver {
       is IrFloatType -> CodeBlock.of("%T", DoubleAdapter::class)
       is IrAnyType -> CodeBlock.of("%T", AnyAdapter::class)
       is IrEnumType -> {
-        CodeBlock.of("%T", enumAdapters.get(type.name) ?: error("Cannot find enum '$type' adapter"))
+        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name))
       }
-      is IrInputObjectType ->{
-        CodeBlock.of("%T", inputObjectAdapters.get(type.name) ?: error("Cannot find inputObject '$type' adapter")).obj(requiresBuffering)
+      is IrInputObjectType -> {
+        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name)).obj(requiresBuffering)
       }
       is IrCustomScalarType -> {
         CodeBlock.of(
-            "$customScalarAdapters.responseAdapterFor<%T>(%M)",
-            customScalars.get(type.name) ?: "Cannot find custom scalar '$type'",
-            compiledType.get(type.name)
+            "$customScalarAdapters.responseAdapterFor(%M)",
+            resolveCompiledType(type.name)
         )
       }
       is IrModelType -> {
-        CodeBlock.of("%T", modelAdapters.get(type.id) ?: error("Cannot find model '$type' adapter")).obj(requiresBuffering)
+        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.ModelAdapter, type.path)).obj(requiresBuffering)
       }
       is IrOptionalType -> {
         val optionalFun = MemberName("com.apollographql.apollo3.api", "optional")
         CodeBlock.of("%L.%M()", adapterInitializer(type.ofType, requiresBuffering), optionalFun)
       }
+      else -> error("Cannot create an adapter for $type")
     }
   }
 
   private fun nullableScalarAdapter(name: String) = CodeBlock.of("%M", MemberName("com.apollographql.apollo3.api", name))
 
-  private val models = mutableMapOf<IrId, ClassName>()
-  fun registerModel(type: IrId, className: ClassName) {
-    models.put(type, className)
-  }
-  fun resolveModel(type: IrId): ClassName {
-    return models.get(type) ?: error("Cannot resolve model '$type'")
-  }
-  private val modelAdapters = mutableMapOf<IrId, ClassName>()
-  fun registerModelAdapter(id: IrId, className: ClassName) {
-    modelAdapters.put(id, className)
-  }
-  fun resolveModelAdapter(id: IrId): ClassName {
-    return modelAdapters.get(id) ?: error("Cannot resolve model adapter '$id'")
-  }
-  private val enumAdapters = mutableMapOf<String, ClassName>()
-  fun registerEnumAdapter(name: String, className: ClassName) {
-    enumAdapters.put(name, className)
-  }
-  private val inputObjectAdapters = mutableMapOf<String, ClassName>()
-  fun registerInputObjectAdapter(name: String, className: ClassName) {
-    inputObjectAdapters.put(name, className)
-  }
-  private val operations = mutableMapOf<String, ClassName>()
-  fun registerOperation(name: String, className: ClassName) {
-    operations.put(name, className)
-  }
-  fun resolveOperation(name: String): ClassName {
-    return operations.get(name) ?: error("Cannot resolve operation '$name'")
-  }
 
-  private val operationsVariablesAdapter = mutableMapOf<String, ClassName>()
-  fun registerOperationVariablesAdapter(name: String, className: ClassName) {
-    operationsVariablesAdapter.put(name, className)
-  }
-  fun resolveOperationVariablesAdapter(name: String): ClassName? {
-    return operationsVariablesAdapter.get(name)
-  }
+  fun resolveModel(path: String) = resolveAndAssert(ResolverKeyKind.Model, path)
 
-  private val operationSelections = mutableMapOf<String, ClassName>()
-  fun registerOperationSelections(name: String, className: ClassName) {
-    operationSelections.put(name, className)
-  }
-  fun resolveOperationSelections(name: String): ClassName {
-    return operationSelections.get(name) ?: error("Cannot resolve operation '$name' response fields")
-  }
+  fun registerModelAdapter(path: String, className: ClassName) = register(ResolverKeyKind.ModelAdapter, path, className)
+  fun resolveModelAdapter(path: String) = resolveAndAssert(ResolverKeyKind.ModelAdapter, path)
 
-  private val fragments = mutableMapOf<String, ClassName>()
-  fun registerFragment(name: String, className: ClassName) {
-    fragments.put(name, className)
-  }
-  fun resolveFragment(name: String): ClassName {
-    return fragments.get(name) ?: error("Cannot resolve fragment '$name'")
-  }
+  fun registerEnumAdapter(name: String, className: ClassName) = register(ResolverKeyKind.SchemaTypeAdapter, name, className)
+  fun registerInputObjectAdapter(name: String, className: ClassName) = register(ResolverKeyKind.SchemaTypeAdapter, name, className)
 
-  private val fragmentsVariablesAdapter = mutableMapOf<String, ClassName>()
-  fun registerFragmentVariablesAdapter(name: String, className: ClassName) {
-    fragmentsVariablesAdapter.put(name, className)
-  }
-  fun resolveFragmentVariablesAdapter(name: String): ClassName? {
-    return fragmentsVariablesAdapter.get(name)
-  }
+  fun registerOperation(name: String, className: ClassName) = register(ResolverKeyKind.Operation, name, className)
+  fun resolveOperation(name: String) = resolveAndAssert(ResolverKeyKind.Operation, name)
 
-  private val fragmentSelections = mutableMapOf<String, ClassName>()
-  fun registerFragmentSelections(name: String, className: ClassName) {
-    fragmentSelections.put(name, className)
-  }
-
-  fun resolveFragmentSelections(name: String): ClassName {
-    return fragmentSelections.get(name) ?: error("Cannot resolve fragment '$name' selections")
-  }
-
-  private var customScalars = mutableMapOf<String, ClassName?>()
-  fun registerCustomScalar(
-      name: String,
-      kotlinName: String?,
-  ) {
-    customScalars.put(name, kotlinName?.let { ClassName.bestGuess(it) })
-  }
-
-  private var compiledType = mutableMapOf<String, MemberName>()
-  fun registerCompiledType(
-      name: String,
-      memberName: MemberName,
-  ) {
-    compiledType.put(name, memberName)
-  }
-
-  fun resolveCompiledType(name: String): MemberName? {
-    when (name) {
-      "String" -> return MemberName("com.apollographql.apollo3.api", "CompiledStringType")
-      "Int" -> return MemberName("com.apollographql.apollo3.api", "CompiledIntType")
-      "Float" -> return MemberName("com.apollographql.apollo3.api", "CompiledFloatType")
-      "Boolean" -> return MemberName("com.apollographql.apollo3.api", "CompiledBooleanType")
-      "ID" -> return MemberName("com.apollographql.apollo3.api", "CompiledIDType")
-    }
-    return compiledType[name]
-  }
-  private var enums = mutableMapOf<String, ClassName>()
-  fun registerEnum(
+  fun registerOperationVariablesAdapter(
       name: String,
       className: ClassName,
-  ) {
-    enums.put(name, className)
-  }
-  fun resolveEnum(name: String): ClassName {
-    return enums.get(name) ?: error("cannot resolve enum '$name'")
-  }
+  ) = register(ResolverKeyKind.OperationVariablesAdapter, name, className)
 
-  private var inputObjects = mutableMapOf<String, ClassName>()
-  fun registerInputObject(
+  fun resolveOperationVariablesAdapter(name: String) = resolveAndAssert(ResolverKeyKind.OperationVariablesAdapter, name)
+
+  fun registerOperationSelections(name: String, className: ClassName) = register(ResolverKeyKind.OperationSelections, name, className)
+  fun resolveOperationSelections(name: String) = resolveAndAssert(ResolverKeyKind.OperationSelections, name)
+
+  fun registerFragment(name: String, className: ClassName) = register(ResolverKeyKind.Fragment, name, className)
+
+  fun resolveFragment(name: String) = resolveAndAssert(ResolverKeyKind.Fragment, name)
+
+  fun registerFragmentVariablesAdapter(
       name: String,
       className: ClassName,
-  ) {
-    inputObjects.put(name, className)
-  }
+  ) = register(ResolverKeyKind.FragmentVariablesAdapter, name, className)
 
-  fun resolveInputObject(name: String): ClassName {
-    return inputObjects.get(name) ?: error("cannot resolve input object '$name'")
-  }
+  fun resolveFragmentVariablesAdapter(name: String) = resolve(ResolverKeyKind.FragmentVariablesAdapter, name)
 
-  class Ref(val packageName: String, val simpleNames: List<String>)
+  fun registerFragmentSelections(name: String, className: ClassName) = register(ResolverKeyKind.FragmentSelections, name, className)
+  fun resolveFragmentSelections(name: String) = resolveAndAssert(ResolverKeyKind.FragmentSelections, name)
 
-  private var classNames = mutableMapOf<IrId, Ref>()
-  fun registerId(id: IrId, packageName: String, vararg simpleNames: String) {
-    classNames.put(id, Ref(packageName, simpleNames.toList()))
-  }
+  fun entries() = classNames.map { ResolverEntry(it.key, ResolverClassName(it.value.packageName, it.value.simpleNames)) }
+  fun resolveSchemaType(name: String) = resolveAndAssert(ResolverKeyKind.SchemaType, name)
+  fun registerSchemaType(name: String, className: ClassName) = register(ResolverKeyKind.SchemaType, name, className)
+  fun registerModel(path: String, className: ClassName) = register(ResolverKeyKind.Model, path, className)
+  fun canResolveSchemaType(name: String) = classNames.contains(ResolverKey(ResolverKeyKind.SchemaType, name))
 }

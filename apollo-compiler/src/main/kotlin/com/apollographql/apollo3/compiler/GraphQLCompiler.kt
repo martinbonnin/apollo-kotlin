@@ -133,6 +133,7 @@ object GraphQLCompiler {
      */
     KotlinCodeGen(
         ir = ir,
+        resolverInfos = options.enumsToSkip
         generateAsInternal = options.generateAsInternal,
         operationOutput = operationOutput,
         useSemanticNaming = options.useSemanticNaming,
@@ -141,10 +142,6 @@ object GraphQLCompiler {
         generateFilterNotNull = options.generateFilterNotNull,
         generateFragmentImplementations = options.generateFragmentImplementations,
         generateQueryDocument = options.generateQueryDocument,
-        fragmentsToSkip = options.metadataFragments.map { it.name }.toSet(),
-        enumsToSkip = options.enumsToSkip,
-        inputObjectsToSkip = options.inputObjectsToSkip,
-        generateSchema = options.generateTypes,
         flatten = options.flattenModels,
         flattenNamesInOrder = options.codegenModels != MODELS_COMPAT
     ).write(outputDir = outputDir)
@@ -172,7 +169,7 @@ object GraphQLCompiler {
       ApolloMetadata(
           schema = outgoingSchema,
           customScalarsMapping = options.customScalarsMapping,
-          generatedFragments = outgoingMetadataFragments,
+          fragments = outgoingMetadataFragments,
           generatedEnums = ir.enums.map { it.name }.toSet(),
           generatedInputObjects = ir.inputObjects.map { it.name }.toSet(),
           codegenModels = options.codegenModels,

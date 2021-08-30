@@ -63,7 +63,7 @@ private fun List<String>.implementsToCode(resolver: KotlinResolver): CodeBlock {
   val builder = CodeBlock.builder()
   builder.add("listOf(")
   builder.add("%L", sorted().map {
-    CodeBlock.of("%T.$type", resolver.resolveCompiledType(it))
+    CodeBlock.of("%M", resolver.resolveCompiledType(it))
   }.joinToCode(", "))
   builder.add(")")
   return builder.build()

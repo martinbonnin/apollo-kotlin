@@ -30,7 +30,7 @@ class Options(
      */
     val debugDir: File? = null,
     /**
-     * A file where to store the metadata associated with this compilation.
+     * A file where to store the metadata associated with this compilation unit.
      * Metadata are used in multimodule scenarios to share the output of a module with other modules
      */
     val metadataOutputFile: File?,
@@ -49,21 +49,9 @@ class Options(
      */
     val packageNameGenerator: PackageNameGenerator,
     /**
-     * A set of input objects to skip because they were already generated upstream
-     */
-    val inputObjectsToSkip: Set<String>,
-    /**
-     * A set of enums to skip because they were already generated upstream
-     */
-    val enumsToSkip: Set<String>,
-    /**
      * The fragments from upstream
      */
     val metadataFragments: List<MetadataFragment>,
-    /**
-     * Whether to generate the Types
-     */
-    val generateTypes: Boolean,
     /**
      * Additional enum/input types to generate.
      * For input types, this will recursively add all input fields types/enums.

@@ -1,0 +1,46 @@
+package com.apollographql.apollo3.compiler.codegen
+
+import com.squareup.moshi.JsonClass
+
+
+
+@JsonClass(generateAdapter = true)
+class ResolverClassName(val packageName: String, val simpleNames: List<String>) {
+  constructor(packageName: String, vararg simpleNames: String): this(packageName, simpleNames.toList())
+}
+
+@JsonClass(generateAdapter = true)
+class ResolverMemberName(val className: ResolverClassName, val name: String)
+
+/**
+ * Must be a data class because it is used as a key in resolvers
+ */
+@JsonClass(generateAdapter = true, generator = "sealed:kind")
+data class ResolverKey(val kind: ResolverKeyKind, val id: String)
+
+enum class ResolverKeyKind {
+  SchemaType,
+  Model,
+  SchemaTypeAdapter,
+  ModelAdapter,
+  Operation,
+  OperationVariablesAdapter,
+  OperationAdapter,
+  FragmentAdapter,
+  OperationSelections,
+  Fragment,
+  FragmentVariablesAdapter,
+  FragmentSelections
+}
+
+@JsonClass(generateAdapter = true)
+class ResolverEntry(
+    val key: ResolverKey,
+    val className: ResolverClassName
+)
+@JsonClass(generateAdapter = true)
+class ResolverInfo(
+    val magic: String,
+    val version: String,
+    val entries: List<ResolverEntry>
+)

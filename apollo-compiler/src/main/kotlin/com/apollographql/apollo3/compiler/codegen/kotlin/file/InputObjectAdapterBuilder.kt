@@ -37,7 +37,7 @@ class InputObjectAdapterBuilder(
     }.inputAdapterTypeSpec(
         context,
         simpleName,
-        context.resolver.resolveInputObject(inputObject.name)
+        context.resolver.resolveSchemaType(inputObject.name)
     )
   }
 }

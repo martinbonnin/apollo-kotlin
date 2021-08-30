@@ -10,12 +10,12 @@ import com.apollographql.apollo3.ast.Schema
 * IR.
 *
 * Compared to the GraphQL AST, the IR:
+* - Transforms [GQLField] into [IrProperty] and [IrModel]
 * - moves @include/@skip directives on inline fragments and object fields to their children selections
 * - interprets @deprecated directives
 * - coerces argument values and resolves defaultValue
 * - infers fragment variables
 * - registers used types and fragments
-* - compute the packageName
 * - more generally removes all references to the GraphQL AST and "embeds" type definitions/field definitions
 */
 data class Ir(
@@ -49,7 +49,7 @@ data class IrEnum(
  * An input field
  *
  * Note: [IrInputField], and [IrVariable] are all very similar since they all share
- * the [com.apollographql.apollo3.ast.GQLInputValueDefinition] type but they also
+ * the [com.apollographql.apollo3.ast.GQLInputValueDefinition] type, but they also
  * have differences which is why they are different IR models:
  * - [IrVariable] doesn't have a description
  */
@@ -118,17 +118,17 @@ data class IrFieldInfo(
 )
 
 sealed class IrAccessor {
-  abstract val returnedModelId: IrId
+  abstract val returnedModelId: String
 }
 
 data class IrFragmentAccessor(
     val fragmentName: String,
-    override val returnedModelId: IrId,
+    override val returnedModelId: String,
 ) : IrAccessor()
 
 data class IrSubtypeAccessor(
     val typeSet: TypeSet,
-    override val returnedModelId: IrId,
+    override val returnedModelId: String,
 ) : IrAccessor()
 
 /**
@@ -136,7 +136,7 @@ data class IrSubtypeAccessor(
  */
 data class IrModel(
     val modelName: String,
-    val id: IrId,
+    val id: String,
     /**
      * The typeSet of this model.
      * Used by the adapters for ordering/making the code look nice
@@ -149,7 +149,8 @@ data class IrModel(
      */
     val possibleTypes: Set<String>,
     val accessors: List<IrAccessor>,
-    val implements: List<IrId>,
+    // A list of paths
+    val implements: List<String>,
     /**
      * Nested models. Might be empty if the models are flattened
      */
@@ -175,7 +176,7 @@ data class IrProperty(
 )
 
 data class IrModelGroup(
-    val baseModelId: IrId,
+    val baseModelId: String,
     val models: List<IrModel>,
 )
 
@@ -274,10 +275,31 @@ object IrBooleanType : IrType()
 object IrIdType : IrType()
 object IrAnyType : IrType()
 
-data class IrCustomScalarType(val name: String) : IrType()
-data class IrInputObjectType(val name: String) : IrType()
-data class IrEnumType(val name: String) : IrType()
-data class IrModelType(val id: IrId) : IrType()
+interface IrNamedType {
+  val name: String
+}
+data class IrCustomScalarType(override val name: String) : IrType(), IrNamedType
+data class IrInputObjectType(override val name: String) : IrType(), IrNamedType
+data class IrEnumType(override val name: String) : IrType(), IrNamedType
+/**
+ * @param path a unique path identifying the model.
+ *
+ * fragmentData.$fragmentName.hero.friend
+ * fragmentIface.$fragmentName.hero.friend
+ * operationData.$operationName.hero.friend
+ * operationData.$operationName.hero.otherFriend
+ * ?
+ */
+data class IrModelType(val path: String) : IrType()
+
+const val MODEL_OPERATION_DATA = "operationData"
+const val MODEL_FRAGMENT_DATA = "fragmentData"
+const val MODEL_FRAGMENT_INTERFACE = "fragmentIface"
+const val MODEL_UNKNOWN = "?"
+
+data class IrObjectType(override val name: String) : IrType(), IrNamedType
+data class IrInterfaceType(override val name: String) : IrType(), IrNamedType
+data class IrUnionType(override val name: String) : IrType(), IrNamedType
 
 fun IrType.makeOptional(): IrType = IrNonNullType(IrOptionalType(this))
 fun IrType.makeNullable(): IrType = if (this is IrNonNullType) {
@@ -294,22 +316,4 @@ fun IrType.makeNonNull(): IrType = if (this is IrNonNullType) {
 
 fun IrType.isOptional() = (this is IrNonNullType) && (this.ofType is IrOptionalType)
 
-/**
- * A unique, stable id for Ir types that can be referenced in the target language.
- */
-sealed class IrId {
-  data class Object(val name: String) : IrId()
-  data class Interface(val name: String) : IrId()
-  data class Union(val name: String) : IrId()
-  data class Enum(val name: String) : IrId()
-  data class CustomScalar(val name: String) : IrId()
-  data class InputObject(val name: String) : IrId()
-  data class FragmentInterfaceModel(val path: String) : IrId()
-  data class FragmentDataModel(val path: String) : IrId()
-  data class OperationDataModel(val path: String) : IrId()
-  /**
-   * A placeholder for compound types until we assign them an id
-   */
-  object Unknown : IrId()
-}
 

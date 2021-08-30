@@ -9,6 +9,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapters
+import com.apollographql.apollo3.compiler.codegen.Identifier.reader
 import com.apollographql.apollo3.compiler.codegen.Identifier.toJson
 import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
@@ -48,11 +49,11 @@ class EnumResponseAdapterBuilder(
   }
 
   private fun IrEnum.typeSpec(): TypeSpec {
-    val adaptedTypeName = context.resolver.resolveEnum(enum.name)
+    val adaptedTypeName = context.resolver.resolveSchemaType(enum.name)
     val fromResponseFunSpec = FunSpec.builder(Identifier.fromJson)
         .addModifiers(KModifier.OVERRIDE)
-        .addParameter(Identifier.reader, JsonReader::class)
-        .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
+        .addParameter(reader, JsonReader::class)
+        .addParameter(customScalarAdapters, CustomScalarAdapters::class)
         .returns(adaptedTypeName)
         .addCode(
             CodeBlock.builder()

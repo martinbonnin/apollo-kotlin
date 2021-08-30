@@ -25,7 +25,7 @@ internal fun NamedType.toParameterSpec(context: KotlinContext): ParameterSpec {
       .builder(
           // we use property for parameters as these are ultimately data classes
           name = context.layout.propertyName(graphQlName),
-          type = context.resolver.resolveType(type)
+          type = context.resolver.resolveIrType(type)
       )
       .applyIf(description?.isNotBlank() == true) { addKdoc("%L\n", description!!) }
       .applyIf(type.isOptional()) { defaultValue("%T", Optional.Absent::class.asClassName()) }
