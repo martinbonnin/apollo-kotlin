@@ -8,7 +8,7 @@ import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrNamedFragment
 import com.squareup.javapoet.TypeSpec
 
-class FragmentResponseAdapterBuilder(
+class FragmentDataAdapterBuilder(
     val context: JavaContext,
     val fragment: IrNamedFragment,
     val flatten: Boolean,
@@ -34,7 +34,6 @@ class FragmentResponseAdapterBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = fragment.responseAdapterTypeSpec()
     )
   }

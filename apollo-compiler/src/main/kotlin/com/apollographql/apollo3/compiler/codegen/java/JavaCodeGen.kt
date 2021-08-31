@@ -9,7 +9,7 @@ import com.apollographql.apollo3.compiler.codegen.java.file.CustomScalarBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.EnumBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentModelsBuilder
-import com.apollographql.apollo3.compiler.codegen.java.file.FragmentResponseAdapterBuilder
+import com.apollographql.apollo3.compiler.codegen.java.file.FragmentDataAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentSelectionsBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentVariablesAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.InputObjectAdapterBuilder
@@ -130,7 +130,7 @@ class JavaCodeGen(
           builders.add(FragmentSelectionsBuilder(context, fragment, ir.schema, ir.allFragmentDefinitions))
 
           if (generateFragmentImplementations || fragment.interfaceModelGroup == null) {
-            builders.add(FragmentResponseAdapterBuilder(context, fragment, flatten, flattenNamesInOrder))
+            builders.add(FragmentDataAdapterBuilder(context, fragment, flatten, flattenNamesInOrder))
           }
 
           if (generateFragmentImplementations) {

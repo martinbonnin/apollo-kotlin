@@ -1,9 +1,6 @@
 package test;
 
-import com.apollographql.apollo3.api.AdapterKt;
 import com.apollographql.apollo3.api.Adapters;
-import com.apollographql.apollo3.api.CompiledGraphQL;
-import com.apollographql.apollo3.api.CompiledType;
 import com.apollographql.apollo3.api.CustomScalarAdapters;
 import com.apollographql.apollo3.api.StringAdapter;
 import com.apollographql.apollo3.api.internal.json.BufferedSourceJsonReader;
@@ -40,4 +37,5 @@ public class JavaApiTest {
     assertThat(result).isEqualTo(null);
   }
 }
+
 
