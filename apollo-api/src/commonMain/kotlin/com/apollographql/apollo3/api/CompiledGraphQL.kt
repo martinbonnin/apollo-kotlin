@@ -1,9 +1,13 @@
+@file:JvmName("CompiledGraphQL")
+
 package com.apollographql.apollo3.api
 
 import com.apollographql.apollo3.api.CompiledArgument.Companion.resolveVariables
 import com.apollographql.apollo3.api.internal.json.BufferedSinkJsonWriter
 import com.apollographql.apollo3.api.internal.json.Utils
 import okio.Buffer
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmName
 import kotlin.native.concurrent.SharedImmutable
 
 
@@ -196,26 +200,37 @@ fun CompiledType.leafType(): CompiledNamedType {
 }
 
 @SharedImmutable
+@JvmField
 val CompiledStringType = ScalarType("String")
 @SharedImmutable
+@JvmField
 val CompiledIntType = ScalarType("Int")
 @SharedImmutable
+@JvmField
 val CompiledFloatType = ScalarType("Float")
 @SharedImmutable
+@JvmField
 val CompiledBooleanType = ScalarType("Boolean")
 @SharedImmutable
+@JvmField
 val CompiledIDType = ScalarType("ID")
 @SharedImmutable
+@JvmField
 val CompiledSchemaType = ObjectType("__Schema")
 @SharedImmutable
+@JvmField
 val CompiledTypeType = ObjectType("__Type")
 @SharedImmutable
+@JvmField
 val CompiledFieldType = ObjectType("__Field")
 @SharedImmutable
+@JvmField
 val CompiledInputValueType = ObjectType("__InputValue")
 @SharedImmutable
+@JvmField
 val CompiledEnumValueType = ObjectType("__EnumValue")
 @SharedImmutable
+@JvmField
 val CompiledDirectiveType = ObjectType("__Directive")
 
 fun CompiledNamedType.isComposite(): Boolean {

@@ -12,6 +12,7 @@ dependencies {
     because("To generate the CacheResolver")
   }
   implementation(groovy.util.Eval.x(project, "x.dep.poet.kotlin"))
+  implementation(groovy.util.Eval.x(project, "x.dep.poet.java"))
 
   implementation(groovy.util.Eval.x(project, "x.dep.moshi.adapters"))
   implementation(groovy.util.Eval.x(project, "x.dep.moshi.moshi"))

@@ -1,0 +1,46 @@
+package com.apollographql.apollo3.compiler.codegen.java.file
+
+import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDeprecation
+import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
+import com.apollographql.apollo3.compiler.ir.IrUnion
+import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.TypeSpec
+
+class UnionBuilder(
+    private val context: JavaContext,
+    private val union: IrUnion
+): JavaClassBuilder {
+  private val layout = context.layout
+  private val packageName = layout.typePackageName()
+  private val simpleName = layout.compiledTypeName(name = union.name)
+
+  override fun prepare() {
+    context.resolver.registerSchemaType(union.name, ClassName.get(packageName, simpleName))
+  }
+
+  override fun build(): CodegenJavaFile {
+    return CodegenJavaFile(
+        packageName = packageName,
+        fileName = simpleName,
+        typeSpec = listOf(union.typeSpec())
+    )
+  }
+
+  private fun IrUnion.typeSpec(): TypeSpec {
+    return TypeSpec
+        .classBuilder(simpleName)
+        .maybeAddDescription(description)
+        .maybeAddDeprecation(deprecationReason)
+        .addType(companionTypeSpec())
+        .build()
+  }
+
+  private fun IrUnion.companionTypeSpec(): TypeSpec {
+    return TypeSpec.companionObjectBuilder()
+        .addField(typeFieldSpec(context.resolver))
+        .build()
+  }
+}

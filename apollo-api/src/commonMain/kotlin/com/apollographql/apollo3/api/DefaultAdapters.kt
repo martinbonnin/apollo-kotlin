@@ -1,5 +1,6 @@
-package com.apollographql.apollo3.api
+@file:JvmName("Adapters")
 
+package com.apollographql.apollo3.api
 
 import com.apollographql.apollo3.api.internal.json.MapJsonReader.Companion.buffer
 import com.apollographql.apollo3.api.internal.json.MapJsonWriter
@@ -7,6 +8,10 @@ import com.apollographql.apollo3.api.internal.json.Utils
 import com.apollographql.apollo3.api.internal.json.Utils.readRecursively
 import com.apollographql.apollo3.api.json.JsonReader
 import com.apollographql.apollo3.api.json.JsonWriter
+import kotlin.jvm.JvmField
+import kotlin.jvm.JvmMultifileClass
+import kotlin.jvm.JvmName
+import kotlin.jvm.JvmStatic
 import kotlin.native.concurrent.SharedImmutable
 
 /**
@@ -189,12 +194,17 @@ fun <T> Adapter<T>.optional() = OptionalAdapter(this)
  * Global instances of nullable adapters for built-in scalar types
  */
 @SharedImmutable
+@JvmField
 val NullableStringAdapter = StringAdapter.nullable()
 @SharedImmutable
+@JvmField
 val NullableDoubleAdapter = DoubleAdapter.nullable()
 @SharedImmutable
+@JvmField
 val NullableIntAdapter = IntAdapter.nullable()
 @SharedImmutable
+@JvmField
 val NullableBooleanAdapter = BooleanAdapter.nullable()
 @SharedImmutable
+@JvmField
 val NullableAnyAdapter = AnyAdapter.nullable()
