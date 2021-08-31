@@ -25,7 +25,7 @@ class ObjectBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(obj.typeSpec())
+        typeSpec = obj.typeSpec()
     )
   }
 

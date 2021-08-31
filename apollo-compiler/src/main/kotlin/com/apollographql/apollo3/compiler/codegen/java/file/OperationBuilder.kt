@@ -23,7 +23,7 @@ import com.apollographql.apollo3.compiler.codegen.java.model.ModelBuilder
 import com.apollographql.apollo3.compiler.ir.IrOperation
 import com.apollographql.apollo3.compiler.ir.IrOperationType
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.FieldSpec
@@ -74,7 +74,7 @@ class OperationBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(typeSpec())
+        typeSpec = typeSpec()
     )
   }
 
@@ -83,25 +83,25 @@ class OperationBuilder(
         .addSuperinterface(superInterfaceType())
         .maybeAddDescription(operation.description)
         .makeDataClass(operation.variables.map { it.toNamedType().toParameterSpec(context) })
-        .addFunction(operationIdFunSpec())
-        .addFunction(queryDocumentFunSpec(generateQueryDocument))
-        .addFunction(nameFunSpec())
-        .addFunction(serializeVariablesFunSpec())
-        .addFunction(adapterFunSpec())
-        .addFunction(fieldSetsFunSpec())
+        .addFunction(operationIdMethodSpec())
+        .addFunction(queryDocumentMethodSpec(generateQueryDocument))
+        .addFunction(nameMethodSpec())
+        .addFunction(serializeVariablesMethodSpec())
+        .addFunction(adapterMethodSpec())
+        .addFunction(fieldSetsMethodSpec())
         .addTypes(dataTypeSpecs())
         .addType(companionTypeSpec())
         .build()
         .maybeAddFilterNotNull(generateFilterNotNull)
   }
 
-  private fun serializeVariablesFunSpec(): FunSpec = serializeVariablesFunSpec(
+  private fun serializeVariablesMethodSpec(): MethodSpec = serializeVariablesMethodSpec(
       adapterClassName = context.resolver.resolveOperationVariablesAdapter(operation.name),
       emptyMessage = "This operation doesn't have any variable"
   )
 
-  private fun adapterFunSpec(): FunSpec {
-    return adapterFunSpec(
+  private fun adapterMethodSpec(): MethodSpec {
+    return adapterMethodSpec(
         adapterTypeName = context.resolver.resolveModelAdapter(operation.dataModelGroup.baseModelId),
         adaptedTypeName = context.resolver.resolveModel(operation.dataModelGroup.baseModelId)
     )
@@ -123,13 +123,13 @@ class OperationBuilder(
     )
   }
 
-  private fun operationIdFunSpec() = FunSpec.builder(id)
+  private fun operationIdMethodSpec() = MethodSpec.builder(id)
       .addModifiers(KModifier.OVERRIDE)
       .returns(String::class)
       .addStatement("return $OPERATION_ID")
       .build()
 
-  private fun queryDocumentFunSpec(generateQueryDocument: Boolean) = FunSpec.builder(document)
+  private fun queryDocumentMethodSpec(generateQueryDocument: Boolean) = MethodSpec.builder(document)
       .addModifiers(KModifier.OVERRIDE)
       .returns(String::class)
       .apply {
@@ -141,7 +141,7 @@ class OperationBuilder(
       }
       .build()
 
-  private fun nameFunSpec() = FunSpec.builder(name)
+  private fun nameMethodSpec() = MethodSpec.builder(name)
       .addModifiers(KModifier.OVERRIDE)
       .returns(String::class)
       .addStatement("return OPERATION_NAME")
@@ -184,8 +184,8 @@ class OperationBuilder(
     return replace("[", "\\[").replace("]", "\\]")
   }
 
-  private fun fieldSetsFunSpec(): FunSpec {
-    return selectionsFunSpec(
+  private fun fieldSetsMethodSpec(): MethodSpec {
+    return selectionsMethodSpec(
         context, context.resolver.resolveOperationSelections(operation.name)
     )
   }

@@ -12,7 +12,7 @@ import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.codegen.java.model.ModelBuilder
 import com.apollographql.apollo3.compiler.ir.IrNamedFragment
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
@@ -58,7 +58,7 @@ class FragmentBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(fragment.typeSpec())
+        typeSpec = fragment.typeSpec()
     )
   }
 
@@ -67,28 +67,28 @@ class FragmentBuilder(
         .addSuperinterface(superInterfaceType())
         .maybeAddDescription(description)
         .makeDataClass(variables.map { it.toNamedType().toParameterSpec(context) })
-        .addFunction(serializeVariablesFunSpec())
-        .addFunction(adapterFunSpec())
-        .addFunction(selectionsFunSpec())
+        .addFunction(serializeVariablesMethodSpec())
+        .addFunction(adapterMethodSpec())
+        .addFunction(selectionsMethodSpec())
         // Fragments can have multiple data shapes
         .addTypes(dataTypeSpecs())
         .build()
         .maybeAddFilterNotNull(generateFilterNotNull)
   }
 
-  private fun IrNamedFragment.selectionsFunSpec(): FunSpec {
-    return selectionsFunSpec(
+  private fun IrNamedFragment.selectionsMethodSpec(): MethodSpec {
+    return selectionsMethodSpec(
         context, context.resolver.resolveFragmentSelections(name)
     )
   }
 
-  private fun IrNamedFragment.serializeVariablesFunSpec(): FunSpec = serializeVariablesFunSpec(
+  private fun IrNamedFragment.serializeVariablesMethodSpec(): MethodSpec = serializeVariablesMethodSpec(
       adapterClassName = context.resolver.resolveFragmentVariablesAdapter(name),
       emptyMessage = "This fragment doesn't have any variable",
   )
 
-  private fun IrNamedFragment.adapterFunSpec(): FunSpec {
-    return adapterFunSpec(
+  private fun IrNamedFragment.adapterMethodSpec(): MethodSpec {
+    return adapterMethodSpec(
         adapterTypeName = context.resolver.resolveModelAdapter(dataModelGroup.baseModelId),
         adaptedTypeName = context.resolver.resolveModel(dataModelGroup.baseModelId)
     )

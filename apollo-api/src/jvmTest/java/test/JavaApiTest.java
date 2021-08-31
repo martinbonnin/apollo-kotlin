@@ -37,5 +37,7 @@ public class JavaApiTest {
     BufferedSourceJsonReader jsonReader = new BufferedSourceJsonReader(Okio.buffer(Okio.source(new ByteArrayInputStream(json.getBytes()))));
     String result = Adapters.NullableStringAdapter.fromJson(jsonReader, CustomScalarAdapters.Empty);
     assertThat(result).isEqualTo(null);
+
   }
 }
+

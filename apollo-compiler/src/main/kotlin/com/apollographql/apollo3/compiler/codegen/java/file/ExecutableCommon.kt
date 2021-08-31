@@ -14,7 +14,7 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.helpers.patchKotlinNativeOptionalArrayProperties
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.TypeName
@@ -22,10 +22,10 @@ import com.squareup.javapoet.TypeSpec
 import com.squareup.javapoet.asClassName
 import com.squareup.javapoet.asTypeName
 
-fun serializeVariablesFunSpec(
+fun serializeVariablesMethodSpec(
     adapterClassName: TypeName?,
     emptyMessage: String
-): FunSpec {
+): MethodSpec {
 
   val body = if (adapterClassName == null) {
     CodeBlock.of("""
@@ -37,7 +37,7 @@ fun serializeVariablesFunSpec(
             CodeBlock.of("%T", adapterClassName)
     )
   }
-  return FunSpec.builder(serializeVariables)
+  return MethodSpec.builder(serializeVariables)
       .addModifiers(KModifier.OVERRIDE)
       .addParameter(writer, JsonWriter::class)
       .addParameter(customScalarAdapters, CustomScalarAdapters::class.asTypeName())
@@ -45,19 +45,19 @@ fun serializeVariablesFunSpec(
       .build()
 }
 
-fun adapterFunSpec(
+fun adapterMethodSpec(
     adapterTypeName: TypeName,
     adaptedTypeName: TypeName
-): FunSpec {
-  return FunSpec.builder("adapter")
+): MethodSpec {
+  return MethodSpec.builder("adapter")
       .addModifiers(KModifier.OVERRIDE)
       .returns(Adapter::class.asClassName().parameterizedBy(adaptedTypeName))
       .addCode(CodeBlock.of("return·%T", adapterTypeName).obj(false))
       .build()
 }
 
-fun selectionsFunSpec(context: JavaContext, className: ClassName): FunSpec {
-  return FunSpec.builder(selections)
+fun selectionsMethodSpec(context: JavaContext, className: ClassName): MethodSpec {
+  return MethodSpec.builder(selections)
       .addModifiers(KModifier.OVERRIDE)
       .returns(List::class.parameterizedBy(CompiledSelection::class))
       .addCode("return %T.%L\n", className, context.layout.rootSelectionsPropertyName())

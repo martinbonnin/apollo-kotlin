@@ -25,7 +25,7 @@ class UnionBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(union.typeSpec())
+        typeSpec = union.typeSpec()
     )
   }
 

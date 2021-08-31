@@ -1,40 +1,41 @@
 package com.apollographql.apollo3.compiler.codegen.java.file
 
-import com.apollographql.apollo3.compiler.applyIf
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.Identifier
+import com.apollographql.apollo3.compiler.codegen.Identifier.rawValue
 import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
-import com.apollographql.apollo3.compiler.codegen.java.helpers.deprecatedAnnotation
-import com.apollographql.apollo3.compiler.ir.IrEnum
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
+import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.squareup.javapoet.ClassName
+import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.FieldSpec
-import com.squareup.javapoet.TypeName
+import com.squareup.javapoet.MethodSpec
+import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.TypeSpec
+import javax.lang.model.element.Modifier
 
 class EnumBuilder(
     private val context: JavaContext,
-    private val enum: IrEnum
-): JavaClassBuilder {
+    private val enum: IrEnum,
+) : JavaClassBuilder {
   private val layout = context.layout
   private val packageName = layout.typePackageName()
   private val simpleName = layout.enumName(name = enum.name)
+  private val selfClassName = ClassName.get(packageName, simpleName)
 
   override fun prepare() {
     context.resolver.registerSchemaType(
         enum.name,
-        ClassName.get(
-            packageName,
-            simpleName
-        )
+        selfClassName
     )
   }
-
 
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        typeSpec = listOf(enum.toSealedClassTypeSpec())
+        typeSpec = enum.toSealedClassTypeSpec()
     )
   }
 
@@ -42,65 +43,39 @@ class EnumBuilder(
     return TypeSpec
         .classBuilder(simpleName)
         .maybeAddDescription(description)
-        // XXX: can an enum be made deprecated (and not only its values) ?
-        .addModifiers(KModifier.SEALED)
-        .primaryConstructor(primaryConstructorWithOverriddenParamSpec)
-        .addField(rawValueFieldSpec)
-        .addType(companionTypeSpec())
-        .addTypes(values.map { value ->
-          value.toObjectTypeSpec(ClassName("", layout.enumName(name)))
-        })
-        .addType(unknownValueTypeSpec())
+        .addField(
+            FieldSpec.builder(JavaClassNames.String, rawValue).build()
+        )
+        .addMethod(
+            MethodSpec.constructorBuilder()
+                .addParameter(ParameterSpec.builder(JavaClassNames.String, rawValue).build())
+                .addCode("this.$rawValue = $rawValue")
+                .build()
+        )
+        .addFields(
+            values.map { value ->
+              FieldSpec.builder(selfClassName, layout.enumName(name))
+                  .initializer(CodeBlock.of("new %T(%S)", selfClassName, name))
+                  .build()
+            }
+        )
+        .addType(
+            unknownTypeSpec()
+        )
         .build()
   }
 
-  private fun IrEnum.companionTypeSpec(): TypeSpec {
-    return TypeSpec.companionObjectBuilder()
-        .addField(typeFieldSpec())
+  private fun unknownTypeSpec(): TypeSpec {
+    return TypeSpec.classBuilder(Identifier.UNKNOWN__)
+        .addModifiers(Modifier.STATIC, Modifier.PUBLIC)
+        .superclass(selfClassName)
+        .addJavadoc("An enum value that wasn't known at compile time.\n")
+        .addMethod(
+            MethodSpec.constructorBuilder()
+                .addParameter(ParameterSpec.builder(JavaClassNames.String, rawValue).build())
+                .addCode("super($rawValue)")
+                .build()
+        )
         .build()
   }
-
-  private fun IrEnum.Value.toObjectTypeSpec(superClass: TypeName): TypeSpec {
-    return TypeSpec.objectBuilder(layout.enumValueName(name))
-        .applyIf(description?.isNotBlank() == true) { addKdoc("%L\n", description!!) }
-        .applyIf(deprecationReason != null) { addAnnotation(deprecatedAnnotation(deprecationReason!!)) }
-        .superclass(superClass)
-        .addSuperclassConstructorParameter("rawValue = %S", name)
-        .build()
-  }
-
-  private fun IrEnum.unknownValueTypeSpec(): TypeSpec {
-    return TypeSpec.classBuilder("UNKNOWN__")
-        .addKdoc("%L", "Auto generated constant for unknown enum values\n")
-        .primaryConstructor(primaryConstructorSpec)
-        .superclass(ClassName("", layout.enumName(name)))
-        .addSuperclassConstructorParameter("rawValue = rawValue")
-        .build()
-  }
-
-  fun className(): TypeName {
-    return ClassName.get(
-        packageName,
-        simpleName
-    )
-  }
-
-  private val primaryConstructorSpec =
-      FunSpec
-          .constructorBuilder()
-          .addParameter("rawValue", String::class)
-          .build()
-
-  private val primaryConstructorWithOverriddenParamSpec =
-      FunSpec
-          .constructorBuilder()
-          .addParameter("rawValue", String::class)
-          .build()
-
-  private val rawValueFieldSpec =
-      FieldSpec
-          .builder("rawValue", String::class)
-          .initializer("rawValue")
-          .build()
-
 }

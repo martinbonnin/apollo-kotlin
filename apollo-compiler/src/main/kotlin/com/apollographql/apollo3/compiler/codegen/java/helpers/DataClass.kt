@@ -1,7 +1,7 @@
 package com.apollographql.apollo3.compiler.codegen.java.helpers
 
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.FieldSpec
@@ -15,7 +15,7 @@ fun TypeSpec.Builder.makeDataClass(parameters: List<ParameterSpec>) = apply {
   if (parameters.isNotEmpty()) {
     addModifiers(KModifier.DATA)
   }
-  primaryConstructor(FunSpec.constructorBuilder()
+  primaryConstructor(MethodSpec.constructorBuilder()
       .apply {
         parameters.forEach {
           addParameter(it)
@@ -33,7 +33,7 @@ fun TypeSpec.Builder.makeDataClassFromProperties(properties: List<FieldSpec>) = 
   if (properties.isNotEmpty()) {
     addModifiers(KModifier.DATA)
   }
-  primaryConstructor(FunSpec.constructorBuilder()
+  primaryConstructor(MethodSpec.constructorBuilder()
       .apply {
         properties.forEach {
           addParameter(it.name, it.type)

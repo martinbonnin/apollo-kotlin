@@ -79,7 +79,7 @@ class EnumBuilder(
 
   private fun IrEnum.unknownValueTypeSpec(): TypeSpec {
     return TypeSpec.classBuilder("UNKNOWN__")
-        .addKdoc("%L", "Auto generated constant for unknown enum values\n")
+        .addKdoc("An enum value that wasn't known at compile time.\n")
         .primaryConstructor(primaryConstructorSpec)
         .superclass(ClassName("", layout.enumName(name)))
         .addSuperclassConstructorParameter("rawValue = rawValue")

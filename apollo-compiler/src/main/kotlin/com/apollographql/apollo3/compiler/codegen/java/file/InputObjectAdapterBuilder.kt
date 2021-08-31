@@ -27,7 +27,7 @@ class InputObjectAdapterBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(inputObject.adapterTypeSpec())
+        typeSpec = inputObject.adapterTypeSpec()
     )
   }
 

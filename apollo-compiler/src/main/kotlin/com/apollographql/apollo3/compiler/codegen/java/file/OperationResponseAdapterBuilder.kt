@@ -34,7 +34,7 @@ class OperationResponseAdapterBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(typeSpec())
+        typeSpec = typeSpec()
     )
   }
 

@@ -17,7 +17,7 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.ir.IrModelGroup
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.FieldSpec
@@ -76,8 +76,8 @@ class PolymorphicFieldResponseAdapterBuilder(
           addModifiers(KModifier.PRIVATE)
         }
         .addField(responseNamesFieldSpec())
-        .addFunction(readFromResponseFunSpec())
-        .addFunction(writeToResponseFunSpec())
+        .addFunction(readFromResponseMethodSpec())
+        .addFunction(writeToResponseMethodSpec())
         .build()
   }
 
@@ -87,8 +87,8 @@ class PolymorphicFieldResponseAdapterBuilder(
         .build()
   }
 
-  private fun readFromResponseFunSpec(): FunSpec {
-    return FunSpec.builder(fromJson)
+  private fun readFromResponseMethodSpec(): MethodSpec {
+    return MethodSpec.builder(fromJson)
         .returns(adaptedClassName)
         .addParameter(reader, JsonReader::class)
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)
@@ -126,8 +126,8 @@ class PolymorphicFieldResponseAdapterBuilder(
     return builder.build()
   }
 
-  private fun writeToResponseFunSpec(): FunSpec {
-    return FunSpec.builder(toJson)
+  private fun writeToResponseMethodSpec(): MethodSpec {
+    return MethodSpec.builder(toJson)
         .addModifiers(KModifier.OVERRIDE)
         .addParameter(writer, JsonWriter::class.asTypeName())
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)

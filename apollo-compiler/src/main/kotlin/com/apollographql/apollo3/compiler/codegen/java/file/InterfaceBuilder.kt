@@ -25,7 +25,7 @@ class InterfaceBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(iface.typeSpec())
+        typeSpec = iface.typeSpec()
     )
   }
 

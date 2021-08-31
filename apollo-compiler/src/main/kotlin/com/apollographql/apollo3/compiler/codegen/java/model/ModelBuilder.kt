@@ -13,7 +13,7 @@ import com.apollographql.apollo3.compiler.ir.IrFragmentAccessor
 import com.apollographql.apollo3.compiler.ir.IrModel
 import com.apollographql.apollo3.compiler.ir.IrSubtypeAccessor
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.FieldSpec
 import com.squareup.javapoet.TypeSpec
@@ -83,14 +83,14 @@ class ModelBuilder(
   }
 
   private fun companionTypeSpec(model: IrModel): TypeSpec {
-    val funSpecs = model.accessors.map { accessor ->
-      FunSpec.builder(accessor.funName())
+    val MethodSpecs = model.accessors.map { accessor ->
+      MethodSpec.builder(accessor.funName())
           .receiver(context.resolver.resolveModel(model.id))
           .addCode("return this as? %T\n", context.resolver.resolveModel(accessor.returnedModelId))
           .build()
     }
     return TypeSpec.companionObjectBuilder()
-        .addFunctions(funSpecs)
+        .addFunctions(MethodSpecs)
         .build()
   }
 

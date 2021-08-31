@@ -22,7 +22,7 @@ class InputObjectBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(inputObject.typeSpec())
+        typeSpec = inputObject.typeSpec()
     )
   }
 

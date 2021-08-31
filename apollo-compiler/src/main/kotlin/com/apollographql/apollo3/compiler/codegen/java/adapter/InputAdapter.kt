@@ -17,7 +17,7 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.codegen.java.helpers.NamedType
 import com.apollographql.apollo3.compiler.codegen.java.helpers.writeToResponseCodeBlock
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.TypeName
@@ -32,12 +32,12 @@ internal fun List<NamedType>.inputAdapterTypeSpec(
 ): TypeSpec {
   return TypeSpec.objectBuilder(adapterName)
       .addSuperinterface(Adapter::class.asTypeName().parameterizedBy(adaptedTypeName))
-      .addFunction(notImplementedFromResponseFunSpec(adaptedTypeName))
-      .addFunction(writeToResponseFunSpec(context, adaptedTypeName))
+      .addFunction(notImplementedFromResponseMethodSpec(adaptedTypeName))
+      .addFunction(writeToResponseMethodSpec(context, adaptedTypeName))
       .build()
 }
 
-private fun notImplementedFromResponseFunSpec(adaptedTypeName: TypeName) = FunSpec.builder(fromJson)
+private fun notImplementedFromResponseMethodSpec(adaptedTypeName: TypeName) = MethodSpec.builder(fromJson)
     .addModifiers(KModifier.OVERRIDE)
     .addParameter(Identifier.reader, JsonReader::class)
     .addParameter(customScalarAdapters, CustomScalarAdapters::class.asTypeName())
@@ -46,11 +46,11 @@ private fun notImplementedFromResponseFunSpec(adaptedTypeName: TypeName) = FunSp
     .build()
 
 
-private fun List<NamedType>.writeToResponseFunSpec(
+private fun List<NamedType>.writeToResponseMethodSpec(
     context: JavaContext,
     adaptedTypeName: TypeName,
-): FunSpec {
-  return FunSpec.builder(toJson)
+): MethodSpec {
+  return MethodSpec.builder(toJson)
       .addModifiers(KModifier.OVERRIDE)
       .addParameter(writer, JsonWriter::class.asTypeName())
       .addParameter(customScalarAdapters, CustomScalarAdapters::class)

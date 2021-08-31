@@ -35,7 +35,7 @@ class FragmentResponseAdapterBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(fragment.responseAdapterTypeSpec())
+        typeSpec = fragment.responseAdapterTypeSpec()
     )
   }
 

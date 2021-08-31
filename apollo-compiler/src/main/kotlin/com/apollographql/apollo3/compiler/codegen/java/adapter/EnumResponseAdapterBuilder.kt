@@ -16,7 +16,7 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.TypeName
@@ -44,13 +44,13 @@ class EnumResponseAdapterBuilder(
     return CodegenJavaFile(
         packageName = packageName,
         fileName = simpleName,
-        typeSpec = listOf(enum.typeSpec())
+        typeSpec = enum.typeSpec()
     )
   }
 
   private fun IrEnum.typeSpec(): TypeSpec {
     val adaptedTypeName = context.resolver.resolveSchemaType(enum.name)
-    val fromResponseFunSpec = FunSpec.builder(Identifier.fromJson)
+    val fromResponseMethodSpec = MethodSpec.builder(Identifier.fromJson)
         .addModifiers(KModifier.OVERRIDE)
         .addParameter(reader, JsonReader::class)
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)
@@ -70,20 +70,20 @@ class EnumResponseAdapterBuilder(
         )
         .addModifiers(KModifier.OVERRIDE)
         .build()
-    val toResponseFunSpec = toResponseFunSpecBuilder(adaptedTypeName)
+    val toResponseMethodSpec = toResponseMethodSpecBuilder(adaptedTypeName)
         .addCode("${Identifier.writer}.${Identifier.value}(${Identifier.value}.rawValue)")
         .build()
 
     return TypeSpec
         .objectBuilder(layout.enumResponseAdapterName(name))
         .addSuperinterface(Adapter::class.asClassName().parameterizedBy(adaptedTypeName))
-        .addFunction(fromResponseFunSpec)
-        .addFunction(toResponseFunSpec)
+        .addFunction(fromResponseMethodSpec)
+        .addFunction(toResponseMethodSpec)
         .build()
   }
 }
 
-internal fun toResponseFunSpecBuilder(typeName: TypeName) = FunSpec.builder(toJson)
+internal fun toResponseMethodSpecBuilder(typeName: TypeName) = MethodSpec.builder(toJson)
     .addModifiers(KModifier.OVERRIDE)
     .addParameter(name = writer, type = JsonWriter::class.asTypeName())
     .addParameter(name = customScalarAdapters, type = CustomScalarAdapters::class)

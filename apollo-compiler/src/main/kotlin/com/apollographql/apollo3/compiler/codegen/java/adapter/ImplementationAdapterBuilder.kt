@@ -6,7 +6,7 @@ import com.apollographql.apollo3.api.json.JsonWriter
 import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.ir.IrModel
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.TypeSpec
 import com.squareup.javapoet.asTypeName
 
@@ -39,15 +39,15 @@ class ImplementationAdapterBuilder(
   fun build(): TypeSpec {
     return TypeSpec.objectBuilder(adapterName)
         .addField(responseNamesFieldSpec(model))
-        .addFunction(readFromResponseFunSpec())
-        .addFunction(writeToResponseFunSpec())
+        .addFunction(readFromResponseMethodSpec())
+        .addFunction(writeToResponseMethodSpec())
         .addTypes(nestedAdapterBuilders.flatMap { it.build() })
         .build()
 
   }
 
-  private fun readFromResponseFunSpec(): FunSpec {
-    return FunSpec.builder(Identifier.fromJson)
+  private fun readFromResponseMethodSpec(): MethodSpec {
+    return MethodSpec.builder(Identifier.fromJson)
         .returns(adaptedClassName)
         .addParameter(Identifier.reader, JsonReader::class)
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
@@ -56,8 +56,8 @@ class ImplementationAdapterBuilder(
         .build()
   }
 
-  private fun writeToResponseFunSpec(): FunSpec {
-    return FunSpec.builder(Identifier.toJson)
+  private fun writeToResponseMethodSpec(): MethodSpec {
+    return MethodSpec.builder(Identifier.toJson)
         .addParameter(Identifier.writer, JsonWriter::class.asTypeName())
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
         .addParameter(Identifier.value, adaptedClassName)

@@ -1,6 +1,6 @@
 package com.apollographql.apollo3.compiler.codegen.java.helpers
 
-import com.squareup.javapoet.FunSpec
+import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.TypeSpec
@@ -29,7 +29,7 @@ internal fun TypeSpec.patchKotlinNativeOptionalArrayProperties(): TypeSpec {
       .map { FieldSpec ->
         val listItemType = (FieldSpec.type as ParameterizedTypeName).typeArguments.single().copy(nullable = false)
         val nonOptionalListType = List::class.asClassName().parameterizedBy(listItemType).copy(nullable = FieldSpec.type.isNullable)
-        FunSpec
+        MethodSpec
             .builder("${FieldSpec.name}FilterNotNull")
             .returns(nonOptionalListType)
             .addStatement("return %L%L.filterNotNull()", FieldSpec.name, if (FieldSpec.type.isNullable) "?" else "")
