@@ -26,7 +26,6 @@ class FragmentVariablesAdapterBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = typeSpec()
     )
   }

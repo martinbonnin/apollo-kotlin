@@ -28,17 +28,14 @@ class OperationSelectionsBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
-        typeSpec = listOf(
-            CompiledSelectionsBuilder(
-                context = context,
-                allFragmentDefinitions = allFragmentDefinitions,
-                schema = schema
-            ).build(
-                selections = operation.selections,
-                rootName = simpleName,
-                parentType = operation.typeCondition
-            )
+        typeSpec = CompiledSelectionsBuilder(
+            context = context,
+            allFragmentDefinitions = allFragmentDefinitions,
+            schema = schema
+        ).build(
+            selections = operation.selections,
+            rootName = simpleName,
+            parentType = operation.typeCondition
         )
     )
   }

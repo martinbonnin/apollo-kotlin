@@ -27,7 +27,6 @@ import com.apollographql.apollo3.compiler.operationoutput.findOperationId
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.JavaFile
-import com.squareup.javapoet.TypeSpec
 import java.io.File
 
 

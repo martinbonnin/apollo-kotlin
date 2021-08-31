@@ -39,7 +39,7 @@ class FragmentDataAdapterBuilder(
   }
 
   private fun IrNamedFragment.responseAdapterTypeSpec(): TypeSpec {
-    return TypeSpec.objectBuilder(simpleName)
+    return TypeSpec.classBuilder(simpleName)
         .addTypes(
             responseAdapterBuilders.flatMap { it.build() }
         )

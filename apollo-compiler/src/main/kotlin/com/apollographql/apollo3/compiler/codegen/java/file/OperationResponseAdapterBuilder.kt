@@ -33,13 +33,12 @@ class OperationResponseAdapterBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = typeSpec()
     )
   }
 
   private fun typeSpec(): TypeSpec {
-    return TypeSpec.objectBuilder(simpleName)
+    return TypeSpec.classBuilder(simpleName)
         .addTypes(
             responseAdapterBuilders.flatMap { it.build() }
         )

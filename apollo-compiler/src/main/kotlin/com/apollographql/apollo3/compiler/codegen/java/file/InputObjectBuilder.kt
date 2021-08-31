@@ -21,7 +21,6 @@ class InputObjectBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = inputObject.typeSpec()
     )
   }

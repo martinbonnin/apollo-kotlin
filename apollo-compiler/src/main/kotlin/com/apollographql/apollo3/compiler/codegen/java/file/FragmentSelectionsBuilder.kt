@@ -28,14 +28,11 @@ class FragmentSelectionsBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
-        typeSpec = listOf(
-            CompiledSelectionsBuilder(
+        typeSpec = CompiledSelectionsBuilder(
                 context = context,
                 allFragmentDefinitions = allFragmentDefinitions,
                 schema = schema
             ).build(fragment.selections, simpleName, fragment.typeCondition)
         )
-    )
   }
 }
