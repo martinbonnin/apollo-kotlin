@@ -24,7 +24,6 @@ class InterfaceBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = iface.typeSpec()
     )
   }
@@ -34,12 +33,6 @@ class InterfaceBuilder(
         .classBuilder(simpleName)
         .maybeAddDescription(description)
         .maybeAddDeprecation(deprecationReason)
-        .addType(companionTypeSpec())
-        .build()
-  }
-
-  private fun IrInterface.companionTypeSpec(): TypeSpec {
-    return TypeSpec.companionObjectBuilder()
         .addField(typeFieldSpec(context.resolver))
         .build()
   }

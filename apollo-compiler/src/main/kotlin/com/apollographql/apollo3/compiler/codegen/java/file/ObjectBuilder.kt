@@ -24,7 +24,6 @@ class ObjectBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = obj.typeSpec()
     )
   }
@@ -34,12 +33,6 @@ class ObjectBuilder(
         .classBuilder(simpleName)
         .maybeAddDescription(description)
         .maybeAddDeprecation(deprecationReason)
-        .addType(companionTypeSpec())
-        .build()
-  }
-
-  private fun IrObject.companionTypeSpec(): TypeSpec {
-    return TypeSpec.companionObjectBuilder()
         .addField(typeFieldSpec(context.resolver))
         .build()
   }
