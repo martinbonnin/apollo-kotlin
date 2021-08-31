@@ -1,36 +1,32 @@
 package com.apollographql.apollo3.compiler.codegen.java.file
 
-import com.apollographql.apollo3.api.Mutation
-import com.apollographql.apollo3.api.Query
 import com.apollographql.apollo3.api.QueryDocumentMinifier
-import com.apollographql.apollo3.api.Subscription
 import com.apollographql.apollo3.compiler.applyIf
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
-import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
-import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
 import com.apollographql.apollo3.compiler.codegen.Identifier.OPERATION_DOCUMENT
 import com.apollographql.apollo3.compiler.codegen.Identifier.OPERATION_ID
 import com.apollographql.apollo3.compiler.codegen.Identifier.OPERATION_NAME
 import com.apollographql.apollo3.compiler.codegen.Identifier.document
 import com.apollographql.apollo3.compiler.codegen.Identifier.id
 import com.apollographql.apollo3.compiler.codegen.Identifier.name
-import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClass
+import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClassFromParameters
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toNamedType
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toParameterSpec
-import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.codegen.java.model.ModelBuilder
+import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrOperation
 import com.apollographql.apollo3.compiler.ir.IrOperationType
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.KModifier
-import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.FieldSpec
+import com.squareup.javapoet.MethodSpec
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
-import com.squareup.javapoet.asClassName
-import com.squareup.javapoet.asTypeName
+import javax.lang.model.element.Modifier
 
 class OperationBuilder(
     private val context: JavaContext,
@@ -46,10 +42,10 @@ class OperationBuilder(
   private val simpleName = layout.operationName(operation)
 
   private val dataSuperClassName = when (operation.operationType) {
-    IrOperationType.Query -> Query.Data::class
-    IrOperationType.Mutation -> Mutation.Data::class
-    IrOperationType.Subscription -> Subscription.Data::class
-  }.asClassName()
+    IrOperationType.Query -> JavaClassNames.QueryData
+    IrOperationType.Mutation -> JavaClassNames.MutationData
+    IrOperationType.Subscription -> JavaClassNames.SubscriptionData
+  }
 
   private val modelBuilders = operation.dataModelGroup.maybeFlatten(flatten, flattenNamesInOrder).flatMap {
     it.models
@@ -73,7 +69,6 @@ class OperationBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = typeSpec()
     )
   }
@@ -82,15 +77,40 @@ class OperationBuilder(
     return TypeSpec.classBuilder(layout.operationName(operation))
         .addSuperinterface(superInterfaceType())
         .maybeAddDescription(operation.description)
-        .makeDataClass(operation.variables.map { it.toNamedType().toParameterSpec(context) })
-        .addFunction(operationIdMethodSpec())
-        .addFunction(queryDocumentMethodSpec(generateQueryDocument))
-        .addFunction(nameMethodSpec())
-        .addFunction(serializeVariablesMethodSpec())
-        .addFunction(adapterMethodSpec())
-        .addFunction(fieldSetsMethodSpec())
+        .makeDataClassFromParameters(operation.variables.map { it.toNamedType().toParameterSpec(context) })
+        .addMethod(operationIdMethodSpec())
+        .addMethod(queryDocumentMethodSpec(generateQueryDocument))
+        .addMethod(nameMethodSpec())
+        .addMethod(serializeVariablesMethodSpec())
+        .addMethod(adapterMethodSpec())
+        .addMethod(fieldSetsMethodSpec())
         .addTypes(dataTypeSpecs())
-        .addType(companionTypeSpec())
+        .addField(
+            FieldSpec.builder(JavaClassNames.String, OPERATION_ID)
+            .addModifiers(Modifier.FINAL)
+            .initializer("%S", operationId)
+            .build()
+        )
+        .applyIf(generateQueryDocument) {
+          addField(FieldSpec.builder(JavaClassNames.String, OPERATION_DOCUMENT)
+              .addModifiers(Modifier.FINAL)
+              .initializer("%S", QueryDocumentMinifier.minify(operation.sourceWithFragments))
+              .addJavadoc("""
+                The minimized GraphQL document being sent to the server to save a few bytes.
+                The un-minimized version is:
+
+
+                """.trimIndent() + operation.sourceWithFragments.escapeKdoc()
+              )
+              .build()
+          )
+        }
+        .addField(FieldSpec
+            .builder(JavaClassNames.String, OPERATION_NAME)
+            .addModifiers(Modifier.FINAL)
+            .initializer("%S", operation.name)
+            .build()
+        )
         .build()
         .maybeAddFilterNotNull(generateFilterNotNull)
   }
@@ -115,23 +135,23 @@ class OperationBuilder(
 
   private fun superInterfaceType(): TypeName {
     return when (operation.operationType) {
-      IrOperationType.Query -> Query::class.asTypeName()
-      IrOperationType.Mutation -> Mutation::class.asTypeName()
-      IrOperationType.Subscription -> Subscription::class.asTypeName()
-    }.parameterizedBy(
-        context.resolver.resolveModel(operation.dataModelGroup.baseModelId)
-    )
+      IrOperationType.Query -> JavaClassNames.Query
+      IrOperationType.Mutation -> JavaClassNames.Mutation
+      IrOperationType.Subscription -> JavaClassNames.Subscription
+    }.let {
+        ParameterizedTypeName.get(it, context.resolver.resolveModel(operation.dataModelGroup.baseModelId))
+    }
   }
 
-  private fun operationIdMethodSpec() = MethodSpec.builder(id)
-      .addModifiers(KModifier.OVERRIDE)
-      .returns(String::class)
+  private fun operationIdMethodSpec() = MethodSpec.methodBuilder(id)
+      .addAnnotation(JavaClassNames.Override)
+      .returns(JavaClassNames.String)
       .addStatement("return $OPERATION_ID")
       .build()
 
-  private fun queryDocumentMethodSpec(generateQueryDocument: Boolean) = MethodSpec.builder(document)
-      .addModifiers(KModifier.OVERRIDE)
-      .returns(String::class)
+  private fun queryDocumentMethodSpec(generateQueryDocument: Boolean) = MethodSpec.methodBuilder(document)
+      .addAnnotation(JavaClassNames.Override)
+      .returns(JavaClassNames.String)
       .apply {
         if (generateQueryDocument) {
           addStatement("return $OPERATION_DOCUMENT")
@@ -141,41 +161,11 @@ class OperationBuilder(
       }
       .build()
 
-  private fun nameMethodSpec() = MethodSpec.builder(name)
-      .addModifiers(KModifier.OVERRIDE)
-      .returns(String::class)
+  private fun nameMethodSpec() = MethodSpec.methodBuilder(name)
+      .addAnnotation(JavaClassNames.Override)
+      .returns(JavaClassNames.String)
       .addStatement("return OPERATION_NAME")
       .build()
-
-  private fun companionTypeSpec(): TypeSpec {
-    return TypeSpec.companionObjectBuilder()
-        .addField(FieldSpec.builder(OPERATION_ID, String::class)
-            .addModifiers(KModifier.CONST)
-            .initializer("%S", operationId)
-            .build()
-        )
-        .applyIf(generateQueryDocument) {
-          addField(FieldSpec.builder(OPERATION_DOCUMENT, String::class)
-              .addModifiers(KModifier.CONST)
-              .initializer("%S", QueryDocumentMinifier.minify(operation.sourceWithFragments))
-              .addKdoc("""
-                The minimized GraphQL document being sent to the server to save a few bytes.
-                The un-minimized version is:
-
-
-                """.trimIndent() + operation.sourceWithFragments.escapeKdoc()
-              )
-              .build()
-          )
-        }
-        .addField(FieldSpec
-            .builder(OPERATION_NAME, String::class)
-            .addModifiers(KModifier.CONST)
-            .initializer("%S", operation.name)
-            .build()
-        )
-        .build()
-  }
 
   /**
    * Things like `[${'$'}oo]` do not compile. See https://youtrack.jetbrains.com/issue/KT-43906

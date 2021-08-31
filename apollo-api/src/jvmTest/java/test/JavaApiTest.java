@@ -1,5 +1,6 @@
 package test;
 
+import com.apollographql.apollo3.api.AdapterKt;
 import com.apollographql.apollo3.api.Adapters;
 import com.apollographql.apollo3.api.CompiledGraphQL;
 import com.apollographql.apollo3.api.CompiledType;
@@ -37,7 +38,6 @@ public class JavaApiTest {
     BufferedSourceJsonReader jsonReader = new BufferedSourceJsonReader(Okio.buffer(Okio.source(new ByteArrayInputStream(json.getBytes()))));
     String result = Adapters.NullableStringAdapter.fromJson(jsonReader, CustomScalarAdapters.Empty);
     assertThat(result).isEqualTo(null);
-
   }
 }
 

@@ -11,8 +11,8 @@ import com.squareup.javapoet.joinToCode
 
 internal fun BooleanExpression<BTerm>.codeBlock(): CodeBlock {
   return when(this) {
-    is BooleanExpression.False -> CodeBlock.of("%T", BooleanExpression.False::class.asTypeName())
-    is BooleanExpression.True -> CodeBlock.of("%T", BooleanExpression.True::class.asTypeName())
+    is BooleanExpression.False -> CodeBlock.of("%T", JavaClassNames.BooleanExpression.False)
+    is BooleanExpression.True -> CodeBlock.of("%T", JavaClassNames.BooleanExpression.True)
     is BooleanExpression.And -> {
       val parameters = operands.map {
         it.codeBlock()

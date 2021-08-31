@@ -50,8 +50,8 @@ class EnumResponseAdapterBuilder(
 
   private fun IrEnum.typeSpec(): TypeSpec {
     val adaptedTypeName = context.resolver.resolveSchemaType(enum.name)
-    val fromResponseMethodSpec = MethodSpec.builder(Identifier.fromJson)
-        .addModifiers(KModifier.OVERRIDE)
+    val fromResponseMethodSpec = MethodSpec.methodBuilder(Identifier.fromJson)
+        .addAnnotation(JavaClassNames.Override)
         .addParameter(reader, JsonReader::class)
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)
         .returns(adaptedTypeName)
@@ -68,7 +68,7 @@ class EnumResponseAdapterBuilder(
                 .endControlFlow()
                 .build()
         )
-        .addModifiers(KModifier.OVERRIDE)
+        .addAnnotation(JavaClassNames.Override)
         .build()
     val toResponseMethodSpec = toResponseMethodSpecBuilder(adaptedTypeName)
         .addCode("${Identifier.writer}.${Identifier.value}(${Identifier.value}.rawValue)")
@@ -76,15 +76,15 @@ class EnumResponseAdapterBuilder(
 
     return TypeSpec
         .objectBuilder(layout.enumResponseAdapterName(name))
-        .addSuperinterface(Adapter::class.asClassName().parameterizedBy(adaptedTypeName))
-        .addFunction(fromResponseMethodSpec)
-        .addFunction(toResponseMethodSpec)
+        JavaClassNames..addSuperinterface(Adapter.parameterizedBy(adaptedTypeName))
+        .addMethod(fromResponseMethodSpec)
+        .addMethod(toResponseMethodSpec)
         .build()
   }
 }
 
-internal fun toResponseMethodSpecBuilder(typeName: TypeName) = MethodSpec.builder(toJson)
-    .addModifiers(KModifier.OVERRIDE)
-    .addParameter(name = writer, type = JsonWriter::class.asTypeName())
+internal fun toResponseMethodSpecBuilder(typeName: TypeName) = MethodSpec.methodBuilder(toJson)
+    .addAnnotation(JavaClassNames.Override)
+    .addParameter(name = writer, type = JavaClassNames.JsonWriter)
     .addParameter(name = customScalarAdapters, type = CustomScalarAdapters::class)
     .addParameter(value, typeName)

@@ -125,7 +125,7 @@ class CompiledSelectionsBuilder(
 
     check(expression is BooleanExpression.Element)
 
-    return CodeBlock.of("%T(%S,·%L)", CompiledCondition::class.asTypeName(), expression.value.name, inverted.toString())
+    return CodeBlock.of("%T(%S,·%L)", JavaClassNames.CompiledCondition, expression.value.name, inverted.toString())
   }
 
   private fun GQLField.walk(private: Boolean, parentType: String): SelectionResult? {
@@ -207,7 +207,7 @@ class CompiledSelectionsBuilder(
     }
 
     val builder = CodeBlock.builder()
-    builder.add("%T(\n", CompiledFragment::class.asTypeName())
+    builder.add("%T(\n", JavaClassNames.CompiledFragment)
     builder.indent()
     builder.add(parameters.joinToCode(separator = ",\n", suffix = "\n"))
     builder.unindent()
@@ -237,7 +237,7 @@ class CompiledSelectionsBuilder(
     parameters.add(CodeBlock.of("selections·=·%T.%L", context.resolver.resolveFragmentSelections(name), context.layout.rootSelectionsPropertyName()))
 
     val builder = CodeBlock.builder()
-    builder.add("%T(\n", CompiledFragment::class.asTypeName())
+    builder.add("%T(\n", JavaClassNames.CompiledFragment)
     builder.indent()
     builder.add(parameters.joinToCode(separator = ",\n", suffix = "\n"))
     builder.unindent()

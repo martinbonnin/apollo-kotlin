@@ -4,7 +4,7 @@ import com.apollographql.apollo3.compiler.applyIf
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
-import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClass
+import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClassFromParameters
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toNamedType
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toParameterSpec
 import com.apollographql.apollo3.compiler.ir.IrInputObject
@@ -35,8 +35,8 @@ class InputObjectBuilder(
   private fun IrInputObject.typeSpec() =
       TypeSpec
           .classBuilder(simpleName)
-          .applyIf(description?.isNotBlank()== true)  { addKdoc("%L\n", description!!) }
-          .makeDataClass(fields.map {
+          .applyIf(description?.isNotBlank()== true)  { addJavadoc("%L\n", description!!) }
+          .makeDataClassFromParameters(fields.map {
             it.toNamedType().toParameterSpec(context)
           })
           .build()

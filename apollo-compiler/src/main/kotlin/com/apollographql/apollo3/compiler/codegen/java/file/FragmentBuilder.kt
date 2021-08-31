@@ -1,23 +1,21 @@
 package com.apollographql.apollo3.compiler.codegen.java.file
 
-import com.apollographql.apollo3.api.Fragment
-import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClass
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClassFromParameters
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toNamedType
 import com.apollographql.apollo3.compiler.codegen.java.helpers.toParameterSpec
-import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.codegen.java.model.ModelBuilder
+import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrNamedFragment
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
-import com.squareup.javapoet.asClassName
-import com.squareup.javapoet.asTypeName
 
 class FragmentBuilder(
     private val context: JavaContext,
@@ -35,7 +33,7 @@ class FragmentBuilder(
       ModelBuilder(
           context = context,
           model = it,
-          superClassName = if (it.id == fragment.dataModelGroup.baseModelId) Fragment.Data::class.asClassName() else null,
+          superClassName = if (it.id == fragment.dataModelGroup.baseModelId) JavaClassNames.FragmentData else null,
           path = listOf(packageName, simpleName)
       )
     }
@@ -57,7 +55,6 @@ class FragmentBuilder(
   override fun build(): CodegenJavaFile {
     return CodegenJavaFile(
         packageName = packageName,
-        fileName = simpleName,
         typeSpec = fragment.typeSpec()
     )
   }
@@ -66,10 +63,10 @@ class FragmentBuilder(
     return TypeSpec.classBuilder(simpleName)
         .addSuperinterface(superInterfaceType())
         .maybeAddDescription(description)
-        .makeDataClass(variables.map { it.toNamedType().toParameterSpec(context) })
-        .addFunction(serializeVariablesMethodSpec())
-        .addFunction(adapterMethodSpec())
-        .addFunction(selectionsMethodSpec())
+        .makeDataClassFromParameters(variables.map { it.toNamedType().toParameterSpec(context) })
+        .addMethod(serializeVariablesMethodSpec())
+        .addMethod(adapterMethodSpec())
+        .addMethod(selectionsMethodSpec())
         // Fragments can have multiple data shapes
         .addTypes(dataTypeSpecs())
         .build()
@@ -99,9 +96,7 @@ class FragmentBuilder(
   }
 
   private fun superInterfaceType(): TypeName {
-    return Fragment::class.asTypeName().parameterizedBy(
-        context.resolver.resolveModel(fragment.dataModelGroup.baseModelId)
-    )
+    return ParameterizedTypeName.get(JavaClassNames.Fragment, context.resolver.resolveModel(fragment.dataModelGroup.baseModelId))
   }
 }
 

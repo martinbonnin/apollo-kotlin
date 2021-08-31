@@ -53,7 +53,7 @@ class ModelBuilder(
           context.layout.propertyName(it.info.responseName),
           context.resolver.resolveIrType(it.info.type)
       )
-          .applyIf(it.override) { addModifiers(KModifier.OVERRIDE) }
+          .applyIf(it.override) { addAnnotation(JavaClassNames.Override) }
           .maybeAddDescription(it.info.description)
           .maybeAddDeprecation(it.info.deprecationReason)
           .build()
@@ -84,13 +84,13 @@ class ModelBuilder(
 
   private fun companionTypeSpec(model: IrModel): TypeSpec {
     val MethodSpecs = model.accessors.map { accessor ->
-      MethodSpec.builder(accessor.funName())
+      MethodSpec.methodBuilder(accessor.funName())
           .receiver(context.resolver.resolveModel(model.id))
           .addCode("return this as? %T\n", context.resolver.resolveModel(accessor.returnedModelId))
           .build()
     }
     return TypeSpec.companionObjectBuilder()
-        .addFunctions(MethodSpecs)
+        .addMethods(MethodSpecs)
         .build()
   }
 

@@ -51,7 +51,7 @@ class MonomorphicFieldResponseAdapterBuilder(
   private fun typeSpec(): TypeSpec {
     return TypeSpec.objectBuilder(adapterName)
         .addSuperinterface(
-            Adapter::class.asTypeName().parameterizedBy(
+            JavaClassNames.Adapter.parameterizedBy(
                 context.resolver.resolveModel(model.id)
             )
         )
@@ -59,26 +59,26 @@ class MonomorphicFieldResponseAdapterBuilder(
           addModifiers(KModifier.PRIVATE)
         }
         .addField(responseNamesFieldSpec(model))
-        .addFunction(readFromResponseMethodSpec())
-        .addFunction(writeToResponseMethodSpec())
+        .addMethod(readFromResponseMethodSpec())
+        .addMethod(writeToResponseMethodSpec())
         .addTypes(nestedAdapterBuilders.flatMap { it.build() })
         .build()
   }
 
   private fun readFromResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(Identifier.fromJson)
+    return MethodSpec.methodBuilder(Identifier.fromJson)
         .returns(adaptedClassName)
         .addParameter(Identifier.reader, JsonReader::class)
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
-        .addModifiers(KModifier.OVERRIDE)
+        .addAnnotation(JavaClassNames.Override)
         .addCode(readFromResponseCodeBlock(model, context, false))
         .build()
   }
 
   private fun writeToResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(Identifier.toJson)
-        .addModifiers(KModifier.OVERRIDE)
-        .addParameter(Identifier.writer, JsonWriter::class.asTypeName())
+    return MethodSpec.methodBuilder(Identifier.toJson)
+        .addAnnotation(JavaClassNames.Override)
+        .addParameter(Identifier.writer, JavaClassNames.JsonWriter)
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
         .addParameter(Identifier.value, adaptedClassName)
         .addCode(writeToResponseCodeBlock(model, context))

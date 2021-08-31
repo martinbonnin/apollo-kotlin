@@ -27,8 +27,8 @@ internal fun NamedType.toParameterSpec(context: JavaContext): ParameterSpec {
           name = context.layout.propertyName(graphQlName),
           type = context.resolver.resolveIrType(type)
       )
-      .applyIf(description?.isNotBlank() == true) { addKdoc("%L\n", description!!) }
-      .applyIf(type.isOptional()) { defaultValue("%T", Optional.Absent::class.asClassName()) }
+      .applyIf(description?.isNotBlank() == true) { addJavadoc("%L\n", description!!) }
+      .applyIf(type.isOptional()) { defaultValue("%T", JavaClassNames.Optional.Absent) }
       .build()
 }
 
@@ -62,7 +62,7 @@ internal fun NamedType.writeToResponseCodeBlock(context: JavaContext): CodeBlock
   val propertyName = context.layout.propertyName(graphQlName)
 
   if (type.isOptional()) {
-    builder.beginControlFlow("if (${Identifier.value}.$propertyName is %T)", Optional.Present::class.asClassName())
+    builder.beginControlFlow("if (${Identifier.value}.$propertyName is %T)", JavaClassNames.Optional.Present)
   }
   builder.addStatement("${Identifier.writer}.name(%S)", graphQlName)
   builder.addStatement(

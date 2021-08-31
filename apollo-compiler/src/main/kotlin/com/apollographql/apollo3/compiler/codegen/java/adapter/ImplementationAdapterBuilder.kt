@@ -39,15 +39,15 @@ class ImplementationAdapterBuilder(
   fun build(): TypeSpec {
     return TypeSpec.objectBuilder(adapterName)
         .addField(responseNamesFieldSpec(model))
-        .addFunction(readFromResponseMethodSpec())
-        .addFunction(writeToResponseMethodSpec())
+        .addMethod(readFromResponseMethodSpec())
+        .addMethod(writeToResponseMethodSpec())
         .addTypes(nestedAdapterBuilders.flatMap { it.build() })
         .build()
 
   }
 
   private fun readFromResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(Identifier.fromJson)
+    return MethodSpec.methodBuilder(Identifier.fromJson)
         .returns(adaptedClassName)
         .addParameter(Identifier.reader, JsonReader::class)
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
@@ -57,8 +57,8 @@ class ImplementationAdapterBuilder(
   }
 
   private fun writeToResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(Identifier.toJson)
-        .addParameter(Identifier.writer, JsonWriter::class.asTypeName())
+    return MethodSpec.methodBuilder(Identifier.toJson)
+        .addParameter(Identifier.writer, JavaClassNames.JsonWriter)
         .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
         .addParameter(Identifier.value, adaptedClassName)
         .addCode(writeToResponseCodeBlock(model, context))

@@ -29,7 +29,7 @@ class FragmentModelsBuilder(
         ModelBuilder(
             context = context,
             model = it,
-            superClassName = if (addSuperInterface && it.id == fragment.dataModelGroup.baseModelId) Fragment.Data::class.asClassName() else null,
+            superClassName = if (addSuperInterface && it.id == fragment.dataModelGroup.baseModelId) JavaClassNames.Fragment.Data else null,
             path = listOf(packageName)
         )
       }

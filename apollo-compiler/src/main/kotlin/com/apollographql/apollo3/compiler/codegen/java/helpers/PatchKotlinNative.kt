@@ -23,12 +23,12 @@ internal fun TypeSpec.patchKotlinNativeOptionalArrayProperties(): TypeSpec {
       .filter { FieldSpec ->
         val propertyType = FieldSpec.type
         propertyType is ParameterizedTypeName &&
-            propertyType.rawType == List::class.asClassName() &&
+            propertyType.rawType == JavaClassNames.List &&
             propertyType.typeArguments.single().isNullable
       }
       .map { FieldSpec ->
         val listItemType = (FieldSpec.type as ParameterizedTypeName).typeArguments.single().copy(nullable = false)
-        val nonOptionalListType = List::class.asClassName().parameterizedBy(listItemType).copy(nullable = FieldSpec.type.isNullable)
+        val nonOptionalListType = JavaClassNames.List.parameterizedBy(listItemType).copy(nullable = FieldSpec.type.isNullable)
         MethodSpec
             .builder("${FieldSpec.name}FilterNotNull")
             .returns(nonOptionalListType)
@@ -36,7 +36,7 @@ internal fun TypeSpec.patchKotlinNativeOptionalArrayProperties(): TypeSpec {
             .build()
       }
   return toBuilder()
-      .addFunctions(nonOptionalListPropertyAccessors)
+      .addMethods(nonOptionalListPropertyAccessors)
       .apply { typeSpecs.clear() }
       .addTypes(patchedNestedTypes)
       .build()

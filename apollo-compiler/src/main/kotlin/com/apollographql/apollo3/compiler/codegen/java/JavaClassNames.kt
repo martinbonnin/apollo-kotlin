@@ -32,6 +32,9 @@ internal object JavaClassNames {
   val Query = ClassNames.Query.toJavaPoetClassName()
   val Mutation = ClassNames.Mutation.toJavaPoetClassName()
   val Subscription = ClassNames.Subscription.toJavaPoetClassName()
+  val QueryData = ClassNames.QueryData.toJavaPoetClassName()
+  val MutationData = ClassNames.MutationData.toJavaPoetClassName()
+  val SubscriptionData = ClassNames.SubscriptionData.toJavaPoetClassName()
   val EnumType = ClassNames.EnumType.toJavaPoetClassName()
   val CustomScalarType = ClassNames.CustomScalarType.toJavaPoetClassName()
   val True = ClassNames.True.toJavaPoetClassName()
@@ -51,11 +54,12 @@ internal object JavaClassNames {
   /**
    * ClassNames for builtin Java types
    */
-  val List = ClassName.get(List::class.java)
-  val String = ClassName.get(String::class.java)
-  val Int = ClassName.get(Int::class.java)
-  val Double = ClassName.get(Double::class.java)
-  val Object = ClassName.get(Object::class.java)
-  val Boolean = ClassName.get(Boolean::class.java)
+  val List: ClassName = ClassName.get("java.lang", "List")
+  val String: ClassName = ClassName.get("java.lang", "String")
+  val Int: ClassName = ClassName.get("java.lang", "Int")
+  val Double: ClassName = ClassName.get("java.lang", "Double")
+  val Object: ClassName = ClassName.get("java.lang", "Object")
+  val Boolean: ClassName = ClassName.get("java.lang", "Boolean")
   val Deprecated = ClassName.get("java.lang", "Deprecated")
+  val Override = ClassName.get("java.lang", "Override")
 }

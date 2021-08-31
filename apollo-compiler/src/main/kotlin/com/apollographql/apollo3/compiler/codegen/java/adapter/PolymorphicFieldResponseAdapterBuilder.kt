@@ -70,14 +70,14 @@ class PolymorphicFieldResponseAdapterBuilder(
   private fun typeSpec(): TypeSpec {
     return TypeSpec.objectBuilder(adapterName)
         .addSuperinterface(
-            Adapter::class.asTypeName().parameterizedBy(adaptedClassName)
+            JavaClassNames.Adapter.parameterizedBy(adaptedClassName)
         )
         .applyIf(!public) {
           addModifiers(KModifier.PRIVATE)
         }
         .addField(responseNamesFieldSpec())
-        .addFunction(readFromResponseMethodSpec())
-        .addFunction(writeToResponseMethodSpec())
+        .addMethod(readFromResponseMethodSpec())
+        .addMethod(writeToResponseMethodSpec())
         .build()
   }
 
@@ -88,11 +88,11 @@ class PolymorphicFieldResponseAdapterBuilder(
   }
 
   private fun readFromResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(fromJson)
+    return MethodSpec.methodBuilder(fromJson)
         .returns(adaptedClassName)
         .addParameter(reader, JsonReader::class)
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)
-        .addModifiers(KModifier.OVERRIDE)
+        .addAnnotation(JavaClassNames.Override)
         .addCode(readFromResponseCodeBlock())
         .build()
   }
@@ -127,9 +127,9 @@ class PolymorphicFieldResponseAdapterBuilder(
   }
 
   private fun writeToResponseMethodSpec(): MethodSpec {
-    return MethodSpec.builder(toJson)
-        .addModifiers(KModifier.OVERRIDE)
-        .addParameter(writer, JsonWriter::class.asTypeName())
+    return MethodSpec.methodBuilder(toJson)
+        .addAnnotation(JavaClassNames.Override)
+        .addParameter(writer, JavaClassNames.JsonWriter)
         .addParameter(customScalarAdapters, CustomScalarAdapters::class)
         .addParameter(value, adaptedClassName)
         .addCode(writeToResponseCodeBlock())

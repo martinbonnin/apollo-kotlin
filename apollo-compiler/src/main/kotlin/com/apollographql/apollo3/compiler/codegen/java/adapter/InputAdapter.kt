@@ -32,15 +32,15 @@ internal fun List<NamedType>.inputAdapterTypeSpec(
 ): TypeSpec {
   return TypeSpec.objectBuilder(adapterName)
       .addSuperinterface(Adapter::class.asTypeName().parameterizedBy(adaptedTypeName))
-      .addFunction(notImplementedFromResponseMethodSpec(adaptedTypeName))
-      .addFunction(writeToResponseMethodSpec(context, adaptedTypeName))
+      .addMethod(notImplementedFromResponseMethodSpec(adaptedTypeName))
+      .addMethod(writeToResponseMethodSpec(context, adaptedTypeName))
       .build()
 }
 
-private fun notImplementedFromResponseMethodSpec(adaptedTypeName: TypeName) = MethodSpec.builder(fromJson)
-    .addModifiers(KModifier.OVERRIDE)
+private fun notImplementedFromResponseMethodSpec(adaptedTypeName: TypeName) = MethodSpec.methodBuilder(fromJson)
+    .addAnnotation(JavaClassNames.Override)
     .addParameter(Identifier.reader, JsonReader::class)
-    .addParameter(customScalarAdapters, CustomScalarAdapters::class.asTypeName())
+    .addParameter(customScalarAdapters, JavaClassNames.CustomScalarAdapters)
     .returns(adaptedTypeName)
     .addCode("throw %T(%S)", ClassName.get("kotlin", "IllegalStateException"), "Input type used in output position")
     .build()
@@ -50,9 +50,9 @@ private fun List<NamedType>.writeToResponseMethodSpec(
     context: JavaContext,
     adaptedTypeName: TypeName,
 ): MethodSpec {
-  return MethodSpec.builder(toJson)
-      .addModifiers(KModifier.OVERRIDE)
-      .addParameter(writer, JsonWriter::class.asTypeName())
+  return MethodSpec.methodBuilder(toJson)
+      .addAnnotation(JavaClassNames.Override)
+      .addParameter(writer, JavaClassNames.JsonWriter)
       .addParameter(customScalarAdapters, CustomScalarAdapters::class)
       .addParameter(value, adaptedTypeName)
       .addCode(writeToResponseCodeBlock(context))
