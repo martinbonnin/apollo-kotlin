@@ -8,6 +8,9 @@ import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescripti
 import com.apollographql.apollo3.compiler.ir.IrUnion
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.TypeSpec
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class UnionBuilder(
     private val context: JavaContext,

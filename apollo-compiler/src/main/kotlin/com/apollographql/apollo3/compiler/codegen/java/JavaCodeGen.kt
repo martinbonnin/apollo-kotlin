@@ -206,9 +206,13 @@ fun List<CodeBlock>.joinToCode(separator: String, prefix: String = "", suffix: S
       builder.add(separator)
       first = false
     }
-    builder.add("%L", block)
+    builder.add("$L", block)
   }.add(suffix)
       .build()
 }
 
 fun CodeBlock.isNotEmpty() = isEmpty().not()
+
+internal val T = "${'$'}T"
+internal val L = "${'$'}L"
+internal val S = "${'$'}S"

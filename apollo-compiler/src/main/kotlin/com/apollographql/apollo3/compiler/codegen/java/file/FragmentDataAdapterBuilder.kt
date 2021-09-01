@@ -7,6 +7,9 @@ import com.apollographql.apollo3.compiler.codegen.java.adapter.ResponseAdapterBu
 import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrNamedFragment
 import com.squareup.javapoet.TypeSpec
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class FragmentDataAdapterBuilder(
     val context: JavaContext,

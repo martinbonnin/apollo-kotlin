@@ -1,16 +1,16 @@
 package test;
 
 import com.apollographql.apollo3.api.Adapter;
-import com.apollographql.apollo3.api.BooleanExpression;
-import com.apollographql.apollo3.api.BooleanExpressionKt;
 import com.apollographql.apollo3.api.CustomScalarAdapters;
 import com.apollographql.apollo3.api.json.JsonReader;
 import com.apollographql.apollo3.api.json.JsonWriter;
-import kotlin.jvm.functions.Function1;
-import kotlin.reflect.KFunction;
+import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 enum ScratchFile implements Adapter<Object> {
   INSTANCE;
@@ -18,13 +18,12 @@ enum ScratchFile implements Adapter<Object> {
   enum Test implements  Adapter<String> {
     INSTANCE;
 
+    private void listOf(String... strings) {
+
+    }
     @Override public String fromJson(@NotNull JsonReader reader, @NotNull CustomScalarAdapters customScalarAdapters) {
 
-      BooleanExpressionKt.evaluate(
-          BooleanExpression.True.INSTANCE,
-          Collections.emptySet(),
-          "toh"
-      );
+
 
       return null;
     }

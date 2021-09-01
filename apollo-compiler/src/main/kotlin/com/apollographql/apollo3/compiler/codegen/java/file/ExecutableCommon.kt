@@ -13,6 +13,9 @@ import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 fun serializeVariablesMethodSpec(
     adapterClassName: TypeName?,
@@ -25,8 +28,8 @@ fun serializeVariablesMethodSpec(
     """.trimIndent())
   } else {
     CodeBlock.of(
-        "%L.$toJson($writer, $customScalarAdapters, this)",
-            CodeBlock.of("%T", adapterClassName)
+        "$L.$toJson($writer, $customScalarAdapters, this)",
+            CodeBlock.of("$T", adapterClassName)
     )
   }
   return MethodSpec.methodBuilder(serializeVariables)
@@ -44,7 +47,7 @@ fun adapterMethodSpec(
   return MethodSpec.methodBuilder("adapter")
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.Adapter, adaptedTypeName))
-      .addCode(CodeBlock.of("return·%T", adapterTypeName).obj(false))
+      .addCode(CodeBlock.of("return·$T", adapterTypeName).obj(false))
       .build()
 }
 
@@ -52,6 +55,6 @@ fun selectionsMethodSpec(context: JavaContext, className: ClassName): MethodSpec
   return MethodSpec.methodBuilder(selections)
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection))
-      .addCode("return %T.%L\n", className, context.layout.rootSelectionsPropertyName())
+      .addCode("return $T.$L\n", className, context.layout.rootSelectionsPropertyName())
       .build()
 }

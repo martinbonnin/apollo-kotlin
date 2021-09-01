@@ -9,6 +9,9 @@ import com.apollographql.apollo3.compiler.ir.IrVariable
 import com.apollographql.apollo3.compiler.ir.isOptional
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.ParameterSpec
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class NamedType(
     val graphQlName: String,
@@ -57,11 +60,11 @@ internal fun NamedType.writeToResponseCodeBlock(context: JavaContext): CodeBlock
   val propertyName = context.layout.propertyName(graphQlName)
 
   if (type.isOptional()) {
-    builder.beginControlFlow("if (${Identifier.value}.$propertyName is %T)", JavaClassNames.Present)
+    builder.beginControlFlow("if (${Identifier.value}.$propertyName is $T)", JavaClassNames.Present)
   }
-  builder.addStatement("${Identifier.writer}.name(%S)", graphQlName)
+  builder.addStatement("${Identifier.writer}.name($S)", graphQlName)
   builder.addStatement(
-      "%L.${Identifier.toJson}(${Identifier.writer}, ${Identifier.customScalarAdapters}, ${Identifier.value}.$propertyName)",
+      "$L.${Identifier.toJson}(${Identifier.writer}, ${Identifier.customScalarAdapters}, ${Identifier.value}.$propertyName)",
       adapterInitializer
   )
   if (type.isOptional()) {

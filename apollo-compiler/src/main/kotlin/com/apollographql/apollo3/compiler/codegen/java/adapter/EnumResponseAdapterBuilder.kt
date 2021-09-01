@@ -13,6 +13,9 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.squareup.javapoet.ClassName
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
@@ -54,10 +57,10 @@ class EnumResponseAdapterBuilder(
                 .beginControlFlow("return when(rawValue)")
                 .add(
                     values
-                        .map { CodeBlock.of("%S -> %L.%L", it.name, layout.enumName(name), layout.enumValueName(it.name)) }
+                        .map { CodeBlock.of("$S -> $L.$L", it.name, layout.enumName(name), layout.enumValueName(it.name)) }
                         .joinToCode(separator = "\n", suffix = "\n")
                 )
-                .add("else -> %L.UNKNOWN__%L\n", layout.enumName(name), "(rawValue)")
+                .add("else -> $L.UNKNOWN__$L\n", layout.enumName(name), "(rawValue)")
                 .endControlFlow()
                 .build()
         )

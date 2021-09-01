@@ -14,6 +14,9 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.helpers.NamedType
 import com.apollographql.apollo3.compiler.codegen.java.helpers.writeToResponseCodeBlock
 import com.squareup.javapoet.ClassName
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
@@ -37,7 +40,7 @@ private fun notImplementedFromResponseMethodSpec(adaptedTypeName: TypeName) = Me
     .addParameter(JavaClassNames.JsonReader, Identifier.reader)
     .addParameter(JavaClassNames.CustomScalarAdapters, customScalarAdapters)
     .returns(adaptedTypeName)
-    .addCode("throw %T(%S)", ClassName.get("kotlin", "IllegalStateException"), "Input type used in output position")
+    .addCode("throw $T($S)", ClassName.get("kotlin", "IllegalStateException"), "Input type used in output position")
     .build()
 
 

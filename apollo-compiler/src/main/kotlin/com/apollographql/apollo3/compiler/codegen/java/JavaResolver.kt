@@ -1,10 +1,5 @@
 package com.apollographql.apollo3.compiler.codegen.java
 
-import com.apollographql.apollo3.api.AnyAdapter
-import com.apollographql.apollo3.api.BooleanAdapter
-import com.apollographql.apollo3.api.DoubleAdapter
-import com.apollographql.apollo3.api.IntAdapter
-import com.apollographql.apollo3.api.StringAdapter
 import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapters
 import com.apollographql.apollo3.compiler.codegen.Identifier.list
@@ -34,6 +29,9 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 
 class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
@@ -68,7 +66,7 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
       is IrListType -> ParameterizedTypeName.get(JavaClassNames.List, resolveIrType(type.ofType))
       is IrStringType -> JavaClassNames.String
       is IrFloatType -> JavaClassNames.Double
-      is IrIntType -> JavaClassNames.Int
+      is IrIntType -> JavaClassNames.Integer
       is IrBooleanType -> JavaClassNames.Boolean
       is IrIdType -> JavaClassNames.String
       is IrAnyType -> JavaClassNames.Object
@@ -89,7 +87,7 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
         is IrFloatType -> nullableScalarAdapter("NullableDoubleAdapter")
         is IrAnyType -> nullableScalarAdapter("NullableAnyAdapter")
         else -> {
-          CodeBlock.of("%T.$nullable(%L)", JavaClassNames.Adapters, adapterInitializer(IrNonNullType(type), requiresBuffering))
+          CodeBlock.of("$T.$nullable($L)", JavaClassNames.Adapters, adapterInitializer(IrNonNullType(type), requiresBuffering))
         }
       }
     }
@@ -113,17 +111,17 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
     }
 
     if (builtin != null) {
-      return CodeBlock.of("%T.%L", JavaClassNames.CompiledGraphQL, builtin)
+      return CodeBlock.of("$T.$L", JavaClassNames.CompiledGraphQL, builtin)
     }
 
-    return CodeBlock.of("%T.$type", resolveAndAssert(ResolverKeyKind.SchemaType, name))
+    return CodeBlock.of("$T.$type", resolveAndAssert(ResolverKeyKind.SchemaType, name))
   }
 
   private fun nonNullableAdapterInitializer(type: IrType, requiresBuffering: Boolean): CodeBlock {
     return when (type) {
       is IrNonNullType -> error("")
       is IrListType -> {
-        CodeBlock.of("%T.$list(%L)", JavaClassNames.Adapters, adapterInitializer(type.ofType, requiresBuffering))
+        CodeBlock.of("$T.$list($L)", JavaClassNames.Adapters, adapterInitializer(type.ofType, requiresBuffering))
       }
       is IrBooleanType -> nonNullableScalarAdapter(JavaClassNames.BooleanAdapter)
       is IrIdType -> nonNullableScalarAdapter(JavaClassNames.StringAdapter)
@@ -132,23 +130,23 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
       is IrFloatType -> nonNullableScalarAdapter(JavaClassNames.DoubleAdapter)
       is IrAnyType -> nonNullableScalarAdapter(JavaClassNames.AnyAdapter)
       is IrEnumType -> {
-        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name))
+        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name))
       }
       is IrInputObjectType -> {
-        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name)).obj(requiresBuffering)
+        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name)).obj(requiresBuffering)
       }
       is IrCustomScalarType -> {
         CodeBlock.of(
-            "$customScalarAdapters.responseAdapterFor<%T>(%L)",
+            "$customScalarAdapters.responseAdapterFor<$T>($L)",
             resolveIrType(IrNonNullType(type)),
             resolveCompiledType(type.name)
         )
       }
       is IrModelType -> {
-        CodeBlock.of("%T", resolveAndAssert(ResolverKeyKind.ModelAdapter, type.path)).obj(requiresBuffering)
+        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.ModelAdapter, type.path)).obj(requiresBuffering)
       }
       is IrOptionalType -> {
-        CodeBlock.of("%T.${Identifier.optional}(%L)", JavaClassNames.Adapters, adapterInitializer(type.ofType, requiresBuffering))
+        CodeBlock.of("$T.${Identifier.optional}($L)", JavaClassNames.Adapters, adapterInitializer(type.ofType, requiresBuffering))
       }
       else -> error("Cannot create an adapter for $type")
     }
@@ -157,11 +155,11 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
   /**
    * Nullable adapters are @JvmField properties
    */
-  private fun nullableScalarAdapter(name: String) = CodeBlock.of("%T.%L", JavaClassNames.Adapters, name)
+  private fun nullableScalarAdapter(name: String) = CodeBlock.of("$T.$L", JavaClassNames.Adapters, name)
   /**
    * Non Nullable adapters are object INSTANCES
    */
-  private fun nonNullableScalarAdapter(className: ClassName) = CodeBlock.of("%T.INSTANCE", className)
+  private fun nonNullableScalarAdapter(className: ClassName) = CodeBlock.of("$T.INSTANCE", className)
 
 
   fun resolveModel(path: String) = resolveAndAssert(ResolverKeyKind.Model, path)

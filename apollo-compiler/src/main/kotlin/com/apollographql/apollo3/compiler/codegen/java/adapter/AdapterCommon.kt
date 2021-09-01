@@ -14,6 +14,9 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.helpers.codeBlock
 import com.apollographql.apollo3.compiler.codegen.java.isNotEmpty
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
@@ -31,7 +34,7 @@ import com.squareup.javapoet.ParameterizedTypeName
 
 internal fun responseNamesFieldSpec(model: IrModel): FieldSpec {
   val initializer = model.properties.filter { !it.isSynthetic }.map {
-    CodeBlock.of("%S", it.info.responseName)
+    CodeBlock.of("$S", it.info.responseName)
   }.joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
   return FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.String), RESPONSE_NAMES)
@@ -48,12 +51,12 @@ internal fun readFromResponseCodeBlock(
   val prefix = regularProperties.map { property ->
     val variableInitializer = when {
       hasTypenameArgument && property.info.responseName == "__typename" -> CodeBlock.of(typename)
-      (property.info.type is IrNonNullType && property.info.type.ofType is IrOptionalType) -> CodeBlock.of("%T", JavaClassNames.Absent)
+      (property.info.type is IrNonNullType && property.info.type.ofType is IrOptionalType) -> CodeBlock.of("$T", JavaClassNames.Absent)
       else -> CodeBlock.of("null")
     }
 
     CodeBlock.of(
-        "var·%L:·%T·=·%L",
+        "var·$L:·$T·=·$L",
         context.layout.variableName(property.info.responseName),
         context.resolver.resolveIrType(property.info.type),
         variableInitializer
@@ -69,7 +72,7 @@ internal fun readFromResponseCodeBlock(
       .add(
           regularProperties.mapIndexed { index, property ->
             CodeBlock.of(
-                "%L·->·%L·=·%L.$fromJson($reader, $customScalarAdapters)",
+                "$L·->·$L·=·$L.$fromJson($reader, $customScalarAdapters)",
                 index,
                 context.layout.variableName(property.info.responseName),
                 context.resolver.adapterInitializer(property.info.type, property.requiresBuffering)
@@ -90,7 +93,7 @@ internal fun readFromResponseCodeBlock(
     checkedProperties.add(__typename)
     CodeBlock.builder()
         .beginControlFlow("check($__typename·!=·null)")
-        .add("%S\n", "__typename was not found")
+        .add("$S\n", "__typename was not found")
         .endControlFlow()
         .build()
   } else {
@@ -103,11 +106,11 @@ internal fun readFromResponseCodeBlock(
         .apply {
           if (property.condition != BooleanExpression.True) {
             add(
-                "var·%L:·%T·=·null\n",
+                "var·$L:·$T·=·null\n",
                 context.layout.variableName(property.info.responseName),
                 context.resolver.resolveIrType(property.info.type),
             )
-            beginControlFlow("if·(%T.$evaluate(%L, emptySet(),·$__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
+            beginControlFlow("if·($T.$evaluate($L, emptySet(),·$__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
           } else {
             checkedProperties.add(property.info.responseName)
             add("val·")
@@ -115,7 +118,7 @@ internal fun readFromResponseCodeBlock(
         }
         .add(
             CodeBlock.of(
-                "%L·=·%L.$fromJson($reader, $customScalarAdapters)\n",
+                "$L·=·$L.$fromJson($reader, $customScalarAdapters)\n",
                 context.layout.variableName(property.info.responseName),
                 context.resolver.resolveModelAdapter(property.info.type.modelPath())
             )
@@ -127,7 +130,7 @@ internal fun readFromResponseCodeBlock(
   }.joinToCode("\n")
 
   val suffix = CodeBlock.builder()
-      .addStatement("return·%T(", context.resolver.resolveModel(model.id))
+      .addStatement("return·$T(", context.resolver.resolveModel(model.id))
       .indent()
       .add(model.properties.filter { !it.hidden }.map { property ->
         val maybeAssertNotNull = if (
@@ -140,7 +143,7 @@ internal fun readFromResponseCodeBlock(
           ""
         }
         CodeBlock.of(
-            "%L·=·%L%L",
+            "$L·=·$L$L",
             context.layout.propertyName(property.info.responseName),
             context.layout.variableName(property.info.responseName),
             maybeAssertNotNull
@@ -181,9 +184,9 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
 
   if (!isSynthetic) {
     val adapterInitializer = context.resolver.adapterInitializer(info.type, requiresBuffering)
-    builder.addStatement("${writer}.name(%S)", info.responseName)
+    builder.addStatement("${writer}.name($S)", info.responseName)
     builder.addStatement(
-        "%L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
+        "$L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
         adapterInitializer
     )
   } else {
@@ -196,7 +199,7 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
       builder.beginControlFlow("if·($value.$propertyName·!=·null)")
     }
     builder.addStatement(
-        "%L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
+        "$L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
         adapterInitializer
     )
     if (this.info.type !is IrNonNullType) {
@@ -215,5 +218,5 @@ internal fun List<String>.toClassName() = ClassName.get(
 )
 
 internal fun CodeBlock.obj(buffered: Boolean): CodeBlock {
-  return CodeBlock.of("new %T(%L, %L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
+  return CodeBlock.of("new $T($L, $L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
 }

@@ -10,6 +10,9 @@ import com.apollographql.apollo3.compiler.codegen.java.helpers.toParameterSpec
 import com.apollographql.apollo3.compiler.ir.IrInputObject
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.TypeSpec
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class InputObjectBuilder(
     val context: JavaContext,
@@ -34,7 +37,7 @@ class InputObjectBuilder(
   private fun IrInputObject.typeSpec() =
       TypeSpec
           .classBuilder(simpleName)
-          .applyIf(description?.isNotBlank()== true)  { addJavadoc("%L\n", description!!) }
+          .applyIf(description?.isNotBlank()== true)  { addJavadoc("$L\n", description!!) }
           .makeDataClassFromParameters(fields.map {
             it.toNamedType().toParameterSpec(context)
           })

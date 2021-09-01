@@ -71,10 +71,12 @@ internal object JavaClassNames {
    */
   val List: ClassName = ClassName.get("java.lang", "List")
   val String: ClassName = ClassName.get("java.lang", "String")
-  val Int: ClassName = ClassName.get("java.lang", "Int")
+  val Integer: ClassName = ClassName.get("java.lang", "Integer")
   val Double: ClassName = ClassName.get("java.lang", "Double")
   val Object: ClassName = ClassName.get("java.lang", "Object")
   val Boolean: ClassName = ClassName.get("java.lang", "Boolean")
   val Deprecated = ClassName.get("java.lang", "Deprecated")
   val Override = ClassName.get("java.lang", "Override")
+  val Arrays = ClassName.get("java.util", "Arrays")
+
 }

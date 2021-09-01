@@ -27,6 +27,9 @@ import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
 import javax.lang.model.element.Modifier
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class OperationBuilder(
     private val context: JavaContext,
@@ -87,13 +90,13 @@ class OperationBuilder(
         .addField(
             FieldSpec.builder(JavaClassNames.String, OPERATION_ID)
             .addModifiers(Modifier.FINAL)
-            .initializer("%S", operationId)
+            .initializer("$S", operationId)
             .build()
         )
         .applyIf(generateQueryDocument) {
           addField(FieldSpec.builder(JavaClassNames.String, OPERATION_DOCUMENT)
               .addModifiers(Modifier.FINAL)
-              .initializer("%S", QueryDocumentMinifier.minify(operation.sourceWithFragments))
+              .initializer("$S", QueryDocumentMinifier.minify(operation.sourceWithFragments))
               .addJavadoc("""
                 The minimized GraphQL document being sent to the server to save a few bytes.
                 The un-minimized version is:
@@ -107,7 +110,7 @@ class OperationBuilder(
         .addField(FieldSpec
             .builder(JavaClassNames.String, OPERATION_NAME)
             .addModifiers(Modifier.FINAL)
-            .initializer("%S", operation.name)
+            .initializer("$S", operation.name)
             .build()
         )
         .build()

@@ -15,6 +15,9 @@ import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.TypeSpec
 import javax.lang.model.element.Modifier
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class EnumBuilder(
     private val context: JavaContext,
@@ -55,7 +58,7 @@ class EnumBuilder(
         .addFields(
             values.map { value ->
               FieldSpec.builder(selfClassName, layout.enumName(name))
-                  .initializer(CodeBlock.of("new %T(%S)", selfClassName, name))
+                  .initializer(CodeBlock.of("new $T($S)", selfClassName, name))
                   .build()
             }
         )

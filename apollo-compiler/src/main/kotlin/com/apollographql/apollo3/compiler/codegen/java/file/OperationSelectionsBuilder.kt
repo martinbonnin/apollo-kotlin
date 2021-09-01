@@ -8,6 +8,9 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
 import com.apollographql.apollo3.compiler.codegen.java.selections.CompiledSelectionsBuilder
 import com.apollographql.apollo3.compiler.ir.IrOperation
 import com.squareup.javapoet.ClassName
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 
 class OperationSelectionsBuilder(
     val context: JavaContext,
