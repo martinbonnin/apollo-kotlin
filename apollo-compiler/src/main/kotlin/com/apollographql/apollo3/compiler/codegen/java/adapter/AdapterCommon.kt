@@ -1,19 +1,22 @@
 package com.apollographql.apollo3.compiler.codegen.java.adapter
 
 import com.apollographql.apollo3.api.BooleanExpression
-import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.compiler.applyIf
 import com.apollographql.apollo3.compiler.codegen.Identifier
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.Identifier.RESPONSE_NAMES
 import com.apollographql.apollo3.compiler.codegen.Identifier.__typename
 import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapters
+import com.apollographql.apollo3.compiler.codegen.Identifier.evaluate
 import com.apollographql.apollo3.compiler.codegen.Identifier.fromJson
 import com.apollographql.apollo3.compiler.codegen.Identifier.reader
 import com.apollographql.apollo3.compiler.codegen.Identifier.typename
 import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.helpers.codeBlock
+import com.apollographql.apollo3.compiler.codegen.java.isNotEmpty
+import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.IrModel
 import com.apollographql.apollo3.compiler.ir.IrModelType
 import com.apollographql.apollo3.compiler.ir.IrNonNullType
@@ -23,18 +26,15 @@ import com.apollographql.apollo3.compiler.ir.IrType
 import com.apollographql.apollo3.compiler.ir.isOptional
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.MemberName
-import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.FieldSpec
-import com.squareup.javapoet.asClassName
-import com.squareup.javapoet.joinToCode
+import com.squareup.javapoet.ParameterizedTypeName
 
 internal fun responseNamesFieldSpec(model: IrModel): FieldSpec {
   val initializer = model.properties.filter { !it.isSynthetic }.map {
     CodeBlock.of("%S", it.info.responseName)
   }.joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
 
-  return FieldSpec.builder(Identifier.RESPONSE_NAMES, List::class.parameterizedBy(String::class))
+  return FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.String), RESPONSE_NAMES)
       .initializer(initializer)
       .build()
 }
@@ -48,14 +48,14 @@ internal fun readFromResponseCodeBlock(
   val prefix = regularProperties.map { property ->
     val variableInitializer = when {
       hasTypenameArgument && property.info.responseName == "__typename" -> CodeBlock.of(typename)
-      (property.info.type is IrNonNullType && property.info.type.ofType is IrOptionalType) -> CodeBlock.of("%T", JavaClassNames.Optional.Absent)
+      (property.info.type is IrNonNullType && property.info.type.ofType is IrOptionalType) -> CodeBlock.of("%T", JavaClassNames.Absent)
       else -> CodeBlock.of("null")
     }
 
     CodeBlock.of(
         "var·%L:·%T·=·%L",
         context.layout.variableName(property.info.responseName),
-        context.resolver.resolveIrType(property.info.type).copy(nullable = !property.info.type.isOptional()),
+        context.resolver.resolveIrType(property.info.type),
         variableInitializer
     )
   }.joinToCode(separator = "\n", suffix = "\n")
@@ -98,17 +98,16 @@ internal fun readFromResponseCodeBlock(
   }
 
   val syntheticLoop = syntheticProperties.map { property ->
-    val evaluate = MemberName("com.apollographql.apollo3.api", "evaluate")
     CodeBlock.builder()
         .add("$reader.rewind()\n")
         .apply {
-          if(property.condition != BooleanExpression.True) {
+          if (property.condition != BooleanExpression.True) {
             add(
                 "var·%L:·%T·=·null\n",
                 context.layout.variableName(property.info.responseName),
-                context.resolver.resolveIrType(property.info.type).copy(nullable = !property.info.type.isOptional()),
+                context.resolver.resolveIrType(property.info.type),
             )
-            beginControlFlow("if·(%L.%M(emptySet(),·$__typename))", property.condition.codeBlock(), evaluate)
+            beginControlFlow("if·(%T.$evaluate(%L, emptySet(),·$__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
           } else {
             checkedProperties.add(property.info.responseName)
             add("val·")
@@ -209,21 +208,12 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
 }
 
 
-internal fun ClassName.Companion.from(path: List<String>) = ClassName.get(
-    packageName = path.first(),
-    path.drop(1)
+internal fun List<String>.toClassName() = ClassName.get(
+    first(),
+    get(1),
+    *drop(1).toTypedArray()
 )
 
 internal fun CodeBlock.obj(buffered: Boolean): CodeBlock {
-  val params = when {
-    buffered -> CodeBlock.of("true")
-    else -> CodeBlock.of("")
-  }
-  return CodeBlock.Builder()
-      .add("%L", this)
-      .add(
-          ".%M(%L)",
-          MemberName("com.apollographql.apollo3.api", "obj"),
-          params
-      ).build()
+  return CodeBlock.of("new %T(%L, %L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
 }

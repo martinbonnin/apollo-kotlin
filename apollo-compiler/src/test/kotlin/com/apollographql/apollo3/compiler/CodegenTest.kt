@@ -19,7 +19,7 @@ import kotlin.time.measureTime
 
 @RunWith(Parameterized::class)
 @OptIn(ExperimentalTime::class)
-class CodegenTest(private val folder: File, private val codegenModels: String, private val hasFragments: Boolean) {
+class CodegenTest(private val folder: File, private val codegenModels: String, private val generateKotlinModels: Boolean, private val hasFragments: Boolean) {
   private class Measurement(
       val name: String,
       val codegenModels: String,
@@ -28,7 +28,6 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
       val codegenDuration: Duration,
       val compileDuration: Duration,
   )
-
 
   @Test
   fun generateExpectedClasses() {
@@ -290,8 +289,8 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
               }
               hasFragments -> {
                 val list = listOf(
-                    arrayOf(file, MODELS_OPERATION_BASED, true),
-                    arrayOf(file, MODELS_COMPAT, true)
+                    arrayOf(file, MODELS_OPERATION_BASED, true, true),
+                    arrayOf(file, MODELS_COMPAT, true, true)
                 )
 
                 if (file.name in listOf("inline_fragment_with_include_directive", "fragment_spread_with_include_directive")) {

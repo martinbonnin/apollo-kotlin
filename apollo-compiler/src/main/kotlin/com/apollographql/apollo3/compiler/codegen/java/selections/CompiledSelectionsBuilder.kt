@@ -3,10 +3,7 @@ package com.apollographql.apollo3.compiler.codegen.java.selections
 import com.apollographql.apollo3.api.BVariable
 import com.apollographql.apollo3.api.BooleanExpression
 import com.apollographql.apollo3.api.CompiledArgument
-import com.apollographql.apollo3.api.CompiledCondition
 import com.apollographql.apollo3.api.CompiledField
-import com.apollographql.apollo3.api.CompiledFragment
-import com.apollographql.apollo3.api.CompiledSelection
 import com.apollographql.apollo3.api.CompiledVariable
 import com.apollographql.apollo3.ast.GQLArgument
 import com.apollographql.apollo3.ast.GQLBooleanValue
@@ -36,16 +33,15 @@ import com.apollographql.apollo3.ast.definitionFromScope
 import com.apollographql.apollo3.ast.leafType
 import com.apollographql.apollo3.compiler.applyIf
 import com.apollographql.apollo3.compiler.capitalizeFirstLetter
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.toBooleanExpression
 import com.squareup.javapoet.CodeBlock
-import com.squareup.javapoet.KModifier
-import com.squareup.javapoet.MemberName
-import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.javapoet.FieldSpec
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeSpec
-import com.squareup.javapoet.asTypeName
-import com.squareup.javapoet.joinToCode
+import javax.lang.model.element.Modifier
 
 class CompiledSelectionsBuilder(
     private val context: JavaContext,
@@ -66,8 +62,8 @@ class CompiledSelectionsBuilder(
   }
 
   fun build(selections: List<GQLSelection>, rootName: String, parentType: String): TypeSpec {
-    return TypeSpec.objectBuilder(rootName)
-        .addProperties(selections.walk(context.layout.rootSelectionsPropertyName(), false, parentType))
+    return TypeSpec.classBuilder(rootName)
+        .addFields(selections.walk(context.layout.rootSelectionsPropertyName(), false, parentType))
         .build()
   }
 
@@ -82,10 +78,10 @@ class CompiledSelectionsBuilder(
     builder.unindent()
     builder.add(")")
 
-    val property = FieldSpec.builder(propertyName, List::class.parameterizedBy(CompiledSelection::class))
+    val property = FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection), propertyName)
         .initializer(builder.build())
         .applyIf(private) {
-          addModifiers(KModifier.PRIVATE)
+          addModifiers(Modifier.PRIVATE)
         }
         .build()
 
@@ -257,12 +253,10 @@ class CompiledSelectionsBuilder(
   private fun GQLType.codeBlock(): CodeBlock {
     return when (this) {
       is GQLNonNullType -> {
-        val notNullFun = MemberName("com.apollographql.apollo3.api", "notNull")
-        CodeBlock.of("%L.%M()", type.codeBlock(), notNullFun)
+        CodeBlock.of("new %T(%L)", JavaClassNames.CompiledNotNullType, type.codeBlock())
       }
       is GQLListType -> {
-        val listFun = MemberName("com.apollographql.apollo3.api", "list")
-        CodeBlock.of("%L.%M()", type.codeBlock(), listFun)
+        CodeBlock.of("new %T(%L)", JavaClassNames.CompiledListType, type.codeBlock())
       }
       is GQLNamedType -> {
         context.resolver.resolveCompiledType(name)

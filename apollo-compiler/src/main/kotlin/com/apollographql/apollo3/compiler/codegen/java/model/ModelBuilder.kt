@@ -1,9 +1,10 @@
 package com.apollographql.apollo3.compiler.codegen.java.model
 
 import com.apollographql.apollo3.compiler.applyIf
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.CodegenLayout.Companion.upperCamelCaseIgnoringNonLetters
-import com.apollographql.apollo3.compiler.codegen.java.adapter.from
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.adapter.toClassName
 import com.apollographql.apollo3.compiler.codegen.java.helpers.makeDataClassFromProperties
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDeprecation
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
@@ -13,8 +14,6 @@ import com.apollographql.apollo3.compiler.ir.IrFragmentAccessor
 import com.apollographql.apollo3.compiler.ir.IrModel
 import com.apollographql.apollo3.compiler.ir.IrSubtypeAccessor
 import com.squareup.javapoet.ClassName
-import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.KModifier
 import com.squareup.javapoet.FieldSpec
 import com.squareup.javapoet.TypeSpec
 
@@ -38,7 +37,7 @@ class ModelBuilder(
   fun prepare() {
     context.resolver.registerModel(
         model.id,
-        ClassName.from(path + model.modelName)
+        (path + model.modelName).toClassName()
     )
     nestedBuilders.forEach { it.prepare() }
   }
@@ -48,12 +47,14 @@ class ModelBuilder(
   }
 
   fun IrModel.typeSpec(): TypeSpec {
-    val properties = properties.filter { !it.hidden }.map {
+    val fields = properties.filter { !it.hidden }.map {
       FieldSpec.builder(
+          context.resolver.resolveIrType(it.info.type),
           context.layout.propertyName(it.info.responseName),
-          context.resolver.resolveIrType(it.info.type)
       )
-          .applyIf(it.override) { addAnnotation(JavaClassNames.Override) }
+          .applyIf(it.override) {
+            addAnnotation(JavaClassNames.Override)
+          }
           .maybeAddDescription(it.info.description)
           .maybeAddDeprecation(it.info.deprecationReason)
           .build()
@@ -65,34 +66,20 @@ class ModelBuilder(
 
     val typeSpecBuilder = if (isInterface) {
       TypeSpec.interfaceBuilder(modelName)
-          .addProperties(properties)
+          .addFields(fields)
     } else {
       TypeSpec.classBuilder(modelName)
-          .makeDataClassFromProperties(properties)
+          .makeDataClassFromProperties(fields)
     }
 
     val nestedTypes = nestedBuilders.map { it.build() }
 
     return typeSpecBuilder
         .addTypes(nestedTypes)
-        .applyIf(accessors.isNotEmpty()) {
-          addType(companionTypeSpec(this@typeSpec))
-        }
         .addSuperinterfaces(superInterfaces)
         .build()
   }
 
-  private fun companionTypeSpec(model: IrModel): TypeSpec {
-    val MethodSpecs = model.accessors.map { accessor ->
-      MethodSpec.methodBuilder(accessor.funName())
-          .receiver(context.resolver.resolveModel(model.id))
-          .addCode("return this as? %T\n", context.resolver.resolveModel(accessor.returnedModelId))
-          .build()
-    }
-    return TypeSpec.companionObjectBuilder()
-        .addMethods(MethodSpecs)
-        .build()
-  }
 
   private fun IrAccessor.funName(): String {
     return when (this) {

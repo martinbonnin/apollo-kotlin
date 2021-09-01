@@ -1,6 +1,9 @@
 package com.apollographql.apollo3.compiler.codegen
 
 internal object Identifier {
+  const val evaluate = "evaluate"
+  const val notNull = "notNull"
+
   // extra underscores at the end to prevent potential name clashes
   const val UNKNOWN__ = "UNKNOWN__"
   const val rawValue = "rawValue"

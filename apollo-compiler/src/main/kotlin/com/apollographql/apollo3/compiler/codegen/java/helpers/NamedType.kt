@@ -1,16 +1,14 @@
 package com.apollographql.apollo3.compiler.codegen.java.helpers
 
-import com.apollographql.apollo3.api.Optional
-import com.apollographql.apollo3.compiler.applyIf
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.Identifier
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.ir.IrInputField
 import com.apollographql.apollo3.compiler.ir.IrType
 import com.apollographql.apollo3.compiler.ir.IrVariable
 import com.apollographql.apollo3.compiler.ir.isOptional
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.ParameterSpec
-import com.squareup.javapoet.asClassName
 
 class NamedType(
     val graphQlName: String,
@@ -23,12 +21,9 @@ class NamedType(
 internal fun NamedType.toParameterSpec(context: JavaContext): ParameterSpec {
   return ParameterSpec
       .builder(
-          // we use property for parameters as these are ultimately data classes
-          name = context.layout.propertyName(graphQlName),
-          type = context.resolver.resolveIrType(type)
+          context.resolver.resolveIrType(type),
+          context.layout.propertyName(graphQlName),
       )
-      .applyIf(description?.isNotBlank() == true) { addJavadoc("%L\n", description!!) }
-      .applyIf(type.isOptional()) { defaultValue("%T", JavaClassNames.Optional.Absent) }
       .build()
 }
 
@@ -62,7 +57,7 @@ internal fun NamedType.writeToResponseCodeBlock(context: JavaContext): CodeBlock
   val propertyName = context.layout.propertyName(graphQlName)
 
   if (type.isOptional()) {
-    builder.beginControlFlow("if (${Identifier.value}.$propertyName is %T)", JavaClassNames.Optional.Present)
+    builder.beginControlFlow("if (${Identifier.value}.$propertyName is %T)", JavaClassNames.Present)
   }
   builder.addStatement("${Identifier.writer}.name(%S)", graphQlName)
   builder.addStatement(

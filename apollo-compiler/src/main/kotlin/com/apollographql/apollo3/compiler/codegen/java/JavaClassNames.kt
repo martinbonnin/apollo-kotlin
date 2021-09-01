@@ -1,5 +1,6 @@
 package com.apollographql.apollo3.compiler.codegen.java
 
+import com.apollographql.apollo3.api.BPossibleTypes
 import com.apollographql.apollo3.compiler.codegen.ClassNames
 import com.apollographql.apollo3.compiler.codegen.ClassNames.apolloApiPackageName
 import com.apollographql.apollo3.compiler.codegen.ResolverClassName
@@ -46,10 +47,24 @@ internal object JavaClassNames {
   val CompiledFragment = ClassNames.CompiledFragment.toJavaPoetClassName()
 
   /**
+   * ClassNames that we don't use in Kotlin because we use extension functions instead
+   */
+  val CompiledNotNullType = ClassName.get(apolloApiPackageName, "CompiledNotNullType")
+  val CompiledListType = ClassName.get(apolloApiPackageName, "CompiledListType")
+  val ObjectAdapter  = ClassName.get(apolloApiPackageName, "ObjectAdapter")
+  val And = ClassName.get(apolloApiPackageName, "BooleanExpression", "And")
+  val Or = ClassName.get(apolloApiPackageName, "BooleanExpression", "Or")
+  val Not = ClassName.get(apolloApiPackageName, "BooleanExpression", "Not")
+  val BVariable = ClassName.get(apolloApiPackageName, "BVariable")
+  val BPossibleTypes = ClassName.get(apolloApiPackageName, "BPossibleTypes")
+
+
+  /**
    * ClassNames for kotlin files turned into java classes
    */
   val Adapters = ClassName.get(apolloApiPackageName, "Adapters")
   val CompiledGraphQL = ClassName.get(apolloApiPackageName, "CompiledGraphQL")
+  val BooleanExpressions = ClassName.get(apolloApiPackageName, "BooleanExpressions")
 
   /**
    * ClassNames for builtin Java types

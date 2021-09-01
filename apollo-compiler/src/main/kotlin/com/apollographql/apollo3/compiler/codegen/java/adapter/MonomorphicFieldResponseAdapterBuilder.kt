@@ -1,19 +1,14 @@
 package com.apollographql.apollo3.compiler.codegen.java.adapter
 
-import com.apollographql.apollo3.api.Adapter
-import com.apollographql.apollo3.api.CustomScalarAdapters
-import com.apollographql.apollo3.api.json.JsonReader
-import com.apollographql.apollo3.api.json.JsonWriter
 import com.apollographql.apollo3.compiler.applyIf
 import com.apollographql.apollo3.compiler.codegen.Identifier
+import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.ir.IrModel
-import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.MethodSpec
-import com.squareup.javapoet.KModifier
-import com.squareup.javapoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeSpec
-import com.squareup.javapoet.asTypeName
+import javax.lang.model.element.Modifier
 
 class MonomorphicFieldResponseAdapterBuilder(
     val context: JavaContext,
@@ -39,7 +34,7 @@ class MonomorphicFieldResponseAdapterBuilder(
   override fun prepare() {
     context.resolver.registerModelAdapter(
         model.id,
-        ClassName.from(path + adapterName)
+        (path + adapterName).toClassName()
     )
     nestedAdapterBuilders.map { it.prepare() }
   }
@@ -49,14 +44,12 @@ class MonomorphicFieldResponseAdapterBuilder(
   }
 
   private fun typeSpec(): TypeSpec {
-    return TypeSpec.objectBuilder(adapterName)
+    return TypeSpec.classBuilder(adapterName)
         .addSuperinterface(
-            JavaClassNames.Adapter.parameterizedBy(
-                context.resolver.resolveModel(model.id)
-            )
+            ParameterizedTypeName.get(JavaClassNames.Adapter,                 context.resolver.resolveModel(model.id))
         )
         .applyIf(!public) {
-          addModifiers(KModifier.PRIVATE)
+          addModifiers(Modifier.PRIVATE)
         }
         .addField(responseNamesFieldSpec(model))
         .addMethod(readFromResponseMethodSpec())
@@ -68,8 +61,8 @@ class MonomorphicFieldResponseAdapterBuilder(
   private fun readFromResponseMethodSpec(): MethodSpec {
     return MethodSpec.methodBuilder(Identifier.fromJson)
         .returns(adaptedClassName)
-        .addParameter(Identifier.reader, JsonReader::class)
-        .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
+        .addParameter(JavaClassNames.JsonReader, Identifier.reader, )
+        .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters, )
         .addAnnotation(JavaClassNames.Override)
         .addCode(readFromResponseCodeBlock(model, context, false))
         .build()
@@ -78,9 +71,9 @@ class MonomorphicFieldResponseAdapterBuilder(
   private fun writeToResponseMethodSpec(): MethodSpec {
     return MethodSpec.methodBuilder(Identifier.toJson)
         .addAnnotation(JavaClassNames.Override)
-        .addParameter(Identifier.writer, JavaClassNames.JsonWriter)
-        .addParameter(Identifier.customScalarAdapters, CustomScalarAdapters::class)
-        .addParameter(Identifier.value, adaptedClassName)
+        .addParameter(JavaClassNames.JsonWriter, Identifier.writer)
+        .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters)
+        .addParameter(adaptedClassName, Identifier.value)
         .addCode(writeToResponseCodeBlock(model, context))
         .build()
   }

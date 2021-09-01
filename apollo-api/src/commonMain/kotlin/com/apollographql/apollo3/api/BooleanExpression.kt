@@ -1,4 +1,8 @@
+@file:JvmName("BooleanExpressions")
+
 package com.apollographql.apollo3.api
+
+import kotlin.jvm.JvmName
 
 /**
  * A boolean expression

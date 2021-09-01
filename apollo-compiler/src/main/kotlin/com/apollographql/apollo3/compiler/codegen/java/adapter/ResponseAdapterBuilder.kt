@@ -25,12 +25,7 @@ interface ResponseAdapterBuilder {
           path = path,
           public = public
       )
-      else -> PolymorphicFieldResponseAdapterBuilder(
-          context = context,
-          modelGroup = modelGroup,
-          path = path,
-          public = public
-      )
+      else -> error("Don't know how to create an adapter for a polymorphic type")
     }
   }
 }

@@ -201,13 +201,18 @@ class JavaCodeGen(
   }
 }
 
-fun List<CodeBlock>.joinToCode(separator: String): CodeBlock {
+fun List<CodeBlock>.joinToCode(separator: String, prefix: String = "", suffix: String = ""): CodeBlock {
   var first = true
-  return fold(CodeBlock.builder()) { builder, block ->
+  return fold(
+      CodeBlock.builder().add(prefix)
+  ) { builder, block ->
     if (first) {
       builder.add(separator)
       first = false
     }
     builder.add("%L", block)
-  }.build()
+  }.add(suffix)
+      .build()
 }
+
+fun CodeBlock.isNotEmpty() = isEmpty().not()
