@@ -60,8 +60,9 @@ class MonomorphicFieldResponseAdapterBuilder(
 
   private fun readFromResponseMethodSpec(): MethodSpec {
     return MethodSpec.methodBuilder(Identifier.fromJson)
+        .addModifiers(Modifier.PUBLIC)
         .returns(adaptedClassName)
-        .addParameter(JavaClassNames.JsonReader, Identifier.reader, )
+        .addParameter(JavaClassNames.JsonReader, Identifier.reader )
         .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters, )
         .addAnnotation(JavaClassNames.Override)
         .addCode(readFromResponseCodeBlock(model, context, false))
@@ -70,6 +71,7 @@ class MonomorphicFieldResponseAdapterBuilder(
 
   private fun writeToResponseMethodSpec(): MethodSpec {
     return MethodSpec.methodBuilder(Identifier.toJson)
+        .addModifiers(Modifier.PUBLIC)
         .addAnnotation(JavaClassNames.Override)
         .addParameter(JavaClassNames.JsonWriter, Identifier.writer)
         .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters)

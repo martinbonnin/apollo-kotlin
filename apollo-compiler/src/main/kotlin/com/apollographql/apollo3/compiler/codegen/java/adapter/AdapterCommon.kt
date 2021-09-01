@@ -40,10 +40,10 @@ import javax.lang.model.element.Modifier
 internal fun responseNamesFieldSpec(model: IrModel): FieldSpec {
   val initializer = model.properties.filter { !it.isSynthetic }.map {
     CodeBlock.of(S, it.info.responseName)
-  }.toArrayInitializerCodeblock()
+  }.toListInitializerCodeblock()
 
-  return FieldSpec.builder(ArrayTypeName.of(JavaClassNames.String), RESPONSE_NAMES)
-      .addModifiers(Modifier.STATIC, Modifier.FINAL, Modifier.PRIVATE)
+  return FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.String), RESPONSE_NAMES)
+      .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
       .initializer(initializer)
       .build()
 }
@@ -112,7 +112,12 @@ internal fun readFromResponseCodeBlock(
                 context.resolver.resolveIrType(property.info.type),
                 context.layout.variableName(property.info.responseName),
             )
-            beginControlFlow("if ($T.$evaluate($L, emptySet(), $__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
+            beginControlFlow(
+                "if ($T.$evaluate($L, $T.emptySet(), $__typename))",
+                JavaClassNames.BooleanExpressions,
+                property.condition.codeBlock(),
+                JavaClassNames.Collections
+            )
           } else {
             checkedProperties.add(property.info.responseName)
             add("$T ", context.resolver.resolveIrType(property.info.type))
@@ -218,10 +223,6 @@ internal fun List<String>.toClassName() = ClassName.get(
     *drop(2).toTypedArray()
 )
 
-internal fun CodeBlock.obj(buffered: Boolean): CodeBlock {
-  return CodeBlock.of("new $T($L, $L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
-}
-
-fun TypeName.objectAdapterInitializer(buffered: Boolean = false): CodeBlock {
-  return CodeBlock.of("new $T($T, $L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
+fun objectAdapterInitializer(wrappedTypeName: TypeName, adaptedTypeName: TypeName, buffered: Boolean = false): CodeBlock {
+  return CodeBlock.of("new $T(new $T(), $L)", ParameterizedTypeName.get(JavaClassNames.ObjectAdapter, adaptedTypeName), wrappedTypeName, if(buffered) "true" else "false")
 }

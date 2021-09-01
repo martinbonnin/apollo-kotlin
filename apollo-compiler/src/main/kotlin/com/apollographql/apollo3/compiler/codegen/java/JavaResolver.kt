@@ -9,7 +9,7 @@ import com.apollographql.apollo3.compiler.codegen.ResolverClassName
 import com.apollographql.apollo3.compiler.codegen.ResolverEntry
 import com.apollographql.apollo3.compiler.codegen.ResolverKey
 import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
-import com.apollographql.apollo3.compiler.codegen.java.adapter.obj
+import com.apollographql.apollo3.compiler.codegen.java.adapter.objectAdapterInitializer
 import com.apollographql.apollo3.compiler.ir.IrAnyType
 import com.apollographql.apollo3.compiler.ir.IrBooleanType
 import com.apollographql.apollo3.compiler.ir.IrCustomScalarType
@@ -127,10 +127,14 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
       is IrFloatType -> nonNullableScalarAdapter(JavaClassNames.DoubleAdapter)
       is IrAnyType -> nonNullableScalarAdapter(JavaClassNames.AnyAdapter)
       is IrEnumType -> {
-        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name))
+        CodeBlock.of(T, resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name))
       }
       is IrInputObjectType -> {
-        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name)).obj(requiresBuffering)
+        objectAdapterInitializer(
+            resolveAndAssert(ResolverKeyKind.SchemaTypeAdapter, type.name),
+            resolveAndAssert(ResolverKeyKind.SchemaType, type.name),
+            requiresBuffering
+        )
       }
       is IrCustomScalarType -> {
         CodeBlock.of(
@@ -140,7 +144,11 @@ class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {
         )
       }
       is IrModelType -> {
-        CodeBlock.of("$T", resolveAndAssert(ResolverKeyKind.ModelAdapter, type.path)).obj(requiresBuffering)
+        objectAdapterInitializer(
+            resolveAndAssert(ResolverKeyKind.ModelAdapter, type.path),
+            resolveAndAssert(ResolverKeyKind.Model, type.path),
+            requiresBuffering
+        )
       }
       is IrOptionalType -> {
         CodeBlock.of("$T.${Identifier.optional}($L)", JavaClassNames.Adapters, adapterInitializer(type.ofType, requiresBuffering))

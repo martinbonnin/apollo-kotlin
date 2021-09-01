@@ -41,5 +41,6 @@ internal object ClassNames {
   val CompiledVariable = ResolverClassName(apolloApiPackageName, "CompiledVariable")
   val CompiledCondition = ResolverClassName(apolloApiPackageName, "CompiledCondition")
   val CompiledField = ResolverClassName(apolloApiPackageName, "CompiledField")
+  val CompiledFieldBuilder = ResolverClassName(apolloApiPackageName, "CompiledField", "Builder")
   val CompiledFragment = ResolverClassName(apolloApiPackageName, "CompiledFragment")
 }

@@ -127,5 +127,7 @@ data class BVariable(val name: String) : BTerm()
 /**
  * A term that comes from a fragment type condition and that needs to be matched against __typename
  */
-data class BPossibleTypes(val possibleTypes: Set<String>) : BTerm()
+data class BPossibleTypes(val possibleTypes: Set<String>) : BTerm() {
+  constructor(vararg types: String): this(types.toSet())
+}
 

@@ -10,7 +10,6 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.L
 import com.apollographql.apollo3.compiler.codegen.java.T
-import com.apollographql.apollo3.compiler.codegen.java.adapter.obj
 import com.apollographql.apollo3.compiler.codegen.java.adapter.objectAdapterInitializer
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
@@ -48,7 +47,11 @@ fun adapterMethodSpec(
       .returns(ParameterizedTypeName.get(JavaClassNames.Adapter, adaptedTypeName))
       .addCode(
           "return $L;\n",
-          adapterTypeName.objectAdapterInitializer(false)
+          objectAdapterInitializer(
+              adapterTypeName,
+              adaptedTypeName,
+              false,
+          )
       )
       .build()
 }

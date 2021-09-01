@@ -56,6 +56,7 @@ class ModelBuilder(
           context.resolver.resolveIrType(it.info.type),
           context.layout.propertyName(it.info.responseName),
       )
+          .addModifiers(Modifier.PUBLIC)
           .applyIf(it.override) {
             addAnnotation(JavaClassNames.Override)
           }
@@ -79,7 +80,7 @@ class ModelBuilder(
     val nestedTypes = nestedBuilders.map { it.build() }
 
     return typeSpecBuilder
-        .addModifiers(Modifier.PUBLIC)
+        .addModifiers(Modifier.PUBLIC, Modifier.STATIC)
         .addTypes(nestedTypes)
         .addSuperinterfaces(superInterfaces)
         .build()

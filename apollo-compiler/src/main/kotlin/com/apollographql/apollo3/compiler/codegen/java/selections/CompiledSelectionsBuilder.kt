@@ -38,6 +38,7 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.L
 import com.apollographql.apollo3.compiler.codegen.java.S
 import com.apollographql.apollo3.compiler.codegen.java.T
+import com.apollographql.apollo3.compiler.codegen.java.helpers.toListInitializerCodeblock
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.toBooleanExpression
 import com.squareup.javapoet.CodeBlock
@@ -75,15 +76,9 @@ class CompiledSelectionsBuilder(
     val propertyName = resolveNameClashes(usedNames, context.layout.propertyName(name))
 
     val results = mapNotNull { it.walk(true, parentType) }
-    val builder = CodeBlock.builder()
-    builder.add("listOf(\n")
-    builder.indent()
-    builder.add(results.map { it.initializer }.joinToCode(separator = ",\n", suffix = "\n"))
-    builder.unindent()
-    builder.add(")")
 
     val property = FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection), propertyName)
-        .initializer(builder.build())
+        .initializer(results.map { it.initializer }.toListInitializerCodeblock(withNewLines = true))
         .addModifiers(Modifier.STATIC)
         .applyIf(private) {
           addModifiers(Modifier.PRIVATE)
@@ -135,49 +130,33 @@ class CompiledSelectionsBuilder(
       return null
     }
 
-    val parameters = mutableListOf<CodeBlock>()
-    parameters.add(CodeBlock.of(S, name))
-    if (alias != null) {
-      parameters.add(CodeBlock.of("alias = $S", alias))
-    }
+
+    val builder = CodeBlock.builder()
 
     val fieldDefinition = definitionFromScope(schema, parentType)!!
-    parameters.add(
-        CodeBlock.of(
-            "type = $L",
-            fieldDefinition.type.codeBlock()
-        )
-    )
+
+    builder.add("$T.builder($S, $L)", JavaClassNames.CompiledField, name, fieldDefinition.type.codeBlock())
+    builder.indent()
+
+    if (alias != null) {
+      builder.add(".alias($S)", alias)
+    }
+
     if (expression != BooleanExpression.True) {
-      parameters.add(
-          CodeBlock.of(
-              "condition = $L",
-              expression.toCompiledConditionInitializer()
-          )
-      )
+      builder.add(".condition($L)", expression.toCompiledConditionInitializer())
     }
     if (arguments?.arguments?.isNotEmpty() == true) {
-      parameters.add(
-          CodeBlock.of(
-              "arguments = $L",
-              arguments!!.arguments.codeBlock(name, parentType)
-          )
-      )
+      builder.add(".arguments($L)", arguments!!.arguments.codeBlock(name, parentType))
     }
 
     var nestededFieldSpecs: List<FieldSpec> = emptyList()
     val selections = selectionSet?.selections ?: emptyList()
     if (selections.isNotEmpty()) {
       nestededFieldSpecs = selections.walk(alias ?: name, private, fieldDefinition.type.leafType().name)
-      parameters.add(CodeBlock.of("selections = $L", nestededFieldSpecs.last().name))
+      builder.add(".selections($L)", nestededFieldSpecs.last().name)
     }
-
-    val builder = CodeBlock.builder()
-    builder.add("$T(\n", JavaClassNames.CompiledField)
-    builder.indent()
-    builder.add(parameters.joinToCode(separator = ",\n", suffix = "\n"))
     builder.unindent()
-    builder.add(")")
+    builder.add(".build()")
 
     return SelectionResult(builder.build(), nestededFieldSpecs)
   }
@@ -188,31 +167,23 @@ class CompiledSelectionsBuilder(
       return null
     }
 
-    val parameters = mutableListOf<CodeBlock>()
     val name = "on${typeCondition.name.capitalizeFirstLetter()}"
-    parameters.add(CodeBlock.of("possibleTypes = $L", possibleTypesCodeBlock(typeCondition.name)))
+
+    val builder = CodeBlock.builder()
+    builder.add("$T.builder($L)", JavaClassNames.CompiledFragment, possibleTypesCodeBlock(typeCondition.name))
+    builder.indent()
     if (expression !is BooleanExpression.True) {
-      parameters.add(
-          CodeBlock.of(
-              "condition = $L",
-              expression.toCompiledConditionInitializer()
-          )
-      )
+      builder.add(".condition($L)", expression.toCompiledConditionInitializer())
     }
 
     var nestededFieldSpecs: List<FieldSpec> = emptyList()
     val selections = selectionSet.selections
     if (selections.isNotEmpty()) {
       nestededFieldSpecs = selections.walk(name, private, typeCondition.name)
-      parameters.add(CodeBlock.of("selections = $L", nestededFieldSpecs.last().name))
+      builder.add(".selections($L)",  nestededFieldSpecs.last().name)
     }
-
-    val builder = CodeBlock.builder()
-    builder.add("$T(\n", JavaClassNames.CompiledFragment)
-    builder.indent()
-    builder.add(parameters.joinToCode(separator = ",\n", suffix = "\n"))
     builder.unindent()
-    builder.add(")")
+    builder.add(".build()")
 
     return SelectionResult(builder.build(), nestededFieldSpecs)
   }
@@ -222,37 +193,23 @@ class CompiledSelectionsBuilder(
     if (expression == BooleanExpression.False) {
       return null
     }
-
-    val parameters = mutableListOf<CodeBlock>()
-    if (expression !is BooleanExpression.True) {
-      parameters.add(
-          CodeBlock.of(
-              "condition = $L",
-              expression.toCompiledConditionInitializer()
-          )
-      )
-    }
-
     val fragmentDefinition = allFragmentDefinitions[name]!!
-    parameters.add(CodeBlock.of("possibleTypes = $L", possibleTypesCodeBlock(fragmentDefinition.typeCondition.name)))
-    parameters.add(CodeBlock.of("selections = $T.$L", context.resolver.resolveFragmentSelections(name), context.layout.rootSelectionsPropertyName()))
 
     val builder = CodeBlock.builder()
-    builder.add("$T(\n", JavaClassNames.CompiledFragment)
+    builder.add("$T.builder($L)", JavaClassNames.CompiledFragment, possibleTypesCodeBlock(fragmentDefinition.typeCondition.name))
     builder.indent()
-    builder.add(parameters.joinToCode(separator = ",\n", suffix = "\n"))
+    if (expression !is BooleanExpression.True) {
+      builder.add(".condition($L)", JavaClassNames.CompiledFragment, expression.toCompiledConditionInitializer())
+    }
+    builder.add(".selections($T.$L)", context.resolver.resolveFragmentSelections(name), context.layout.rootSelectionsPropertyName())
     builder.unindent()
-    builder.add(")")
+    builder.add(".build()")
 
     return SelectionResult(builder.build(), emptyList())
   }
 
   private fun possibleTypesCodeBlock(typeCondition: String): CodeBlock {
-    val builder = CodeBlock.builder()
-    builder.add("listOf(")
-    builder.add("$L", schema.possibleTypes(typeCondition).map { CodeBlock.of("$S", it) }.joinToCode(", "))
-    builder.add(")")
-    return builder.build()
+    return schema.possibleTypes(typeCondition).map { CodeBlock.of(S, it) }.toListInitializerCodeblock()
   }
 
   private fun GQLType.codeBlock(): CodeBlock {

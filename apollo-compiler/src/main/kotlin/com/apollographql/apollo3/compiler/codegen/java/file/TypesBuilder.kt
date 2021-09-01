@@ -27,14 +27,14 @@ internal fun IrCustomScalar.typeFieldSpec(): FieldSpec {
    */
   val kotlinName = kotlinName ?: "kotlin.Any"
   return FieldSpec
-      .builder(JavaClassNames.CustomScalarType, Identifier.type, Modifier.STATIC)
+      .builder(JavaClassNames.CustomScalarType, Identifier.type, Modifier.STATIC, Modifier.PUBLIC)
       .initializer("$T($S, $S)", JavaClassNames.CustomScalarType, name, kotlinName)
       .build()
 }
 
 internal fun IrEnum.typeFieldSpec(): FieldSpec {
   return FieldSpec
-      .builder(JavaClassNames.EnumType, Identifier.type, Modifier.STATIC)
+      .builder(JavaClassNames.EnumType, Identifier.type, Modifier.STATIC, Modifier.PUBLIC)
       .initializer("$T($S)", JavaClassNames.EnumType, name)
       .build()
 }
@@ -42,7 +42,7 @@ internal fun IrEnum.typeFieldSpec(): FieldSpec {
 private fun Set<String>.toCode(): CodeBlock {
   val builder = CodeBlock.builder()
   builder.add("listOf(")
-  builder.add("$L", sorted().map { CodeBlock.of("$S", it) }.joinToCode(", "))
+  builder.add(L, sorted().map { CodeBlock.of(S, it) }.joinToCode(", "))
   builder.add(")")
   return builder.build()
 }
@@ -50,7 +50,7 @@ private fun Set<String>.toCode(): CodeBlock {
 private fun List<String>.implementsToCode(resolver: JavaResolver): CodeBlock {
   val builder = CodeBlock.builder()
   builder.add("listOf(")
-  builder.add("$L", sorted().map {
+  builder.add(L, sorted().map {
     resolver.resolveCompiledType(it)
   }.joinToCode(", "))
   builder.add(")")
@@ -71,7 +71,7 @@ internal fun IrObject.typeFieldSpec(resolver: JavaResolver): FieldSpec {
   builder.add(")")
 
   return FieldSpec
-      .builder(JavaClassNames.ObjectType, type, Modifier.STATIC)
+      .builder(JavaClassNames.ObjectType, type, Modifier.STATIC, Modifier.PUBLIC)
       .initializer(builder.build())
       .build()
 }
@@ -90,7 +90,7 @@ internal fun IrInterface.typeFieldSpec(resolver: JavaResolver): FieldSpec {
   builder.add(")")
 
   return FieldSpec
-      .builder(JavaClassNames.InterfaceType, type, Modifier.STATIC)
+      .builder(JavaClassNames.InterfaceType, type, Modifier.STATIC, Modifier.PUBLIC)
       .initializer(builder.build())
       .build()
 }
@@ -103,7 +103,7 @@ internal fun IrUnion.typeFieldSpec(resolver: JavaResolver): FieldSpec {
   }.joinToCode(", "))
 
   return FieldSpec
-      .builder(JavaClassNames.UnionType, type, Modifier.STATIC)
+      .builder(JavaClassNames.UnionType, type, Modifier.STATIC, Modifier.PUBLIC)
       .maybeAddDescription(description)
       .maybeAddDeprecation(deprecationReason)
       .initializer("$T($S, $L)", JavaClassNames.UnionType, name, builder.build())

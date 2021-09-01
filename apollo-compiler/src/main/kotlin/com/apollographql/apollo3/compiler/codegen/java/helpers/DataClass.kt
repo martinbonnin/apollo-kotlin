@@ -1,5 +1,8 @@
 package com.apollographql.apollo3.compiler.codegen.java.helpers
 
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.joinToCode
+import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.FieldSpec
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterSpec
@@ -12,7 +15,11 @@ import javax.lang.model.element.Modifier
 fun TypeSpec.Builder.makeDataClassFromParameters(parameters: List<ParameterSpec>) = apply {
   addMethod(
       MethodSpec.constructorBuilder()
+          .addModifiers(Modifier.PUBLIC)
           .addParameters(parameters)
+          .addCode(
+              parameters.map { CodeBlock.of("this.$L = $L;", it.name, it.name) }.joinToCode("\n", suffix = "\n")
+          )
           .build()
   )
 
@@ -20,6 +27,7 @@ fun TypeSpec.Builder.makeDataClassFromParameters(parameters: List<ParameterSpec>
       parameters.map {
         FieldSpec.builder(it.type, it.name)
             .addModifiers(Modifier.FINAL)
+            .addModifiers(Modifier.PUBLIC)
             .initializer(it.name)
             .build()
       }
@@ -32,10 +40,14 @@ fun TypeSpec.Builder.makeDataClassFromParameters(parameters: List<ParameterSpec>
 fun TypeSpec.Builder.makeDataClassFromProperties(fields: List<FieldSpec>) = apply {
   addMethod(
       MethodSpec.constructorBuilder()
+          .addModifiers(Modifier.PUBLIC)
           .addParameters(
               fields.map {
                 ParameterSpec.builder(it.type, it.name).build()
               }
+          )
+          .addCode(
+              fields.map { CodeBlock.of("this.$L = $L;", it.name, it.name) }.joinToCode("\n", suffix = "\n")
           )
           .build()
   )

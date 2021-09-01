@@ -1,16 +1,17 @@
 package test;
 
 import com.apollographql.apollo3.api.Adapter;
+import com.apollographql.apollo3.api.BPossibleTypes;
+import com.apollographql.apollo3.api.BTerm;
+import com.apollographql.apollo3.api.BooleanExpression;
+import com.apollographql.apollo3.api.BooleanExpressions;
 import com.apollographql.apollo3.api.CustomScalarAdapters;
 import com.apollographql.apollo3.api.json.JsonReader;
 import com.apollographql.apollo3.api.json.JsonWriter;
-import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 enum ScratchFile implements Adapter<Object> {
   // REMINDER
@@ -25,6 +26,7 @@ enum ScratchFile implements Adapter<Object> {
     INSTANCE;
 
     private void listOf(String... strings) {
+      BooleanExpressions.evaluate(new BooleanExpression.Element<BTerm>(new BPossibleTypes("")), Collections.emptySet(), "");
 
     }
 

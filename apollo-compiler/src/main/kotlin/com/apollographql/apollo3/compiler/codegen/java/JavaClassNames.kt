@@ -43,6 +43,7 @@ internal object JavaClassNames {
   val CompiledVariable = ClassNames.CompiledVariable.toJavaPoetClassName()
   val CompiledCondition = ClassNames.CompiledCondition.toJavaPoetClassName()
   val CompiledField = ClassNames.CompiledField.toJavaPoetClassName()
+  val CompiledFieldBuilder = ClassNames.CompiledFieldBuilder.toJavaPoetClassName()
   val CompiledFragment = ClassNames.CompiledFragment.toJavaPoetClassName()
 
   /**
@@ -54,6 +55,8 @@ internal object JavaClassNames {
   val And = ClassName.get(apolloApiPackageName, "BooleanExpression", "And")
   val Or = ClassName.get(apolloApiPackageName, "BooleanExpression", "Or")
   val Not = ClassName.get(apolloApiPackageName, "BooleanExpression", "Not")
+  val BooleanExpressionElement = ClassName.get(apolloApiPackageName, "BooleanExpression", "Element")
+  val BTerm = ClassName.get(apolloApiPackageName, "BTerm")
   val BVariable = ClassName.get(apolloApiPackageName, "BVariable")
   val BPossibleTypes = ClassName.get(apolloApiPackageName, "BPossibleTypes")
 
@@ -79,5 +82,5 @@ internal object JavaClassNames {
 
   val List: ClassName = ClassName.get("java.util", "List")
   val Arrays = ClassName.get("java.util", "Arrays")
-
+  val Collections = ClassName.get("java.util", "Collections")
 }

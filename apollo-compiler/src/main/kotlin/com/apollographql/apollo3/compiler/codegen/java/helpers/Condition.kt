@@ -10,6 +10,7 @@ import com.apollographql.apollo3.compiler.codegen.java.S
 import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.squareup.javapoet.CodeBlock
+import com.squareup.javapoet.ParameterizedTypeName
 
 internal fun BooleanExpression<BTerm>.codeBlock(): CodeBlock {
   return when(this) {
@@ -42,7 +43,7 @@ internal fun BooleanExpression<BTerm>.codeBlock(): CodeBlock {
         operand.codeBlock()
     )
     is BooleanExpression.Element -> {
-      when(val v = value) {
+      val params = when(val v = value) {
         is BVariable -> {
           CodeBlock.of(
               "new $T($S)",
@@ -54,11 +55,13 @@ internal fun BooleanExpression<BTerm>.codeBlock(): CodeBlock {
           CodeBlock.of(
               "new $T($L)",
               JavaClassNames.BPossibleTypes,
-              v.possibleTypes.map { CodeBlock.of("$S", it) }.joinToCode(",")
+              v.possibleTypes.map { CodeBlock.of(S, it) }.joinToCode(",")
           )
         }
         else -> error("")
       }
+
+      CodeBlock.of("new $T($L)", ParameterizedTypeName.get(JavaClassNames.BooleanExpressionElement, JavaClassNames.BTerm), params)
     }
     else -> error("")
   }

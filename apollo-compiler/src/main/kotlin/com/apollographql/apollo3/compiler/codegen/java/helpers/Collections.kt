@@ -6,11 +6,15 @@ import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.squareup.javapoet.CodeBlock
 
-fun List<CodeBlock>.toListInitializerCodeblock(): CodeBlock {
+fun List<CodeBlock>.toListInitializerCodeblock(withNewLines: Boolean = false): CodeBlock {
+  val newLine = if (withNewLines) "\n" else ""
+  val space = if (withNewLines) "" else " "
   return CodeBlock.builder()
-      .add("$T.asList(", JavaClassNames.Arrays)
-      .add(L, joinToCode(", "))
-      .add(")")
+      .add("$T.asList($newLine", JavaClassNames.Arrays)
+      .indent()
+      .add(L, joinToCode(",$newLine$space"))
+      .unindent()
+      .add("$newLine)")
       .build()
 }
 
