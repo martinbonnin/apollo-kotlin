@@ -144,12 +144,14 @@ class OperationBuilder(
   }
 
   private fun operationIdMethodSpec() = MethodSpec.methodBuilder(id)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .returns(JavaClassNames.String)
       .addStatement("return $OPERATION_ID")
       .build()
 
   private fun queryDocumentMethodSpec(generateQueryDocument: Boolean) = MethodSpec.methodBuilder(document)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .returns(JavaClassNames.String)
       .apply {
@@ -162,6 +164,7 @@ class OperationBuilder(
       .build()
 
   private fun nameMethodSpec() = MethodSpec.methodBuilder(name)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .returns(JavaClassNames.String)
       .addStatement("return $OPERATION_NAME")

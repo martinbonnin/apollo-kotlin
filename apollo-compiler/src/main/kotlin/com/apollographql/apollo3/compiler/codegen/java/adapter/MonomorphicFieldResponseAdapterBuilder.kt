@@ -44,14 +44,15 @@ class MonomorphicFieldResponseAdapterBuilder(
   }
 
   private fun typeSpec(): TypeSpec {
-    return TypeSpec.classBuilder(adapterName)
+    return TypeSpec.enumBuilder(adapterName)
         .addSuperinterface(
-            ParameterizedTypeName.get(JavaClassNames.Adapter,                 context.resolver.resolveModel(model.id))
+            ParameterizedTypeName.get(JavaClassNames.Adapter, context.resolver.resolveModel(model.id))
         )
-        .applyIf(!public) {
-          addModifiers(Modifier.PRIVATE)
+        .apply {
+          addModifiers(if (public) Modifier.PUBLIC else Modifier.PRIVATE)
         }
         .addField(responseNamesFieldSpec(model))
+        .addEnumConstant("INSTANCE")
         .addMethod(readFromResponseMethodSpec())
         .addMethod(writeToResponseMethodSpec())
         .addTypes(nestedAdapterBuilders.flatMap { it.build() })
@@ -62,8 +63,8 @@ class MonomorphicFieldResponseAdapterBuilder(
     return MethodSpec.methodBuilder(Identifier.fromJson)
         .addModifiers(Modifier.PUBLIC)
         .returns(adaptedClassName)
-        .addParameter(JavaClassNames.JsonReader, Identifier.reader )
-        .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters, )
+        .addParameter(JavaClassNames.JsonReader, Identifier.reader)
+        .addParameter(JavaClassNames.CustomScalarAdapters, Identifier.customScalarAdapters)
         .addAnnotation(JavaClassNames.Override)
         .addCode(readFromResponseCodeBlock(model, context, false))
         .build()

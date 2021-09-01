@@ -9,6 +9,7 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapter
 import com.apollographql.apollo3.compiler.codegen.Identifier.evaluate
 import com.apollographql.apollo3.compiler.codegen.Identifier.fromJson
 import com.apollographql.apollo3.compiler.codegen.Identifier.reader
+import com.apollographql.apollo3.compiler.codegen.Identifier.toJson
 import com.apollographql.apollo3.compiler.codegen.Identifier.typename
 import com.apollographql.apollo3.compiler.codegen.Identifier.value
 import com.apollographql.apollo3.compiler.codegen.Identifier.writer
@@ -43,7 +44,7 @@ internal fun responseNamesFieldSpec(model: IrModel): FieldSpec {
   }.toListInitializerCodeblock()
 
   return FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.String), RESPONSE_NAMES)
-      .addModifiers(Modifier.FINAL, Modifier.PRIVATE)
+      .addModifiers(Modifier.FINAL, Modifier.PRIVATE, Modifier.STATIC)
       .initializer(initializer)
       .build()
 }
@@ -73,19 +74,20 @@ internal fun readFromResponseCodeBlock(
    * Read the regular properties
    */
   val loop = CodeBlock.builder()
+      .add("loop:\n")
       .beginControlFlow("while(true)")
       .beginControlFlow("switch ($reader.selectName($RESPONSE_NAMES))")
       .add(
           regularProperties.mapIndexed { index, property ->
             CodeBlock.of(
-                "case $L: $L = $L.$fromJson($reader, $customScalarAdapters);",
+                "case $L: $L = $L.$fromJson($reader, $customScalarAdapters); break;",
                 index,
                 context.layout.variableName(property.info.responseName),
                 context.resolver.adapterInitializer(property.info.type, property.requiresBuffering)
             )
           }.joinToCode(separator = "\n", suffix = "\n")
       )
-      .addStatement("default: break")
+      .addStatement("default: break loop")
       .endControlFlow()
       .endControlFlow()
       .build()
@@ -125,7 +127,7 @@ internal fun readFromResponseCodeBlock(
         }
         .add(
             CodeBlock.of(
-                "$L = $L.$fromJson($reader, $customScalarAdapters);\n",
+                "$L = $L.INSTANCE.$fromJson($reader, $customScalarAdapters);\n",
                 context.layout.variableName(property.info.responseName),
                 context.resolver.resolveModelAdapter(property.info.type.modelPath())
             )
@@ -192,7 +194,7 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
     val adapterInitializer = context.resolver.adapterInitializer(info.type, requiresBuffering)
     builder.addStatement("${writer}.name($S)", info.responseName)
     builder.addStatement(
-        "$L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
+        "$L.$toJson($writer, $customScalarAdapters, $value.$propertyName)",
         adapterInitializer
     )
   } else {
@@ -205,7 +207,7 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
       builder.beginControlFlow("if ($value.$propertyName != null)")
     }
     builder.addStatement(
-        "$L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
+        "$L.INSTANCE.$toJson($writer, $customScalarAdapters, $value.$propertyName)",
         adapterInitializer
     )
     if (this.info.type !is IrNonNullType) {
@@ -224,5 +226,5 @@ internal fun List<String>.toClassName() = ClassName.get(
 )
 
 fun objectAdapterInitializer(wrappedTypeName: TypeName, adaptedTypeName: TypeName, buffered: Boolean = false): CodeBlock {
-  return CodeBlock.of("new $T(new $T(), $L)", ParameterizedTypeName.get(JavaClassNames.ObjectAdapter, adaptedTypeName), wrappedTypeName, if(buffered) "true" else "false")
+  return CodeBlock.of("new $T($T.INSTANCE, $L)", ParameterizedTypeName.get(JavaClassNames.ObjectAdapter, adaptedTypeName), wrappedTypeName, if(buffered) "true" else "false")
 }

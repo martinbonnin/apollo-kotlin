@@ -9,6 +9,7 @@ import com.apollographql.apollo3.compiler.codegen.java.S
 import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDeprecation
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
+import com.apollographql.apollo3.compiler.codegen.java.helpers.toListInitializerCodeblock
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.IrCustomScalar
 import com.apollographql.apollo3.compiler.ir.IrEnum
@@ -28,46 +29,32 @@ internal fun IrCustomScalar.typeFieldSpec(): FieldSpec {
   val kotlinName = kotlinName ?: "kotlin.Any"
   return FieldSpec
       .builder(JavaClassNames.CustomScalarType, Identifier.type, Modifier.STATIC, Modifier.PUBLIC)
-      .initializer("$T($S, $S)", JavaClassNames.CustomScalarType, name, kotlinName)
+      .initializer("new $T($S, $S)", JavaClassNames.CustomScalarType, name, kotlinName)
       .build()
 }
 
 internal fun IrEnum.typeFieldSpec(): FieldSpec {
   return FieldSpec
       .builder(JavaClassNames.EnumType, Identifier.type, Modifier.STATIC, Modifier.PUBLIC)
-      .initializer("$T($S)", JavaClassNames.EnumType, name)
+      .initializer("new $T($S)", JavaClassNames.EnumType, name)
       .build()
 }
 
 private fun Set<String>.toCode(): CodeBlock {
-  val builder = CodeBlock.builder()
-  builder.add("listOf(")
-  builder.add(L, sorted().map { CodeBlock.of(S, it) }.joinToCode(", "))
-  builder.add(")")
-  return builder.build()
+  return sorted().map { CodeBlock.of(S, it) }.toListInitializerCodeblock()
 }
 
 private fun List<String>.implementsToCode(resolver: JavaResolver): CodeBlock {
-  val builder = CodeBlock.builder()
-  builder.add("listOf(")
-  builder.add(L, sorted().map {
-    resolver.resolveCompiledType(it)
-  }.joinToCode(", "))
-  builder.add(")")
-  return builder.build()
+  return sorted().map { resolver.resolveCompiledType(it) }.toListInitializerCodeblock()
 }
 
 internal fun IrObject.typeFieldSpec(resolver: JavaResolver): FieldSpec {
   val builder = CodeBlock.builder()
-  builder.add("$T(name = $S", JavaClassNames.ObjectType, name)
-  if (keyFields.isNotEmpty()) {
-    builder.add(", ")
-    builder.add("keyFields = $L", keyFields.toCode())
-  }
-  if (implements.isNotEmpty()) {
-    builder.add(", ")
-    builder.add("implements = $L", implements.implementsToCode(resolver))
-  }
+  builder.add("new $T($S", JavaClassNames.ObjectType, name)
+  builder.add(", ")
+  builder.add("keyFields = $L", keyFields.toCode())
+  builder.add(", ")
+  builder.add("implements = $L", implements.implementsToCode(resolver))
   builder.add(")")
 
   return FieldSpec
@@ -78,15 +65,11 @@ internal fun IrObject.typeFieldSpec(resolver: JavaResolver): FieldSpec {
 
 internal fun IrInterface.typeFieldSpec(resolver: JavaResolver): FieldSpec {
   val builder = CodeBlock.builder()
-  builder.add("$T(name = $S", JavaClassNames.InterfaceType, name)
-  if (keyFields.isNotEmpty()) {
-    builder.add(", ")
-    builder.add("keyFields = $L", keyFields.toCode())
-  }
-  if (implements.isNotEmpty()) {
-    builder.add(", ")
-    builder.add("implements = $L", implements.implementsToCode(resolver))
-  }
+  builder.add("new $T($S", JavaClassNames.InterfaceType, name)
+  builder.add(", ")
+  builder.add(L, keyFields.toCode())
+  builder.add(", ")
+  builder.add(L, implements.implementsToCode(resolver))
   builder.add(")")
 
   return FieldSpec
@@ -106,6 +89,6 @@ internal fun IrUnion.typeFieldSpec(resolver: JavaResolver): FieldSpec {
       .builder(JavaClassNames.UnionType, type, Modifier.STATIC, Modifier.PUBLIC)
       .maybeAddDescription(description)
       .maybeAddDeprecation(deprecationReason)
-      .initializer("$T($S, $L)", JavaClassNames.UnionType, name, builder.build())
+      .initializer("new $T($S, $L)", JavaClassNames.UnionType, name, builder.build())
       .build()
 }

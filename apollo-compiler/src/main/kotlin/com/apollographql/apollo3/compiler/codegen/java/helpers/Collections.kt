@@ -7,6 +7,10 @@ import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.squareup.javapoet.CodeBlock
 
 fun List<CodeBlock>.toListInitializerCodeblock(withNewLines: Boolean = false): CodeBlock {
+  if (isEmpty()) {
+    return CodeBlock.of("$T.emptyList()", JavaClassNames.Collections)
+  }
+
   val newLine = if (withNewLines) "\n" else ""
   val space = if (withNewLines) "" else " "
   return CodeBlock.builder()

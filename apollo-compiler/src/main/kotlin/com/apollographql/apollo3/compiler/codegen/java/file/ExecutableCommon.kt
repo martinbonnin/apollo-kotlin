@@ -16,6 +16,7 @@ import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
+import javax.lang.model.element.Modifier
 
 fun serializeVariablesMethodSpec(
     adapterClassName: TypeName?,
@@ -31,6 +32,7 @@ fun serializeVariablesMethodSpec(
     )
   }
   return MethodSpec.methodBuilder(serializeVariables)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .addParameter(JavaClassNames.JsonWriter, writer)
       .addParameter(JavaClassNames.CustomScalarAdapters, customScalarAdapters)
@@ -43,6 +45,7 @@ fun adapterMethodSpec(
     adaptedTypeName: TypeName
 ): MethodSpec {
   return MethodSpec.methodBuilder(Identifier.adapter)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.Adapter, adaptedTypeName))
       .addCode(
@@ -58,6 +61,7 @@ fun adapterMethodSpec(
 
 fun selectionsMethodSpec(context: JavaContext, className: ClassName): MethodSpec {
   return MethodSpec.methodBuilder(selections)
+      .addModifiers(Modifier.PUBLIC)
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection))
       .addCode("return $T.$L;\n", className, context.layout.rootSelectionsPropertyName())

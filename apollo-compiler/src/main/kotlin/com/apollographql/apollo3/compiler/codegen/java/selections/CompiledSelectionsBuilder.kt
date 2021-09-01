@@ -80,9 +80,7 @@ class CompiledSelectionsBuilder(
     val property = FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection), propertyName)
         .initializer(results.map { it.initializer }.toListInitializerCodeblock(withNewLines = true))
         .addModifiers(Modifier.STATIC)
-        .applyIf(private) {
-          addModifiers(Modifier.PRIVATE)
-        }
+        .addModifiers(if (private) Modifier.PRIVATE else Modifier.PUBLIC)
         .build()
 
     return results.flatMap { it.nestedFieldSpecs } + property

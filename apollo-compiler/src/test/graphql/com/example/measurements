@@ -1,7 +1,8 @@
 Test:                                              CodegenModels:                 Total LOC:        Codegen (ms):
-aggregate                                          all                                     0                   0s                   0s
+aggregate                                          all                                   323          92.928970ms         687.319385ms
 aggregate                                          responseBased                           0                   0s                   0s
-aggregate                                          operationBased                          0                   0s                   0s
+aggregate                                          operationBased                        323          92.928970ms         687.319385ms
 aggregate                                          compat                                  0                   0s                   0s
 aggregate                                          no-fragments                            0                   0s                   0s
 
+hero_name                                          operationBased                        323                   92         687.319385ms
