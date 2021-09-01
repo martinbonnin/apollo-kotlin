@@ -10,6 +10,9 @@ const val MODELS_RESPONSE_BASED = "responseBased"
 const val MODELS_OPERATION_BASED = "operationBased"
 const val MODELS_COMPAT = "compat"
 
+const val TARGET_KOTLIN = "Kotlin"
+const val TARGET_JAVA = "Java"
+
 class Options(
     /**
      * The files containing the operations and fragments
@@ -53,9 +56,10 @@ class Options(
      */
     val operationOutputGenerator: OperationOutputGenerator = defaultOperationOutputGenerator,
     /**
-     * The fragments from upstream
+     * The metadata from upstream
      */
     val incomingCompilerMetadata: List<CompilerMetadata> = emptyList(),
+    val targetLanguage: String = defaultTargetLanguage,
 
     //========== codegen options ============
     val customScalarsMapping: Map<String, String> = defaultCustomScalarsMapping,
@@ -121,6 +125,7 @@ class Options(
       generateResponseFields: Boolean = defaultGenerateResponseFields,
       generateQueryDocument: Boolean = defaultGenerateQueryDocument,
       moduleName: String = defaultModuleName,
+      targetLanguage: String = defaultTargetLanguage,
   ) : this(
       executableFiles = executableFiles,
       schema = schemaFile.toGQLDocument().toSchema(),
@@ -145,6 +150,59 @@ class Options(
       generateResponseFields = generateResponseFields,
       generateQueryDocument = generateQueryDocument,
       moduleName = moduleName,
+      targetLanguage = targetLanguage
+  )
+
+  fun copy(
+      schema: Schema = this.schema,
+      outputDir: File = this.outputDir,
+      debugDir: File? = this.debugDir,
+      operationOutputFile: File? = this.operationOutputFile,
+      executableFiles: Set<File> = this.executableFiles,
+      schemaPackageName: String = this.schemaPackageName,
+      packageNameGenerator: PackageNameGenerator = this.packageNameGenerator,
+      alwaysGenerateTypesMatching: Set<String> = this.alwaysGenerateTypesMatching,
+      operationOutputGenerator: OperationOutputGenerator = this.operationOutputGenerator,
+      incomingCompilerMetadata: List<CompilerMetadata> = this.incomingCompilerMetadata,
+      customScalarsMapping: Map<String, String> = this.customScalarsMapping,
+      codegenModels: String = this.codegenModels,
+      flattenModels: Boolean = this.flattenModels,
+      useSemanticNaming: Boolean = this.useSemanticNaming,
+      warnOnDeprecatedUsages: Boolean = this.warnOnDeprecatedUsages,
+      failOnWarnings: Boolean = this.failOnWarnings,
+      logger: GraphQLCompiler.Logger = this.logger,
+      generateAsInternal: Boolean = this.generateAsInternal,
+      generateFilterNotNull: Boolean = this.generateFilterNotNull,
+      generateFragmentImplementations: Boolean = this.generateFragmentImplementations,
+      generateResponseFields: Boolean = this.generateResponseFields,
+      generateQueryDocument: Boolean = this.generateQueryDocument,
+      moduleName: String = this.moduleName,
+      targetLanguage: String = this.targetLanguage,
+  ) = Options(
+      schema = schema,
+      outputDir = outputDir,
+      debugDir = debugDir,
+      executableFiles = executableFiles,
+      operationOutputFile = operationOutputFile,
+      schemaPackageName = schemaPackageName,
+      packageNameGenerator = packageNameGenerator,
+      alwaysGenerateTypesMatching = alwaysGenerateTypesMatching,
+      operationOutputGenerator = operationOutputGenerator,
+      incomingCompilerMetadata = incomingCompilerMetadata,
+      customScalarsMapping = customScalarsMapping,
+      codegenModels = codegenModels,
+      flattenModels = flattenModels,
+      useSemanticNaming = useSemanticNaming,
+      warnOnDeprecatedUsages = warnOnDeprecatedUsages,
+      failOnWarnings = failOnWarnings,
+      logger = logger,
+      generateAsInternal = generateAsInternal,
+      generateFilterNotNull = generateFilterNotNull,
+      generateFragmentImplementations = generateFragmentImplementations,
+      generateResponseFields = generateResponseFields,
+      generateQueryDocument = generateQueryDocument,
+      moduleName = moduleName,
+      targetLanguage = targetLanguage
   )
 
   companion object {
@@ -164,6 +222,7 @@ class Options(
     const val defaultModuleName = "apollographql"
     const val defaultCodegenModels = MODELS_COMPAT
     const val defaultFlattenModels = true
+    const val defaultTargetLanguage = TARGET_KOTLIN
   }
 }
 

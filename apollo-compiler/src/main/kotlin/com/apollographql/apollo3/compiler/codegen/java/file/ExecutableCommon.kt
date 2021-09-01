@@ -8,13 +8,11 @@ import com.apollographql.apollo3.compiler.codegen.Identifier.writer
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.adapter.obj
-import com.apollographql.apollo3.compiler.codegen.java.helpers.patchKotlinNativeOptionalArrayProperties
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
-import com.squareup.javapoet.TypeSpec
 
 fun serializeVariablesMethodSpec(
     adapterClassName: TypeName?,
@@ -56,11 +54,4 @@ fun selectionsMethodSpec(context: JavaContext, className: ClassName): MethodSpec
       .returns(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection))
       .addCode("return %T.%L\n", className, context.layout.rootSelectionsPropertyName())
       .build()
-}
-
-fun TypeSpec.maybeAddFilterNotNull(generateFilterNotNull: Boolean): TypeSpec {
-  if (!generateFilterNotNull) {
-    return this
-  }
-  return patchKotlinNativeOptionalArrayProperties()
 }

@@ -5,6 +5,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinCodeGen
 import com.apollographql.apollo3.compiler.operationoutput.OperationDescriptor
 import com.apollographql.apollo3.ast.*
 import com.apollographql.apollo3.ast.transformation.addRequiredFields
+import com.apollographql.apollo3.compiler.codegen.java.JavaCodeGen
 import com.apollographql.apollo3.compiler.ir.IrBuilder
 import com.apollographql.apollo3.compiler.ir.dumpTo
 import java.io.File
@@ -22,6 +23,10 @@ object GraphQLCompiler {
     val outputDir = options.outputDir
     val debugDir = options.debugDir
     val schema = options.schema
+
+    if (options.targetLanguage == TARGET_JAVA && options.codegenModels != MODELS_OPERATION_BASED) {
+      error("Java codegen does not support ${options.codegenModels}. Only $MODELS_OPERATION_BASED is supported.")
+    }
 
     checkCustomScalars(schema, options.customScalarsMapping)
 
@@ -133,20 +138,40 @@ object GraphQLCompiler {
     /**
      * Write the generated models
      */
-    val outputResolverInfo = KotlinCodeGen(
-        ir = ir,
-        resolverInfos = options.incomingCompilerMetadata.map { it.resolverInfo },
-        generateAsInternal = options.generateAsInternal,
-        operationOutput = operationOutput,
-        useSemanticNaming = options.useSemanticNaming,
-        packageNameGenerator = options.packageNameGenerator,
-        schemaPackageName = options.schemaPackageName,
-        generateFilterNotNull = options.generateFilterNotNull,
-        generateFragmentImplementations = options.generateFragmentImplementations,
-        generateQueryDocument = options.generateQueryDocument,
-        flatten = options.flattenModels,
-        flattenNamesInOrder = options.codegenModels != MODELS_COMPAT
-    ).write(outputDir = outputDir)
+    val outputResolverInfo = when (options.targetLanguage) {
+      TARGET_KOTLIN -> {
+        KotlinCodeGen(
+            ir = ir,
+            resolverInfos = options.incomingCompilerMetadata.map { it.resolverInfo },
+            generateAsInternal = options.generateAsInternal,
+            operationOutput = operationOutput,
+            useSemanticNaming = options.useSemanticNaming,
+            packageNameGenerator = options.packageNameGenerator,
+            schemaPackageName = options.schemaPackageName,
+            generateFilterNotNull = options.generateFilterNotNull,
+            generateFragmentImplementations = options.generateFragmentImplementations,
+            generateQueryDocument = options.generateQueryDocument,
+            flatten = options.flattenModels,
+            flattenNamesInOrder = options.codegenModels != MODELS_COMPAT
+        ).write(outputDir = outputDir)
+      }
+      TARGET_JAVA -> {
+        JavaCodeGen(
+            ir = ir,
+            resolverInfos = options.incomingCompilerMetadata.map { it.resolverInfo },
+            operationOutput = operationOutput,
+            useSemanticNaming = options.useSemanticNaming,
+            packageNameGenerator = options.packageNameGenerator,
+            schemaPackageName = options.schemaPackageName,
+            generateFragmentImplementations = options.generateFragmentImplementations,
+            generateQueryDocument = options.generateQueryDocument,
+            flatten = options.flattenModels,
+            flattenNamesInOrder = true
+        ).write(outputDir = outputDir)
+      }
+      else -> error("Target language not supported: ${options.targetLanguage}")
+    }
+
 
     return CompilerMetadata(
         fragments = fragments,

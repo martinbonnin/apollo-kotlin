@@ -7,19 +7,21 @@ import com.apollographql.apollo3.ast.parseAsGQLDocument
 import com.apollographql.apollo3.compiler.TestUtils.checkTestFixture
 import com.apollographql.apollo3.compiler.TestUtils.shouldUpdateMeasurements
 import com.apollographql.apollo3.compiler.TestUtils.shouldUpdateTestFixtures
+import com.google.testing.junit.testparameterinjector.TestParameter
+import com.google.testing.junit.testparameterinjector.TestParameterInjector
 import org.junit.AfterClass
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 import kotlin.time.measureTime
 
-@RunWith(Parameterized::class)
+@RunWith(TestParameterInjector::class)
 @OptIn(ExperimentalTime::class)
-class CodegenTest(private val folder: File, private val codegenModels: String, private val generateKotlinModels: Boolean, private val hasFragments: Boolean) {
+class CodegenTest() {
   private class Measurement(
       val name: String,
       val codegenModels: String,
@@ -29,37 +31,45 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
       val compileDuration: Duration,
   )
 
-  @Test
-  fun generateExpectedClasses() {
-    val args = arguments(
-        folder = folder,
-        codegenModels = codegenModels,
-    )
-    generateExpectedClasses(args, hasFragments)
+  data class Parameters(val folder: File, val codegenModels: String, val generateKotlinModels: Boolean, val hasFragments: Boolean) {
+    override fun toString(): String {
+      val targetLanguage = if (generateKotlinModels) "kotlin" else "java"
+      return "$targetLanguage-$codegenModels-${folder.name}"
+    }
   }
 
-  private fun generateExpectedClasses(options: Options, hasFragments: Boolean) {
+  @Test
+  fun generateExpectedClasses(@TestParameter(valuesProvider = ParametersProvider::class) parameters: Parameters) {
+    val folder = parameters.folder
+    val codegenModels = parameters.codegenModels
+    val hasFragments = parameters.hasFragments
+
+    val options = options(
+        folder = folder,
+        codegenModels = codegenModels,
+        parameters.generateKotlinModels,
+    )
     options.outputDir.deleteRecursively()
 
     val codegenDuration = measureTime {
       GraphQLCompiler.write(options)
     }
 
-    val expectedRoot = folder.parentFile.parentFile.parentFile
-    val expectedRelativeRoot = folder.relativeTo(expectedRoot)
+    val expectedRoot = folder.resolve("${options.targetLanguage}/$codegenModels")
+    // Because codegen will put files under a given packageName, we skip the first 2 folders
+    val actualRoot = options.outputDir.resolve("com/example")
 
-    val actualRoot = options.outputDir
     val actualFiles = actualRoot.walk().filter {
-      // extension should always be the correct one, it's a bug else
-      it.isFile && it.name != "metadata"
+      it.isFile
     }
 
-    val expectedFiles = folder.resolve(codegenModels).walk().filter { it.isFile && it.extension == "expected" }
+    val expectedFiles = expectedRoot.walk().filter {
+      it.isFile && it.extension == "expected"
+    }
 
     expectedFiles.forEach { expected ->
-      val relativePath = expected.relativeTo(folder.resolve(codegenModels)).path.removeSuffix(".expected")
-
-      val actual = actualRoot.resolve(expectedRelativeRoot).resolve(relativePath)
+      val relativePath = expected.relativeTo(expectedRoot).path.removeSuffix(".expected")
+      val actual = actualRoot.resolve(relativePath)
       if (!actual.exists()) {
         if (shouldUpdateTestFixtures()) {
           println("removing actual file: ${expected.absolutePath}")
@@ -76,8 +86,8 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
     }
 
     actualFiles.forEach { actual ->
-      val relativePath = actual.relativeTo(actualRoot).relativeTo(expectedRelativeRoot).path
-      val expected = expectedRoot.resolve(expectedRelativeRoot).resolve(codegenModels).resolve("$relativePath.expected")
+      val relativePath = actual.relativeTo(actualRoot).path
+      val expected = expectedRoot.resolve("$relativePath.expected")
       if (!expected.exists()) {
         if (shouldUpdateTestFixtures()) {
           println("adding expected file: ${actual.absolutePath} - ${actual.path}")
@@ -130,7 +140,11 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
         "variable_default_value",
     )
     val compileDuration = measureTime {
-      KotlinCompiler.assertCompiles(actualFiles.toSet(), !expectedWarnings)
+      when (options.targetLanguage) {
+        TARGET_KOTLIN -> KotlinCompiler.assertCompiles(actualFiles.toSet(), !expectedWarnings)
+        TARGET_JAVA -> JavaCompiler.assertCompiles(actualFiles.toSet())
+        else -> error("No compiler found for ${options.targetLanguage}")
+      }
     }
 
     measurements.add(
@@ -154,6 +168,56 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
     )
   }
 
+  class ParametersProvider : TestParameter.TestParameterValuesProvider {
+    @OptIn(ExperimentalStdlibApi::class)
+    override fun provideValues(): List<Parameters> {
+      return File("src/test/graphql/com/example/")
+          .listFiles()!!
+          .filter { it.isDirectory }
+          .sortedBy { it.name }
+          .filter { file ->
+            TestUtils.testFilterMatches(file.absolutePath)
+          }
+          .map { file ->
+            val codegenModels = System.getProperty("codegenModels")?.trim()
+            val queryFile = checkNotNull(file.walk().find { it.extension == "graphql" })
+            val hasFragments = queryFile.parseAsGQLDocument().getOrThrow().hasFragments()
+
+            when {
+              !codegenModels.isNullOrBlank() -> {
+                listOf(
+                    Parameters(file, codegenModels, true, true),
+                )
+              }
+              hasFragments -> {
+                val list = listOf(
+                    Parameters(file, MODELS_OPERATION_BASED, true, true),
+                    Parameters(file, MODELS_COMPAT, true, true)
+                )
+
+                if (file.name in listOf("inline_fragment_with_include_directive", "fragment_spread_with_include_directive")) {
+                  // These do not suport responseBased models
+                  list
+                } else {
+                  list + listOf(Parameters(file, MODELS_RESPONSE_BASED, true, true))
+                }
+              }
+              else -> {
+                listOf(
+                    Parameters(file, MODELS_RESPONSE_BASED, true, false)
+                )
+              }
+            }
+          }.map {
+            buildList {
+              //addAll(it)
+              // add Java
+              add(it.first().copy(generateKotlinModels = false, codegenModels = MODELS_OPERATION_BASED))
+            }
+          }.flatten()
+    }
+  }
+
   companion object {
     private val measurements = mutableListOf<Measurement>()
 
@@ -168,6 +232,7 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
           filtered.map { it.compileDuration }.fold(Duration.ZERO) { acc, measurement -> acc + measurement }.toString(),
       )
     }
+
     @AfterClass
     @JvmStatic
     fun dumpTimes() {
@@ -184,10 +249,10 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
               )
           )
           appendText(aggregate("all") { true })
-          appendText(aggregate("responseBased") { it.codegenModels == "responseBased" && it.hasFragments})
-          appendText(aggregate("operationBased") { it.codegenModels == "operationBased"&& it.hasFragments })
-          appendText(aggregate("compat") { it.codegenModels == "compat" && it.hasFragments})
-          appendText(aggregate("no-fragments") { !it.hasFragments})
+          appendText(aggregate("responseBased") { it.codegenModels == "responseBased" && it.hasFragments })
+          appendText(aggregate("operationBased") { it.codegenModels == "operationBased" && it.hasFragments })
+          appendText(aggregate("compat") { it.codegenModels == "compat" && it.hasFragments })
+          appendText(aggregate("no-fragments") { !it.hasFragments })
           appendText("\n")
           appendText(
               measurements.sortedByDescending { it.linesOfCode }
@@ -206,7 +271,7 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
       }
     }
 
-    private fun arguments(folder: File, codegenModels: String): Options {
+    private fun options(folder: File, codegenModels: String, generateKotlinModels: Boolean): Options {
       val customScalarsMapping = if (folder.name in listOf(
               "custom_scalar_type",
               "input_object_type",
@@ -249,10 +314,11 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
       val graphqlFiles = setOf(File(folder, "TestOperation.graphql"))
       val operationOutputGenerator = OperationOutputGenerator.Default(operationIdGenerator)
 
+      val targetLanguage = if (generateKotlinModels) TARGET_KOTLIN else TARGET_JAVA
       return Options(
           executableFiles = graphqlFiles,
           schemaFile = schemaFile,
-          outputDir = File("build/generated/test/${folder.name}"),
+          outputDir = File("build/generated/test/${folder.name}/$targetLanguage/$codegenModels/"),
           packageName = "com.example.${folder.name}",
           operationOutputGenerator = operationOutputGenerator,
           customScalarsMapping = customScalarsMapping,
@@ -262,51 +328,9 @@ class CodegenTest(private val folder: File, private val codegenModels: String, p
           generateAsInternal = generateAsInternal,
           generateFilterNotNull = true,
           generateFragmentImplementations = generateFragmentImplementations,
-          moduleName = folder.name
+          moduleName = folder.name,
+          targetLanguage = targetLanguage
       )
-    }
-
-    @JvmStatic
-    @Parameterized.Parameters(name = "{0} ({1})")
-    fun data(): Collection<*> {
-      return File("src/test/graphql/com/example/")
-          .listFiles()!!
-          .filter { it.isDirectory }
-          .sortedBy { it.name }
-          .filter { file ->
-            TestUtils.testFilterMatches(file.absolutePath)
-          }
-          .flatMap { file ->
-            val codegenModels = System.getProperty("codegenModels")?.trim()
-            val queryFile = checkNotNull(file.walk().find { it.extension == "graphql" })
-            val hasFragments = queryFile.parseAsGQLDocument().getOrThrow().hasFragments()
-
-            when {
-              !codegenModels.isNullOrBlank() -> {
-                listOf(
-                    arrayOf(file, codegenModels, true),
-                )
-              }
-              hasFragments -> {
-                val list = listOf(
-                    arrayOf(file, MODELS_OPERATION_BASED, true, true),
-                    arrayOf(file, MODELS_COMPAT, true, true)
-                )
-
-                if (file.name in listOf("inline_fragment_with_include_directive", "fragment_spread_with_include_directive")) {
-                  // These do not suport responseBased models
-                  list
-                } else {
-                  list + listOf(arrayOf(file, MODELS_RESPONSE_BASED, true))
-                }
-              }
-              else -> {
-                listOf(
-                    arrayOf(file, MODELS_RESPONSE_BASED, false)
-                )
-              }
-            }
-          }
     }
 
     private fun GQLNode.hasFragments(): Boolean {

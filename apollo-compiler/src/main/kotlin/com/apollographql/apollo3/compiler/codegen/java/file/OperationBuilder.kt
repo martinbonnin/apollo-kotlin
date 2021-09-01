@@ -30,7 +30,6 @@ import javax.lang.model.element.Modifier
 
 class OperationBuilder(
     private val context: JavaContext,
-    private val generateFilterNotNull: Boolean,
     private val operationId: String,
     private val generateQueryDocument: Boolean,
     private val operation: IrOperation,
@@ -112,7 +111,6 @@ class OperationBuilder(
             .build()
         )
         .build()
-        .maybeAddFilterNotNull(generateFilterNotNull)
   }
 
   private fun serializeVariablesMethodSpec(): MethodSpec = serializeVariablesMethodSpec(

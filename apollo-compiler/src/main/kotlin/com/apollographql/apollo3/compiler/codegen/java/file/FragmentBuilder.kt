@@ -19,7 +19,6 @@ import com.squareup.javapoet.TypeSpec
 
 class FragmentBuilder(
     private val context: JavaContext,
-    private val generateFilterNotNull: Boolean,
     private val fragment: IrNamedFragment,
     flatten: Boolean,
     flattenNamesInOrder: Boolean,
@@ -70,7 +69,6 @@ class FragmentBuilder(
         // Fragments can have multiple data shapes
         .addTypes(dataTypeSpecs())
         .build()
-        .maybeAddFilterNotNull(generateFilterNotNull)
   }
 
   private fun IrNamedFragment.selectionsMethodSpec(): MethodSpec {

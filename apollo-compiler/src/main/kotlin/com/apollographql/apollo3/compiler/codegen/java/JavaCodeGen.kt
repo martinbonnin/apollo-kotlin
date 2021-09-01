@@ -33,7 +33,6 @@ import java.io.File
 class JavaCodeGen(
     private val ir: Ir,
     private val resolverInfos: List<ResolverInfo>,
-    private val generateAsInternal: Boolean = false,
     private val useSemanticNaming: Boolean,
     private val packageNameGenerator: PackageNameGenerator,
     private val schemaPackageName: String,
@@ -42,7 +41,6 @@ class JavaCodeGen(
      * So we do this in the codegen step
      */
     private val operationOutput: OperationOutput,
-    private val generateFilterNotNull: Boolean,
     private val generateFragmentImplementations: Boolean,
     private val generateQueryDocument: Boolean,
     /**
@@ -136,7 +134,6 @@ class JavaCodeGen(
             builders.add(
                 FragmentBuilder(
                     context,
-                    generateFilterNotNull,
                     fragment,
                     flatten,
                     flattenNamesInOrder
@@ -160,7 +157,6 @@ class JavaCodeGen(
           builders.add(
               OperationBuilder(
                   context,
-                  generateFilterNotNull,
                   operationOutput.findOperationId(operation.name),
                   generateQueryDocument,
                   operation,
