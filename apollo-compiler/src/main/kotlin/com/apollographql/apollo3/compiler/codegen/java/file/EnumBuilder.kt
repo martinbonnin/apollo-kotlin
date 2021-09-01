@@ -6,6 +6,8 @@ import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.squareup.javapoet.ClassName
@@ -15,9 +17,6 @@ import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterSpec
 import com.squareup.javapoet.TypeSpec
 import javax.lang.model.element.Modifier
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 class EnumBuilder(
     private val context: JavaContext,

@@ -8,9 +8,6 @@ import com.apollographql.apollo3.compiler.codegen.java.model.ModelBuilder
 import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrModelGroup
 import com.apollographql.apollo3.compiler.ir.IrNamedFragment
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 class FragmentModelsBuilder(
     val context: JavaContext,

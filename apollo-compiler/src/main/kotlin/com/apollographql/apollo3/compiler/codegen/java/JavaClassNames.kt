@@ -1,6 +1,5 @@
 package com.apollographql.apollo3.compiler.codegen.java
 
-import com.apollographql.apollo3.api.BPossibleTypes
 import com.apollographql.apollo3.compiler.codegen.ClassNames
 import com.apollographql.apollo3.compiler.codegen.ClassNames.apolloApiPackageName
 import com.apollographql.apollo3.compiler.codegen.ResolverClassName

@@ -29,9 +29,6 @@ import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 
 class JavaResolver(entries: List<ResolverEntry>, val next: JavaResolver?) {

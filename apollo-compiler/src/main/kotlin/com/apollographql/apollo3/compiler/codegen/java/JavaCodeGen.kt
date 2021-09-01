@@ -8,8 +8,8 @@ import com.apollographql.apollo3.compiler.codegen.java.adapter.EnumResponseAdapt
 import com.apollographql.apollo3.compiler.codegen.java.file.CustomScalarBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.EnumBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentBuilder
-import com.apollographql.apollo3.compiler.codegen.java.file.FragmentModelsBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentDataAdapterBuilder
+import com.apollographql.apollo3.compiler.codegen.java.file.FragmentModelsBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentSelectionsBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.FragmentVariablesAdapterBuilder
 import com.apollographql.apollo3.compiler.codegen.java.file.InputObjectAdapterBuilder

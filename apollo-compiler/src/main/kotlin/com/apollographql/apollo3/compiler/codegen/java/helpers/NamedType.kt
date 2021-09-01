@@ -3,15 +3,15 @@ package com.apollographql.apollo3.compiler.codegen.java.helpers
 import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.ir.IrInputField
 import com.apollographql.apollo3.compiler.ir.IrType
 import com.apollographql.apollo3.compiler.ir.IrVariable
 import com.apollographql.apollo3.compiler.ir.isOptional
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.ParameterSpec
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 class NamedType(
     val graphQlName: String,

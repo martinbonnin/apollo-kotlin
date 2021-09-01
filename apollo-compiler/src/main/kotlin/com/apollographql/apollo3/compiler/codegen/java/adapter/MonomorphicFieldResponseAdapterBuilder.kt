@@ -9,9 +9,6 @@ import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeSpec
 import javax.lang.model.element.Modifier
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 class MonomorphicFieldResponseAdapterBuilder(
     val context: JavaContext,

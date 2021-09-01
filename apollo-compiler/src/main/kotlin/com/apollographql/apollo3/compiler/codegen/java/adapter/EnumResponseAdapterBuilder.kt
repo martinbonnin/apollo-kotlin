@@ -10,12 +10,11 @@ import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaContext
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.IrEnum
 import com.squareup.javapoet.ClassName
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName

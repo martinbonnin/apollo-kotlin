@@ -2,15 +2,12 @@ package com.apollographql.apollo3.compiler.codegen.java.file
 
 import com.apollographql.apollo3.ast.GQLFragmentDefinition
 import com.apollographql.apollo3.ast.Schema
-import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.CodegenJavaFile
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassBuilder
-import com.apollographql.apollo3.compiler.ir.IrNamedFragment
+import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.selections.CompiledSelectionsBuilder
+import com.apollographql.apollo3.compiler.ir.IrNamedFragment
 import com.squareup.javapoet.ClassName
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 class FragmentSelectionsBuilder(
     val context: JavaContext,

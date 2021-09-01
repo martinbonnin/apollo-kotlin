@@ -4,6 +4,9 @@ import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.Identifier.type
 import com.apollographql.apollo3.compiler.codegen.java.JavaClassNames
 import com.apollographql.apollo3.compiler.codegen.java.JavaResolver
+import com.apollographql.apollo3.compiler.codegen.java.L
+import com.apollographql.apollo3.compiler.codegen.java.S
+import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDeprecation
 import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescription
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
@@ -15,9 +18,6 @@ import com.apollographql.apollo3.compiler.ir.IrUnion
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.FieldSpec
 import javax.lang.model.element.Modifier
-import com.apollographql.apollo3.compiler.codegen.java.L
-import com.apollographql.apollo3.compiler.codegen.java.S
-import com.apollographql.apollo3.compiler.codegen.java.T
 
 internal fun IrCustomScalar.typeFieldSpec(): FieldSpec {
   /**
