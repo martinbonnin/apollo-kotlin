@@ -203,16 +203,17 @@ fun List<CodeBlock>.joinToCode(separator: String, prefix: String = "", suffix: S
       CodeBlock.builder().add(prefix)
   ) { builder, block ->
     if (first) {
-      builder.add(separator)
       first = false
+    } else {
+      builder.add(separator)
     }
-    builder.add("$L", block)
+    builder.add(L, block)
   }.add(suffix)
       .build()
 }
 
 fun CodeBlock.isNotEmpty() = isEmpty().not()
 
-internal val T = "${'$'}T"
-internal val L = "${'$'}L"
-internal val S = "${'$'}S"
+internal const val T = "${'$'}T"
+internal const val L = "${'$'}L"
+internal const val S = "${'$'}S"

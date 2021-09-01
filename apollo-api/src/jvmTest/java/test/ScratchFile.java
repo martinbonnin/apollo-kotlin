@@ -13,16 +13,22 @@ import java.util.Collections;
 import java.util.List;
 
 enum ScratchFile implements Adapter<Object> {
+  // REMINDER
+
   INSTANCE;
 
-  enum Test implements  Adapter<String> {
+  Test toto() {
+    return Test.INSTANCE;
+  }
+
+  enum Test implements Adapter<String> {
     INSTANCE;
 
     private void listOf(String... strings) {
 
     }
-    @Override public String fromJson(@NotNull JsonReader reader, @NotNull CustomScalarAdapters customScalarAdapters) {
 
+    @Override public String fromJson(@NotNull JsonReader reader, @NotNull CustomScalarAdapters customScalarAdapters) {
 
 
       return null;
@@ -32,6 +38,7 @@ enum ScratchFile implements Adapter<Object> {
 
     }
   }
+
   @Override public void toJson(@NotNull JsonWriter writer, @NotNull CustomScalarAdapters customScalarAdapters, Object value) {
 
   }

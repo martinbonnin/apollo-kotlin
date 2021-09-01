@@ -44,6 +44,7 @@ class EnumBuilder(
   private fun IrEnum.toSealedClassTypeSpec(): TypeSpec {
     return TypeSpec
         .classBuilder(simpleName)
+        .addModifiers(Modifier.PUBLIC)
         .maybeAddDescription(description)
         .addField(
             FieldSpec.builder(JavaClassNames.String, rawValue).build()

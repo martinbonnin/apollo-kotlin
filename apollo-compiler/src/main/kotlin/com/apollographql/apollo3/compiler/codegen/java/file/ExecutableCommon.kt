@@ -1,5 +1,6 @@
 package com.apollographql.apollo3.compiler.codegen.java.file
 
+import com.apollographql.apollo3.compiler.codegen.Identifier
 import com.apollographql.apollo3.compiler.codegen.Identifier.customScalarAdapters
 import com.apollographql.apollo3.compiler.codegen.Identifier.selections
 import com.apollographql.apollo3.compiler.codegen.Identifier.serializeVariables
@@ -10,6 +11,7 @@ import com.apollographql.apollo3.compiler.codegen.java.JavaContext
 import com.apollographql.apollo3.compiler.codegen.java.L
 import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.adapter.obj
+import com.apollographql.apollo3.compiler.codegen.java.adapter.objectAdapterInitializer
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.MethodSpec
@@ -22,13 +24,11 @@ fun serializeVariablesMethodSpec(
 ): MethodSpec {
 
   val body = if (adapterClassName == null) {
-    CodeBlock.of("""
-      // $emptyMessage
-    """.trimIndent())
+    CodeBlock.of("// $emptyMessage\n")
   } else {
     CodeBlock.of(
         "$L.$toJson($writer, $customScalarAdapters, this)",
-            CodeBlock.of("$T", adapterClassName)
+            CodeBlock.of(T, adapterClassName)
     )
   }
   return MethodSpec.methodBuilder(serializeVariables)
@@ -43,10 +43,13 @@ fun adapterMethodSpec(
     adapterTypeName: TypeName,
     adaptedTypeName: TypeName
 ): MethodSpec {
-  return MethodSpec.methodBuilder("adapter")
+  return MethodSpec.methodBuilder(Identifier.adapter)
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.Adapter, adaptedTypeName))
-      .addCode(CodeBlock.of("return·$T", adapterTypeName).obj(false))
+      .addCode(
+          "return $L;\n",
+          adapterTypeName.objectAdapterInitializer(false)
+      )
       .build()
 }
 
@@ -54,6 +57,6 @@ fun selectionsMethodSpec(context: JavaContext, className: ClassName): MethodSpec
   return MethodSpec.methodBuilder(selections)
       .addAnnotation(JavaClassNames.Override)
       .returns(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.CompiledSelection))
-      .addCode("return $T.$L\n", className, context.layout.rootSelectionsPropertyName())
+      .addCode("return $T.$L;\n", className, context.layout.rootSelectionsPropertyName())
       .build()
 }

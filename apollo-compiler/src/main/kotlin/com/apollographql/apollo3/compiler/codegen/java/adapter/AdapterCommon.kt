@@ -18,6 +18,8 @@ import com.apollographql.apollo3.compiler.codegen.java.L
 import com.apollographql.apollo3.compiler.codegen.java.S
 import com.apollographql.apollo3.compiler.codegen.java.T
 import com.apollographql.apollo3.compiler.codegen.java.helpers.codeBlock
+import com.apollographql.apollo3.compiler.codegen.java.helpers.toArrayInitializerCodeblock
+import com.apollographql.apollo3.compiler.codegen.java.helpers.toListInitializerCodeblock
 import com.apollographql.apollo3.compiler.codegen.java.isNotEmpty
 import com.apollographql.apollo3.compiler.codegen.java.joinToCode
 import com.apollographql.apollo3.compiler.ir.IrModel
@@ -27,17 +29,21 @@ import com.apollographql.apollo3.compiler.ir.IrOptionalType
 import com.apollographql.apollo3.compiler.ir.IrProperty
 import com.apollographql.apollo3.compiler.ir.IrType
 import com.apollographql.apollo3.compiler.ir.isOptional
+import com.squareup.javapoet.ArrayTypeName
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.CodeBlock
 import com.squareup.javapoet.FieldSpec
 import com.squareup.javapoet.ParameterizedTypeName
+import com.squareup.javapoet.TypeName
+import javax.lang.model.element.Modifier
 
 internal fun responseNamesFieldSpec(model: IrModel): FieldSpec {
   val initializer = model.properties.filter { !it.isSynthetic }.map {
-    CodeBlock.of("$S", it.info.responseName)
-  }.joinToCode(prefix = "listOf(", separator = ", ", suffix = ")")
+    CodeBlock.of(S, it.info.responseName)
+  }.toArrayInitializerCodeblock()
 
-  return FieldSpec.builder(ParameterizedTypeName.get(JavaClassNames.List, JavaClassNames.String), RESPONSE_NAMES)
+  return FieldSpec.builder(ArrayTypeName.of(JavaClassNames.String), RESPONSE_NAMES)
+      .addModifiers(Modifier.STATIC, Modifier.FINAL, Modifier.PRIVATE)
       .initializer(initializer)
       .build()
 }
@@ -56,9 +62,9 @@ internal fun readFromResponseCodeBlock(
     }
 
     CodeBlock.of(
-        "var·$L:·$T·=·$L",
-        context.layout.variableName(property.info.responseName),
+        "$T $L = $L;",
         context.resolver.resolveIrType(property.info.type),
+        context.layout.variableName(property.info.responseName),
         variableInitializer
     )
   }.joinToCode(separator = "\n", suffix = "\n")
@@ -68,18 +74,18 @@ internal fun readFromResponseCodeBlock(
    */
   val loop = CodeBlock.builder()
       .beginControlFlow("while(true)")
-      .beginControlFlow("when·($reader.selectName($RESPONSE_NAMES))")
+      .beginControlFlow("switch ($reader.selectName($RESPONSE_NAMES))")
       .add(
           regularProperties.mapIndexed { index, property ->
             CodeBlock.of(
-                "$L·->·$L·=·$L.$fromJson($reader, $customScalarAdapters)",
+                "case $L: $L = $L.$fromJson($reader, $customScalarAdapters);",
                 index,
                 context.layout.variableName(property.info.responseName),
                 context.resolver.adapterInitializer(property.info.type, property.requiresBuffering)
             )
           }.joinToCode(separator = "\n", suffix = "\n")
       )
-      .addStatement("else -> break")
+      .addStatement("default: break")
       .endControlFlow()
       .endControlFlow()
       .build()
@@ -91,34 +97,30 @@ internal fun readFromResponseCodeBlock(
    */
   val checkTypename = if (syntheticProperties.isNotEmpty()) {
     checkedProperties.add(__typename)
-    CodeBlock.builder()
-        .beginControlFlow("check($__typename·!=·null)")
-        .add("$S\n", "__typename was not found")
-        .endControlFlow()
-        .build()
+    CodeBlock.of("$T.checkFieldNotMissing($__typename, $S);", JavaClassNames.Assertions, __typename)
   } else {
     CodeBlock.of("")
   }
 
   val syntheticLoop = syntheticProperties.map { property ->
     CodeBlock.builder()
-        .add("$reader.rewind()\n")
+        .add("$reader.rewind();\n")
         .apply {
           if (property.condition != BooleanExpression.True) {
             add(
-                "var·$L:·$T·=·null\n",
-                context.layout.variableName(property.info.responseName),
+                "$T $L = null;\n",
                 context.resolver.resolveIrType(property.info.type),
+                context.layout.variableName(property.info.responseName),
             )
-            beginControlFlow("if·($T.$evaluate($L, emptySet(),·$__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
+            beginControlFlow("if ($T.$evaluate($L, emptySet(), $__typename))", JavaClassNames.BooleanExpressions, property.condition.codeBlock())
           } else {
             checkedProperties.add(property.info.responseName)
-            add("val·")
+            add("$T ", context.resolver.resolveIrType(property.info.type))
           }
         }
         .add(
             CodeBlock.of(
-                "$L·=·$L.$fromJson($reader, $customScalarAdapters)\n",
+                "$L = $L.$fromJson($reader, $customScalarAdapters);\n",
                 context.layout.variableName(property.info.responseName),
                 context.resolver.resolveModelAdapter(property.info.type.modelPath())
             )
@@ -130,7 +132,7 @@ internal fun readFromResponseCodeBlock(
   }.joinToCode("\n")
 
   val suffix = CodeBlock.builder()
-      .addStatement("return·$T(", context.resolver.resolveModel(model.id))
+      .add("return new $T(\n", context.resolver.resolveModel(model.id))
       .indent()
       .add(model.properties.filter { !it.hidden }.map { property ->
         val maybeAssertNotNull = if (
@@ -138,19 +140,18 @@ internal fun readFromResponseCodeBlock(
             && !property.info.type.isOptional()
             && !checkedProperties.contains(property.info.responseName)
         ) {
-          "!!"
+          ""
         } else {
           ""
         }
         CodeBlock.of(
-            "$L·=·$L$L",
-            context.layout.propertyName(property.info.responseName),
+            "$L$L",
             context.layout.variableName(property.info.responseName),
             maybeAssertNotNull
         )
       }.joinToCode(separator = ",\n", suffix = "\n"))
       .unindent()
-      .addStatement(")")
+      .add(");\n")
       .build()
 
   return CodeBlock.builder()
@@ -196,7 +197,7 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
      * Output types do not distinguish between null and absent
      */
     if (this.info.type !is IrNonNullType) {
-      builder.beginControlFlow("if·($value.$propertyName·!=·null)")
+      builder.beginControlFlow("if ($value.$propertyName != null)")
     }
     builder.addStatement(
         "$L.${Identifier.toJson}($writer, $customScalarAdapters, $value.$propertyName)",
@@ -214,9 +215,13 @@ private fun IrProperty.writeToResponseCodeBlock(context: JavaContext): CodeBlock
 internal fun List<String>.toClassName() = ClassName.get(
     first(),
     get(1),
-    *drop(1).toTypedArray()
+    *drop(2).toTypedArray()
 )
 
 internal fun CodeBlock.obj(buffered: Boolean): CodeBlock {
   return CodeBlock.of("new $T($L, $L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
+}
+
+fun TypeName.objectAdapterInitializer(buffered: Boolean = false): CodeBlock {
+  return CodeBlock.of("new $T($T, $L)", JavaClassNames.ObjectAdapter, this, if(buffered) "true" else "false")
 }

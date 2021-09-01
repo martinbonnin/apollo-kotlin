@@ -64,11 +64,11 @@ internal object JavaClassNames {
   val Adapters = ClassName.get(apolloApiPackageName, "Adapters")
   val CompiledGraphQL = ClassName.get(apolloApiPackageName, "CompiledGraphQL")
   val BooleanExpressions = ClassName.get(apolloApiPackageName, "BooleanExpressions")
+  val Assertions = ClassName.get(apolloApiPackageName, "Assertions")
 
   /**
    * ClassNames for builtin Java types
    */
-  val List: ClassName = ClassName.get("java.lang", "List")
   val String: ClassName = ClassName.get("java.lang", "String")
   val Integer: ClassName = ClassName.get("java.lang", "Integer")
   val Double: ClassName = ClassName.get("java.lang", "Double")
@@ -76,6 +76,8 @@ internal object JavaClassNames {
   val Boolean: ClassName = ClassName.get("java.lang", "Boolean")
   val Deprecated = ClassName.get("java.lang", "Deprecated")
   val Override = ClassName.get("java.lang", "Override")
+
+  val List: ClassName = ClassName.get("java.util", "List")
   val Arrays = ClassName.get("java.util", "Arrays")
 
 }

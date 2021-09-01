@@ -20,6 +20,7 @@ import com.squareup.javapoet.MethodSpec
 import com.squareup.javapoet.ParameterizedTypeName
 import com.squareup.javapoet.TypeName
 import com.squareup.javapoet.TypeSpec
+import javax.lang.model.element.Modifier
 
 
 internal fun List<NamedType>.inputAdapterTypeSpec(
@@ -28,6 +29,7 @@ internal fun List<NamedType>.inputAdapterTypeSpec(
     adaptedTypeName: TypeName,
 ): TypeSpec {
   return TypeSpec.classBuilder(adapterName)
+      .addModifiers(Modifier.PUBLIC)
       .addSuperinterface(ParameterizedTypeName.get(JavaClassNames.Adapter, adaptedTypeName))
       .addMethod(notImplementedFromResponseMethodSpec(adaptedTypeName))
       .addMethod(writeToResponseMethodSpec(context, adaptedTypeName))

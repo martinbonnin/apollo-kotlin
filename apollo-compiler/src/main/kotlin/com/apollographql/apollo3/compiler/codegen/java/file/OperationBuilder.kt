@@ -35,8 +35,8 @@ class OperationBuilder(
     private val generateQueryDocument: Boolean,
     private val operation: IrOperation,
     flatten: Boolean,
-    flattenNamesInOrder: Boolean
-): JavaClassBuilder {
+    flattenNamesInOrder: Boolean,
+) : JavaClassBuilder {
   private val layout = context.layout
   private val packageName = layout.operationPackageName(operation.filePath)
   private val simpleName = layout.operationName(operation)
@@ -57,7 +57,7 @@ class OperationBuilder(
         path = listOf(packageName, simpleName)
     )
   }
-  
+
   override fun prepare() {
     context.resolver.registerOperation(
         operation.name,
@@ -75,6 +75,7 @@ class OperationBuilder(
 
   fun typeSpec(): TypeSpec {
     return TypeSpec.classBuilder(layout.operationName(operation))
+        .addModifiers(Modifier.PUBLIC)
         .addSuperinterface(superInterfaceType())
         .maybeAddDescription(operation.description)
         .makeDataClassFromParameters(operation.variables.map { it.toNamedType().toParameterSpec(context) })
@@ -87,14 +88,14 @@ class OperationBuilder(
         .addTypes(dataTypeSpecs())
         .addField(
             FieldSpec.builder(JavaClassNames.String, OPERATION_ID)
-            .addModifiers(Modifier.FINAL)
-            .initializer("$S", operationId)
-            .build()
+                .addModifiers(Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+                .initializer(S, operationId)
+                .build()
         )
         .applyIf(generateQueryDocument) {
           addField(FieldSpec.builder(JavaClassNames.String, OPERATION_DOCUMENT)
-              .addModifiers(Modifier.FINAL)
-              .initializer("$S", QueryDocumentMinifier.minify(operation.sourceWithFragments))
+              .addModifiers(Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+              .initializer(S, QueryDocumentMinifier.minify(operation.sourceWithFragments))
               .addJavadoc("""
                 The minimized GraphQL document being sent to the server to save a few bytes.
                 The un-minimized version is:
@@ -107,8 +108,8 @@ class OperationBuilder(
         }
         .addField(FieldSpec
             .builder(JavaClassNames.String, OPERATION_NAME)
-            .addModifiers(Modifier.FINAL)
-            .initializer("$S", operation.name)
+            .addModifiers(Modifier.FINAL, Modifier.STATIC, Modifier.PRIVATE)
+            .initializer(S, operation.name)
             .build()
         )
         .build()
@@ -138,7 +139,7 @@ class OperationBuilder(
       IrOperationType.Mutation -> JavaClassNames.Mutation
       IrOperationType.Subscription -> JavaClassNames.Subscription
     }.let {
-        ParameterizedTypeName.get(it, context.resolver.resolveModel(operation.dataModelGroup.baseModelId))
+      ParameterizedTypeName.get(it, context.resolver.resolveModel(operation.dataModelGroup.baseModelId))
     }
   }
 
@@ -163,7 +164,7 @@ class OperationBuilder(
   private fun nameMethodSpec() = MethodSpec.methodBuilder(name)
       .addAnnotation(JavaClassNames.Override)
       .returns(JavaClassNames.String)
-      .addStatement("return OPERATION_NAME")
+      .addStatement("return $OPERATION_NAME")
       .build()
 
   /**

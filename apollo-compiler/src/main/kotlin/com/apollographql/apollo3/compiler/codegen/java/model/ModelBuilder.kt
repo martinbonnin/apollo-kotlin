@@ -16,7 +16,11 @@ import com.apollographql.apollo3.compiler.ir.IrSubtypeAccessor
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.FieldSpec
 import com.squareup.javapoet.TypeSpec
+import javax.lang.model.element.Modifier
 
+/**
+ * @param path: the path leading to this model but not including the model name
+ */
 class ModelBuilder(
     private val context: JavaContext,
     private val model: IrModel,
@@ -75,6 +79,7 @@ class ModelBuilder(
     val nestedTypes = nestedBuilders.map { it.build() }
 
     return typeSpecBuilder
+        .addModifiers(Modifier.PUBLIC)
         .addTypes(nestedTypes)
         .addSuperinterfaces(superInterfaces)
         .build()

@@ -8,6 +8,7 @@ import com.apollographql.apollo3.compiler.codegen.java.helpers.maybeAddDescripti
 import com.apollographql.apollo3.compiler.ir.IrUnion
 import com.squareup.javapoet.ClassName
 import com.squareup.javapoet.TypeSpec
+import javax.lang.model.element.Modifier
 
 class UnionBuilder(
     private val context: JavaContext,
@@ -31,6 +32,7 @@ class UnionBuilder(
   private fun IrUnion.typeSpec(): TypeSpec {
     return TypeSpec
         .classBuilder(simpleName)
+        .addModifiers(Modifier.PUBLIC)
         .maybeAddDescription(description)
         .maybeAddDeprecation(deprecationReason)
         .addField(typeFieldSpec(context.resolver))

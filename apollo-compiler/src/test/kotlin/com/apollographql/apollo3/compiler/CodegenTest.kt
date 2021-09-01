@@ -109,39 +109,41 @@ class CodegenTest() {
     /**
      * Check that generated sources compile
      */
-
-    /**
-     * Some tests generate warnings.
-     * Most of the time because they are using deprecated fields.
-     * Fine tune this list as we go.
-     */
-    val expectedWarnings = folder.name in listOf(
-        "arguments_complex",
-        "arguments_simple",
-        "case_sensitive_enum",
-        "custom_scalar_type",
-        "deprecated_merged_field",
-        "deprecation",
-        "enum_field",
-        "fragment_with_inline_fragment",
-        "hero_name_query_long_name",
-        "hero_with_review",
-        "inline_fragments_with_friends",
-        "input_object_type",
-        "input_object_variable_and_argument",
-        "mutation_create_review",
-        "mutation_create_review_semantic_naming",
-        "named_fragment_inside_inline_fragment",
-        "nested_conditional_inline",
-        "optional",
-        "root_query_inline_fragment",
-        "union_inline_fragments",
-        "unique_type_name",
-        "variable_default_value",
-    )
     val compileDuration = measureTime {
       when (options.targetLanguage) {
-        TARGET_KOTLIN -> KotlinCompiler.assertCompiles(actualFiles.toSet(), !expectedWarnings)
+        TARGET_KOTLIN -> {
+          /**
+           * Some tests generate warnings.
+           * Most of the time because they are using deprecated fields.
+           * Fine tune this list as we go.
+           */
+          val expectedWarnings = folder.name in listOf(
+              "arguments_complex",
+              "arguments_simple",
+              "case_sensitive_enum",
+              "custom_scalar_type",
+              "deprecated_merged_field",
+              "deprecation",
+              "enum_field",
+              "fragment_with_inline_fragment",
+              "hero_name_query_long_name",
+              "hero_with_review",
+              "inline_fragments_with_friends",
+              "input_object_type",
+              "input_object_variable_and_argument",
+              "mutation_create_review",
+              "mutation_create_review_semantic_naming",
+              "named_fragment_inside_inline_fragment",
+              "nested_conditional_inline",
+              "optional",
+              "root_query_inline_fragment",
+              "union_inline_fragments",
+              "unique_type_name",
+              "variable_default_value",
+          )
+
+          KotlinCompiler.assertCompiles(actualFiles.toSet(), !expectedWarnings)
+        }
         TARGET_JAVA -> JavaCompiler.assertCompiles(actualFiles.toSet())
         else -> error("No compiler found for ${options.targetLanguage}")
       }
@@ -210,6 +212,7 @@ class CodegenTest() {
             }
           }.map {
             buildList {
+              // REMINDER
               //addAll(it)
               // add Java
               add(it.first().copy(generateKotlinModels = false, codegenModels = MODELS_OPERATION_BASED))

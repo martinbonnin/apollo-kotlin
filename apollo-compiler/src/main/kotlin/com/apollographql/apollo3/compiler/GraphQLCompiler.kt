@@ -30,10 +30,11 @@ object GraphQLCompiler {
 
     checkCustomScalars(schema, options.customScalarsMapping)
 
-    outputDir.deleteRecursively()
-    outputDir.mkdirs()
-    debugDir?.deleteRecursively()
-    debugDir?.mkdirs()
+    // REMINDER
+//    outputDir.deleteRecursively()
+//    outputDir.mkdirs()
+//    debugDir?.deleteRecursively()
+//    debugDir?.mkdirs()
 
     /**
      * Step 1: parse the documents

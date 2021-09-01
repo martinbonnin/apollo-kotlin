@@ -7,6 +7,7 @@ import com.apollographql.apollo3.compiler.codegen.java.adapter.ResponseAdapterBu
 import com.apollographql.apollo3.compiler.codegen.maybeFlatten
 import com.apollographql.apollo3.compiler.ir.IrOperation
 import com.squareup.javapoet.TypeSpec
+import javax.lang.model.element.Modifier
 
 class OperationResponseAdapterBuilder(
     val context: JavaContext,
@@ -39,6 +40,7 @@ class OperationResponseAdapterBuilder(
 
   private fun typeSpec(): TypeSpec {
     return TypeSpec.classBuilder(simpleName)
+        .addModifiers(Modifier.PUBLIC)
         .addTypes(
             responseAdapterBuilders.flatMap { it.build() }
         )
