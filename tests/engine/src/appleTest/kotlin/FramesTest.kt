@@ -43,7 +43,7 @@ class WebSocketEngineTest {
     assertIs<TextMessage>(clientMessage)
     assertEquals("Hello!", clientMessage.text)
 
-    delay(10000)
+    delay(2000)
     connection.close()
 
     clientMessage = request.awaitMessage()
@@ -71,7 +71,7 @@ class WebSocketEngineTest {
     assertIs<BinaryMessage>(clientMessage)
     assertEquals("Hello!", clientMessage.bytes.decodeToString())
 
-    delay(10000)
+    delay(2000)
     connection.close()
 
     clientMessage = request.awaitMessage()

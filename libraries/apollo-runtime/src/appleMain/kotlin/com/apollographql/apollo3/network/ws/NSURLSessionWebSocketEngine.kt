@@ -34,33 +34,21 @@ import platform.Foundation.setHTTPMethod
 import platform.Foundation.setValue
 import platform.darwin.NSObject
 
-interface WebSocketConnectionListener {
-  fun onOpen(webSocket: NSURLSessionWebSocketTask)
+actual class DefaultWebSocketEngine : WebSocketEngine {
 
-  fun onClose(webSocket: NSURLSessionWebSocketTask, code: NSURLSessionWebSocketCloseCode)
-}
+  private fun newWebSocketTask(request: NSURLRequest, delegate: NSURLSessionWebSocketDelegateProtocol): NSURLSessionWebSocketTask {
+    val delegateQueue = if (NSThread.isMainThread) {
+      runBlocking(Dispatchers.Default) { NSOperationQueue.currentQueue() }
+    } else {
+      NSOperationQueue.currentQueue()
+    }
 
-typealias NSWebSocketFactory = (NSURLRequest, WebSocketConnectionListener) -> NSURLSessionWebSocketTask
-
-actual class DefaultWebSocketEngine(
-    private val webSocketFactory: NSWebSocketFactory,
-) : WebSocketEngine {
-
-  actual constructor() : this(
-      webSocketFactory = { request, connectionListener ->
-        // We must not use the main thread's queue for the delegateQueue
-        val delegateQueue = if (NSThread.isMainThread) {
-          runBlocking(Dispatchers.Default) { NSOperationQueue.currentQueue() }
-        } else {
-          NSOperationQueue.currentQueue()
-        }
-        NSURLSession.sessionWithConfiguration(
-            configuration = NSURLSessionConfiguration.defaultSessionConfiguration,
-            delegate = NSURLSessionWebSocketDelegate(connectionListener),
-            delegateQueue = delegateQueue
-        ).webSocketTaskWithRequest(request)
-      }
-  )
+    return NSURLSession.sessionWithConfiguration(
+        configuration = NSURLSessionConfiguration.defaultSessionConfiguration,
+        delegate = delegate,
+        delegateQueue = delegateQueue
+    ).webSocketTaskWithRequest(request)
+  }
 
   actual override suspend fun open(
       url: String,
@@ -77,20 +65,25 @@ actual class DefaultWebSocketEngine(
     val messageChannel = Channel<String>(Channel.UNLIMITED)
     val isOpen = CompletableDeferred<Boolean>()
 
-    val connectionListener = object : WebSocketConnectionListener {
-      override fun onOpen(webSocket: NSURLSessionWebSocketTask) {
+    val delegate = object : NSObject(), NSURLSessionWebSocketDelegateProtocol {
+      override fun URLSession(session: NSURLSession, webSocketTask: NSURLSessionWebSocketTask, didOpenWithProtocol: String?) {
         if (!isOpen.complete(true)) {
-          webSocket.cancel()
+          webSocketTask.cancel()
         }
       }
 
-      override fun onClose(webSocket: NSURLSessionWebSocketTask, code: NSURLSessionWebSocketCloseCode) {
+      override fun URLSession(
+          session: NSURLSession,
+          webSocketTask: NSURLSessionWebSocketTask,
+          didCloseWithCode: NSURLSessionWebSocketCloseCode,
+          reason: NSData?,
+      ) {
         isOpen.cancel()
         messageChannel.close()
       }
     }
 
-    val webSocket = webSocketFactory(request, connectionListener)
+    val webSocketTask = newWebSocketTask(request, delegate )
         .apply {
           resume()
         }
@@ -98,11 +91,11 @@ actual class DefaultWebSocketEngine(
     try {
       isOpen.await()
       return WebSocketConnectionImpl(
-          webSocket = webSocket,
+          webSocket = webSocketTask,
           messageChannel = messageChannel
       )
     } catch (e: Exception) {
-      webSocket.cancel()
+      webSocketTask.cancel()
       throw e
     }
   }
@@ -145,7 +138,7 @@ private class WebSocketConnectionImpl(
   }
 
   override fun close() {
-    println("NSURLSessionWebSocketEngine::close2")
+    println("NSURLSessionWebSocketEngine::close")
     webSocket.cancelWithCloseCode(
         closeCode = 1001,
         reason = "Oopsie5".encodeToByteArray().toNSData()
@@ -201,25 +194,6 @@ private class WebSocketConnectionImpl(
     receiveNext()
   }
 
-}
-
-
-private class NSURLSessionWebSocketDelegate(
-    val webSocketConnectionListener: WebSocketConnectionListener,
-) : NSObject(), NSURLSessionWebSocketDelegateProtocol {
-
-  override fun URLSession(session: NSURLSession, webSocketTask: NSURLSessionWebSocketTask, didOpenWithProtocol: String?) {
-    webSocketConnectionListener.onOpen(webSocketTask)
-  }
-
-  override fun URLSession(
-      session: NSURLSession,
-      webSocketTask: NSURLSessionWebSocketTask,
-      didCloseWithCode: NSURLSessionWebSocketCloseCode,
-      reason: NSData?,
-  ) {
-    webSocketConnectionListener.onClose(webSocket = webSocketTask, code = didCloseWithCode)
-  }
 }
 
 private fun NSData.toKotlinString() = NSString.create(this, NSUTF8StringEncoding) as String?
