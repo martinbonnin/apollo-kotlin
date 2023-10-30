@@ -101,6 +101,7 @@ actual class DefaultWebSocketEngine(
           messageChannel = messageChannel
       )
     } catch (e: Exception) {
+      println("Cancelling with nothing")
       webSocket.cancel()
       throw e
     }
@@ -113,6 +114,7 @@ private class WebSocketConnectionImpl(
 ) : WebSocketConnection {
   init {
     messageChannel.invokeOnClose {
+      println("invokeOnClose")
       webSocket.cancelWithCloseCode(
           closeCode = 1005,
           reason = "Oopsie5".encodeToByteArray().toNSData()
@@ -163,6 +165,7 @@ private class WebSocketConnectionImpl(
   }
 
   private fun handleError(error: NSError) {
+    println("handleError")
     messageChannel.close(
         if (webSocket.closeCode.convert<Int>() != 0) ApolloWebSocketClosedException(
             code = webSocket.closeCode.convert(),
