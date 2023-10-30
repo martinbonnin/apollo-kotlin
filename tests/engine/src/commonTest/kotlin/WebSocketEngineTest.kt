@@ -42,6 +42,7 @@ class WebSocketEngineTest {
       val closeEvent = awaitItem()
       assertTrue(closeEvent is WebSocketEvent.Close)
 
+      println("close code=${closeEvent.reasonCode} reason=${closeEvent.reasonMessage}")
       cancelAndIgnoreRemainingEvents()
     }
     webSocketServer.close()
@@ -73,6 +74,7 @@ class WebSocketEngineTest {
       val closeEvent = awaitItem()
       assertTrue(closeEvent is WebSocketEvent.Close)
 
+      println("close code=${closeEvent.reasonCode} reason=${closeEvent.reasonMessage}")
       cancelAndIgnoreRemainingEvents()
     }
     webSocketServer.close()

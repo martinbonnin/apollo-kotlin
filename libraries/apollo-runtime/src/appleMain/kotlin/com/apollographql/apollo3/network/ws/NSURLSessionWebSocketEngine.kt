@@ -81,7 +81,7 @@ actual class DefaultWebSocketEngine(
     val connectionListener = object : WebSocketConnectionListener {
       override fun onOpen(webSocket: NSURLSessionWebSocketTask) {
         if (!isOpen.complete(true)) {
-          webSocket.cancel()
+          webSocket.cancelWithCloseCode(1004, "Ooops4".encodeToByteArray().toNSData() )
         }
       }
 
@@ -114,8 +114,8 @@ private class WebSocketConnectionImpl(
   init {
     messageChannel.invokeOnClose {
       webSocket.cancelWithCloseCode(
-          closeCode = CLOSE_NORMAL.convert(),
-          reason = null
+          closeCode = 1005,
+          reason = "Oopsie5".encodeToByteArray().toNSData()
       )
     }
     receiveNext()
@@ -174,7 +174,7 @@ private class WebSocketConnectionImpl(
           )
         }
     )
-    webSocket.cancel()
+    webSocket.cancelWithCloseCode(1002, "Ooops".encodeToByteArray().toNSData() )
   }
 
   private fun requestNext(webSocketMessage: NSURLSessionWebSocketMessage) {
@@ -193,7 +193,7 @@ private class WebSocketConnectionImpl(
     try {
       if (data != null) messageChannel.trySend(data)
     } catch (e: Exception) {
-      webSocket.cancel()
+      webSocket.cancelWithCloseCode(1003, "Ooopsie".encodeToByteArray().toNSData() )
       return
     }
 
