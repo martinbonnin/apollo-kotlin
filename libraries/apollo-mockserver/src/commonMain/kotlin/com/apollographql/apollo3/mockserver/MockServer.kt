@@ -129,14 +129,17 @@ internal class MockServerImpl(
   }
 
   private suspend fun handleRequests(handler: MockServerHandler, socket: TcpSocket, onRequest: (MockRequestBase) -> Unit) {
-    val buffer = Buffer()
     val reader = object : Reader {
-      override val buffer: Buffer
-        get() = buffer
+      override val buffer = Buffer()
 
       override suspend fun fillBuffer() {
-        val data = socket.receive()
-        buffer.write(data)
+        try {
+          val data = socket.receive()
+          buffer.write(data)
+        } catch (e: Exception) {
+          println("Cannot fillBuffer")
+          throw  e
+        }
       }
     }
 
