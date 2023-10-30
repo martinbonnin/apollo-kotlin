@@ -43,6 +43,7 @@ class WebSocketEngineTest {
 
     clientMessage = request.awaitMessage()
     assertIs<CloseFrame>(clientMessage)
+    println("close code=${clientMessage.code} reason=${clientMessage.reason}")
 
     webSocketServer.close()
   }
@@ -72,6 +73,7 @@ class WebSocketEngineTest {
 
     clientMessage = request.awaitMessage()
     assertIs<CloseFrame>(clientMessage)
+    println("close code=${clientMessage.code} reason=${clientMessage.reason}")
 
     webSocketServer.close()
   }
@@ -105,7 +107,7 @@ class WebSocketEngineTest {
   fun serverCloseAbruptly() = runTest {
     if (platform() == Platform.Js) return@runTest // It's not clear how termination works on JS
     if (platform() == Platform.Native) return@runTest // https://youtrack.jetbrains.com/issue/KTOR-6406
-    
+
     val webSocketEngine = webSocketEngine()
     val webSocketServer = MockServer()
 

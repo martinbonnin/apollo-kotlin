@@ -114,10 +114,6 @@ private class WebSocketConnectionImpl(
 ) : WebSocketConnection {
   init {
     messageChannel.invokeOnClose {
-      webSocket.cancelWithCloseCode(
-          closeCode = CLOSE_NORMAL.convert(),
-          reason = null
-      )
     }
     receiveNext()
   }
@@ -150,6 +146,11 @@ private class WebSocketConnectionImpl(
 
   override fun close() {
     messageChannel.close()
+
+    webSocket.cancelWithCloseCode(
+        closeCode = 1005,
+        reason = "Oopsie5".encodeToByteArray().toNSData()
+    )
   }
 
   fun receiveNext() {
