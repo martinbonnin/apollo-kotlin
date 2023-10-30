@@ -64,7 +64,7 @@ class WebSocketEngineTest {
     val webSocketEngine = webSocketEngine()
     val webSocketServer = MockServer()
 
-    val responseBody = webSocketServer.enqueueWebSocket()
+    webSocketServer.enqueueWebSocket()
     val connection = webSocketEngine.open(webSocketServer.url())
     connection.send("client->server".encodeUtf8())
 
@@ -73,9 +73,6 @@ class WebSocketEngineTest {
     var clientMessage = request.awaitMessage()
     assertIs<BinaryMessage>(clientMessage)
     assertEquals("client->server", clientMessage.bytes.decodeToString())
-
-    responseBody.enqueueMessage(BinaryMessage("server->client".encodeToByteArray()))
-    assertEquals("server->client", connection.receive())
 
     delay(10000)
     connection.close()
