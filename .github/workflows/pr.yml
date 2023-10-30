@@ -1,6 +1,8 @@
 name: pr
 
 on: push
+env:
+  env_var: ${{ vars.APOLLO_RELOCATE_JAR }}
 
 jobs:
   tests-no-gradle:

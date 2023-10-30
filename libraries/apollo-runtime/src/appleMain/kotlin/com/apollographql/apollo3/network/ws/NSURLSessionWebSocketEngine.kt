@@ -4,7 +4,6 @@ import com.apollographql.apollo3.api.http.HttpHeader
 import com.apollographql.apollo3.exception.ApolloNetworkException
 import com.apollographql.apollo3.exception.ApolloWebSocketClosedException
 import com.apollographql.apollo3.network.toNSData
-import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.convert
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -92,7 +91,9 @@ actual class DefaultWebSocketEngine(
     }
 
     val webSocket = webSocketFactory(request, connectionListener)
-        .apply { resume() }
+        .apply {
+          resume()
+        }
 
     try {
       isOpen.await()
@@ -221,5 +222,4 @@ private class NSURLSessionWebSocketDelegate(
   }
 }
 
-@OptIn(BetaInteropApi::class)
 private fun NSData.toKotlinString() = NSString.create(this, NSUTF8StringEncoding) as String?
