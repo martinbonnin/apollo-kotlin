@@ -12,14 +12,22 @@ import com.apollographql.apollo3.testing.internal.runTest
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.convert
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.runBlocking
 import okio.ByteString.Companion.encodeUtf8
+import platform.Foundation.NSOperationQueue
+import platform.Foundation.NSThread
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLSession
+import platform.Foundation.NSURLSessionConfiguration
+import platform.Foundation.NSURLSessionWebSocketDelegateProtocol
 import platform.Foundation.NSURLSessionWebSocketMessage
+import platform.Foundation.NSURLSessionWebSocketTask
+import platform.darwin.NSObject
 import platform.posix.sleep
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -110,7 +118,23 @@ class WebSocketEngineTest {
 
   @OptIn(ExperimentalForeignApi::class)
   fun runClient(url: String) {
-    val task = NSURLSession.sharedSession().webSocketTaskWithURL(url = NSURL(string = url.replace("http", "ws")))
+    val delegateQueue = if (NSThread.isMainThread) {
+      runBlocking(Dispatchers.Default) { NSOperationQueue.currentQueue() }
+    } else {
+      NSOperationQueue.currentQueue()
+    }
+
+    val delegate = object : NSObject(), NSURLSessionWebSocketDelegateProtocol {
+      override fun URLSession(session: NSURLSession, webSocketTask: NSURLSessionWebSocketTask, didOpenWithProtocol: String?) {
+        println("open!")
+      }
+    }
+    val task = NSURLSession.sessionWithConfiguration(
+        configuration = NSURLSessionConfiguration.defaultSessionConfiguration,
+        delegate = delegate,
+        delegateQueue = delegateQueue
+
+    ).webSocketTaskWithURL(url = NSURL(string = url.replace("http", "ws")))
 
     task.resume()
 
