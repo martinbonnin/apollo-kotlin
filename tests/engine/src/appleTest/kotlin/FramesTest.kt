@@ -9,6 +9,8 @@ import com.apollographql.apollo3.testing.internal.runTest
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.convert
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSURLSessionWebSocketMessage
@@ -54,23 +56,25 @@ class WebSocketEngineTest {
 
     webSocketServer.enqueueWebSocket()
 
-    val task = NSURLSession.sharedSession.webSocketTaskWithURL(url = NSURL(string = webSocketServer.url().replace("http", "ws")))
+    launch(newSingleThreadContext("martin")) {
+      val task = NSURLSession.sharedSession.webSocketTaskWithURL(url = NSURL(string = webSocketServer.url().replace("http", "ws")))
 
-    task.resume()
+      task.resume()
 
-    val request = webSocketServer.awaitWebSocketRequest(10.seconds)
+      task.sendMessage(NSURLSessionWebSocketMessage("Hello!")) {
+        println("error: $it")
+      }
 
-    task.sendMessage(NSURLSessionWebSocketMessage("Hello!")) {
-      println("error: $it")
+      sleep(2.convert())
+
+      task.cancelWithCloseCode(closeCode = 1001, reason = "Oopsie5".encodeToByteArray().toNSData())
     }
 
+    val request = webSocketServer.awaitWebSocketRequest(10.seconds)
     request.awaitMessage(10.seconds).apply {
       println("message=$this")
     }
 
-    sleep(2.convert())
-
-    task.cancelWithCloseCode(closeCode = 1001, reason = "Oopsie5".encodeToByteArray().toNSData())
     request.awaitMessage(10.seconds).apply {
       println("message=$this")
     }
