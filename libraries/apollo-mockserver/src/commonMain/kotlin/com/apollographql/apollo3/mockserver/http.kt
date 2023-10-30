@@ -76,7 +76,7 @@ internal suspend fun readRequest(reader: Reader): MockRequestBase {
   var line = nextLine()
 
   val (method, path, version) = parseRequestLine(line.trimEol())
-  //println("Line: ${line.trimEol()}")
+  println("Line: ${line.trimEol()}")
 
   val headers = mutableMapOf<String, String>()
   /**
@@ -84,7 +84,7 @@ internal suspend fun readRequest(reader: Reader): MockRequestBase {
    */
   while (true) {
     line = nextLine()
-    //println("Headers: ${line.trimEol()}")
+    println("Headers: ${line.trimEol()}")
     if (line == "\r\n") {
       break
     }

@@ -152,6 +152,7 @@ internal class MockServerImpl(
         if (request is WebsocketMockRequest) {
           launch {
             readFrames(reader) { message ->
+              println("Got message: $message")
               when {
                 handlePings && message is PingFrame -> {
                   socket.send(pongFrame())

@@ -43,11 +43,11 @@ class WebsocketMockRequest(
 sealed interface WebSocketMessage
 
 @ApolloExperimental
-class TextMessage(val text: String) : WebSocketMessage
+data class TextMessage(val text: String) : WebSocketMessage
 @ApolloExperimental
 class BinaryMessage(val bytes: ByteArray) : WebSocketMessage
 @ApolloExperimental
-class CloseFrame(val code: Int?, val reason: String?) : WebSocketMessage
+data class CloseFrame(val code: Int?, val reason: String?) : WebSocketMessage
 @ApolloExperimental
 data object PingFrame : WebSocketMessage
 @ApolloExperimental
