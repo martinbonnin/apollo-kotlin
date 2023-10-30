@@ -46,7 +46,7 @@ class WebSocketEngineTest {
     responseBody.enqueueMessage(TextMessage("server->client"))
     assertEquals("server->client", connection.receive())
 
-    delay(10)
+    delay(10000)
     connection.close()
 
     clientMessage = request.awaitMessage()
@@ -77,7 +77,7 @@ class WebSocketEngineTest {
     responseBody.enqueueMessage(BinaryMessage("server->client".encodeToByteArray()))
     assertEquals("server->client", connection.receive())
 
-    delay(10)
+    delay(10000)
     connection.close()
 
     clientMessage = request.awaitMessage()

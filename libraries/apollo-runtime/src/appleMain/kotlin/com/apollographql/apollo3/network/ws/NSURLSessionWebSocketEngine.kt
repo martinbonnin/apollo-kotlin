@@ -145,10 +145,11 @@ private class WebSocketConnectionImpl(
   }
 
   override fun close() {
+    println("NSURLSessionWebSocketEngine::close")
     messageChannel.close()
 
     webSocket.cancelWithCloseCode(
-        closeCode = 1005,
+        closeCode = 1001,
         reason = "Oopsie5".encodeToByteArray().toNSData()
     )
   }
