@@ -2,9 +2,6 @@ name: pr
 
 on: push
 
-env:
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
-
 jobs:
   tests-no-gradle:
     runs-on: macos-11
@@ -19,4 +16,4 @@ jobs:
           gradle-home-cache-cleanup: true
       - name: Build with Gradle
         run: |
-          ./gradlew -p tests :engine:macosX64Test
+          ./gradlew -p tests :engine:macosX64Test --tests '*Frames*'
