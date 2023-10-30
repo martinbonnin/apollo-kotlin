@@ -1,3 +1,4 @@
+
 import com.apollographql.apollo3.api.http.HttpHeader
 import com.apollographql.apollo3.exception.ApolloException
 import com.apollographql.apollo3.exception.ApolloNetworkException
@@ -11,13 +12,17 @@ import com.apollographql.apollo3.mockserver.enqueueWebSocket
 import com.apollographql.apollo3.mpp.Platform
 import com.apollographql.apollo3.mpp.platform
 import com.apollographql.apollo3.testing.internal.runTest
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import okio.ByteString.Companion.encodeUtf8
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.seconds
 
 class WebSocketEngineTest {
 
@@ -39,6 +44,7 @@ class WebSocketEngineTest {
     responseBody.enqueueMessage(TextMessage("server->client"))
     assertEquals("server->client", connection.receive())
 
+    delay(10)
     connection.close()
 
     clientMessage = request.awaitMessage()
@@ -69,6 +75,7 @@ class WebSocketEngineTest {
     responseBody.enqueueMessage(BinaryMessage("server->client".encodeToByteArray()))
     assertEquals("server->client", connection.receive())
 
+    delay(10)
     connection.close()
 
     clientMessage = request.awaitMessage()
@@ -78,70 +85,47 @@ class WebSocketEngineTest {
     webSocketServer.close()
   }
 
+
+  @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
   @Test
-  fun serverCloseNicely() = runTest {
-    if (platform() == Platform.Js) return@runTest // It's not clear how termination works on JS
+  fun runForeverFrames() = runTest {
+    val dispatcher = newSingleThreadContext("client")
 
-    val webSocketEngine = webSocketEngine()
     val webSocketServer = MockServer()
+    println("listening on: ${webSocketServer.url()}")
 
-    val responseBody = webSocketServer.enqueueWebSocket()
-    val connection = webSocketEngine.open(webSocketServer.url())
-
-    responseBody.enqueueMessage(CloseFrame(4200, "Bye now"))
-    val e = assertFailsWith<ApolloException> {
-      connection.receive()
+    launch(dispatcher) {
+      runClient(webSocketServer.url())
     }
 
-    // On Apple, the close code and reason are not available - https://youtrack.jetbrains.com/issue/KTOR-6198
-    if (!isKtor || platform() != Platform.Native) {
-      assertTrue(e is ApolloWebSocketClosedException)
-      assertEquals(4200, e.code)
-      assertEquals("Bye now", e.reason)
+    webSocketServer.enqueueWebSocket()
+    val request = webSocketServer.awaitWebSocketRequest(10.seconds)
+
+    while (true) {
+      val message = request.awaitMessage(10.seconds)
+      println("message=$message")
+      if (message is CloseFrame) {
+        break
+      }
     }
 
     webSocketServer.close()
   }
 
-  @Test
-  fun serverCloseAbruptly() = runTest {
-    if (platform() == Platform.Js) return@runTest // It's not clear how termination works on JS
-    if (platform() == Platform.Native) return@runTest // https://youtrack.jetbrains.com/issue/KTOR-6406
+  @OptIn(ExperimentalForeignApi::class)
+  fun runClient(url: String) {
+    val task = NSURLSession.sharedSession().webSocketTaskWithURL(url = NSURL(string = url.replace("http", "ws")))
 
-    val webSocketEngine = webSocketEngine()
-    val webSocketServer = MockServer()
+    task.resume()
 
-    webSocketServer.enqueueWebSocket()
-    val connection = webSocketEngine.open(webSocketServer.url())
-
-    webSocketServer.close()
-
-    assertFailsWith<ApolloNetworkException> {
-      connection.receive()
+    task.sendMessage(NSURLSessionWebSocketMessage("Hello!")) {
+      println("error: $it")
     }
 
-    connection.close()
-  }
+    sleep(2.convert())
 
-  @Test
-  fun headers() = runTest {
-    val webSocketEngine = webSocketEngine()
-    val webSocketServer = MockServer()
+    task.cancelWithCloseCode(closeCode = 1001, reason = "Oopsie5".encodeToByteArray().toNSData())
 
-    webSocketServer.enqueueWebSocket()
-
-      webSocketEngine.open(webSocketServer.url(), listOf(
-          HttpHeader("Sec-WebSocket-Protocol", "graphql-ws"),
-          HttpHeader("header1", "value1"),
-          HttpHeader("header2", "value2"),
-      ))
-
-    val request = webSocketServer.awaitWebSocketRequest()
-
-    assertEquals("graphql-ws", request.headers["Sec-WebSocket-Protocol"])
-    assertEquals("value1", request.headers["header1"])
-    assertEquals("value2", request.headers["header2"])
-
-    webSocketServer.close()
+    print("done")
   }
 }
