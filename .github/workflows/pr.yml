@@ -18,6 +18,7 @@ jobs:
           gradle-home-cache-cleanup: true
       - name: Build with Gradle
         run: |
+          ./gradlew -p tests :engine:linkDebugTestMacosArm64 --tests '*Frames*'
           sudo tcpdump -nn -i any -w sntp.cap &
           sleep 1
           ./gradlew -p tests :engine:macosX64Test --tests '*Frames*'
