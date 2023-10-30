@@ -10,7 +10,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.convert
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLSession
 import platform.Foundation.NSURLSessionWebSocketMessage
@@ -56,7 +55,7 @@ class WebSocketEngineTest {
 
     webSocketServer.enqueueWebSocket()
 
-    launch(newSingleThreadContext("martin")) {
+    launch {
       val task = NSURLSession.sharedSession.webSocketTaskWithURL(url = NSURL(string = webSocketServer.url().replace("http", "ws")))
 
       task.resume()
