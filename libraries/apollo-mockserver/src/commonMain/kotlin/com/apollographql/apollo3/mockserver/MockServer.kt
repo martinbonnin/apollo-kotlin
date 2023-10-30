@@ -138,7 +138,7 @@ internal class MockServerImpl(
           buffer.write(data)
         } catch (e: Exception) {
           println("Cannot fillBuffer")
-          Exception().printStackTrace()
+          Exception("ouille").printStackTrace()
           println("Cannot fillBuffer2")
           throw  e
         }
