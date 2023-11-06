@@ -55,3 +55,7 @@ internal fun List<HttpHeader>.toOkHttpHeaders(): Headers =
         headers.add(it.name, it.value)
       }
     }.build()
+
+internal val defaultOkHttpClientBuilder: OkHttpClient.Builder by lazy {
+  OkHttpClient.Builder()
+}

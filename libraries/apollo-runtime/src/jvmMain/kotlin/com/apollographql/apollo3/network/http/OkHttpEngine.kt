@@ -6,6 +6,7 @@ import com.apollographql.apollo3.api.http.HttpRequest
 import com.apollographql.apollo3.api.http.HttpResponse
 import com.apollographql.apollo3.api.http.UploadsHttpBody
 import com.apollographql.apollo3.exception.ApolloNetworkException
+import com.apollographql.apollo3.network.defaultOkHttpClientBuilder
 import com.apollographql.apollo3.network.toOkHttpHeaders
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -29,7 +30,7 @@ actual class DefaultHttpEngine constructor(
   actual constructor(timeoutMillis: Long) : this(timeoutMillis, timeoutMillis)
 
   constructor(connectTimeout: Long, readTimeout: Long) : this(
-      OkHttpClient.Builder()
+      defaultOkHttpClientBuilder
           .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
           .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
           .build()
