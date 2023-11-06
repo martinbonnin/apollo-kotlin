@@ -2,8 +2,8 @@ package com.apollographql.apollo3.network.ws2
 
 import com.apollographql.apollo3.api.http.HttpHeader
 import com.apollographql.apollo3.exception.DefaultApolloException
+import node.buffer.Buffer
 import org.khronos.webgl.Uint8Array
-import org.w3c.dom.CloseEvent
 import org.w3c.dom.WebSocket as PlatformWebSocket
 
 internal class JsWebSocketEngine: WebSocketEngine {
@@ -13,28 +13,40 @@ internal class JsWebSocketEngine: WebSocketEngine {
 }
 
 internal class JsWebSocket(
-    private val url: String,
+    url: String,
     private val headers: List<HttpHeader>,
     private val listener: WebSocketListener,
 ) : WebSocket {
   private lateinit var platformWebSocket: PlatformWebSocket
   private var disposed = false
-
+  private val actualUrl = when {
+    url.startsWith("http://") -> "ws://${url.substring(7)}"
+    url.startsWith("https://") -> "wss://${url.substring(8)}"
+    else -> url
+  }
   override fun connect() {
-    platformWebSocket = createWebSocket(url, headers)
+
+    platformWebSocket = createWebSocket(actualUrl, headers)
     platformWebSocket.onopen = {
       listener.onOpen()
     }
 
     platformWebSocket.onmessage = {
-      when (val data = it.data) {
-        is String -> listener.onMessage(data)
+      val data2: dynamic = it.data
+
+      when {
+        data2 is String -> listener.onMessage(data2 as String)
+        Buffer.isBuffer(data2) -> {
+          listener.onMessage((data2 as Buffer).toByteArray())
+        }
         else -> {
+          val d = JSON.stringify(data2)
           if (!disposed) {
             disposed = true
-            listener.onError(DefaultApolloException("The JS WebSocket implementation only support text messages"))
+            listener.onError(DefaultApolloException("The JS WebSocket implementation only support text messages (got $d)"))
             platformWebSocket.close(CLOSE_GOING_AWAY.toShort(), "Unsupported message received")
           }
+          Unit
         }
       }
     }
@@ -47,11 +59,11 @@ internal class JsWebSocket(
     }
 
     platformWebSocket.onclose = {
+      val event: dynamic = it
       if (!disposed) {
         disposed = true
-        it as CloseEvent
-        if (it.wasClean) {
-          listener.onClosed(it.code.toInt(), it.reason)
+        if (event.wasClean) {
+          listener.onClosed(event.code, event.reason)
         } else {
           listener.onError(DefaultApolloException("WebSocket was closed"))
         }
@@ -94,7 +106,8 @@ internal class JsWebSocket(
     }
 
     if (!disposed) {
-      platformWebSocket.close(code.toShort(), "Going away")
+      disposed = true
+      platformWebSocket.close(code.toShort(), reason)
     }
   }
 }

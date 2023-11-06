@@ -73,7 +73,7 @@ class WebSocketEngineTest {
     connection.send("client->server".encodeUtf8())
     request.awaitMessage().apply {
       assertIs<BinaryMessage>(this)
-      assertEquals("client->server", bytes.decodeToString())
+      assertEquals("client->server", data.decodeToString())
     }
 
     responseBody.enqueueMessage(BinaryMessage("server->client".encodeToByteArray()))

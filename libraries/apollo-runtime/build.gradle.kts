@@ -42,6 +42,11 @@ kotlin {
     findByName("jsMain")?.apply {
       dependencies {
         api(libs.ktor.client.js)
+        /**
+         * The situation is a bit weird because jsMain has both browser and node dependencies
+         * See https://youtrack.jetbrains.com/issue/KT-47038
+         */
+        compileOnly(libs.kotlin.node)
       }
     }
 

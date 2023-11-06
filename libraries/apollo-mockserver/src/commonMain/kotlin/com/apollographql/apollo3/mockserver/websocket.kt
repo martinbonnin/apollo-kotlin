@@ -226,7 +226,7 @@ private fun WebSocketMessage.toFrame(): ByteString {
     is PingFrame -> pingFrame().toByteString()
     is CloseFrame -> closeFrame(code, reason)
     is TextMessage -> textFrame(text)
-    is BinaryMessage -> binaryFrame(bytes)
+    is BinaryMessage -> binaryFrame(data)
   }
 }
 

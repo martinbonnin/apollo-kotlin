@@ -3,6 +3,17 @@ package com.apollographql.apollo3.network.ws2
 import com.apollographql.apollo3.api.http.HttpHeader
 
 interface WebSocketEngine {
+  /**
+   * Creates a new [WebSocket].
+   *
+   * @param url: an url starting with one of:
+   * - ws://
+   * - wss://
+   * - http://
+   * - https://
+   *
+   * If the underlying engine requires a ws or wss, http and https are replaced by ws and wss respectively
+   */
   fun newWebSocket(
       url: String,
       headers: List<HttpHeader> = emptyList(),
@@ -60,7 +71,10 @@ interface WebSocket {
   fun send(text: String)
 
   /**
-   * closes the websocket gracefully and asynchronously
+   * closes the websocket gracefully and asynchronously. No more calls to the listener are made
+   *
+   * On Apple, cancelWithCloseCode calls the URLSession delegate with the same (client) code making it impossible to
+   * retrieve the server code. For this reason, this call is terminal and does not trigger the listener.
    */
   fun close(code: Int, reason: String)
 }

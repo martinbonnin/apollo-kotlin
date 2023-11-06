@@ -19,11 +19,23 @@ import kotlin.js.JsName
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * A server for testing Kotlin Multiplatform applications using HTTP and WebSockets.
+ *
+ * A [MockServer] binds to localhost and allows to enqueue predefined responses using [enqueue], [enqueueString],
+ * [enqueueMultipart]  and [enqueueWebSocket]
+ *
+ * [MockServer] is very simple and should not be used for production application.
+ * In particular, it makes no attempt at flow control:
+ * - data is read as fast as possible from the network and buffered until [takeRequest] or [awaitAnyRequest] is called.
+ * - queued responses from [enqueue] are buffered until they can be transmitted to the network.
+ * If you're using [MockServer] to handle large payloads, it might use a lot of memory.
+ */
 interface MockServer : Closeable {
   /**
    * Returns the root url for this server
    *
-   * It will suspend until a port is found to listen to
+   * Because finding an available port is an asynchronous operation on some platform, this function is suspend.
    */
   suspend fun url(): String
 
@@ -58,10 +70,16 @@ interface MockServer : Closeable {
    */
   suspend fun awaitAnyRequest(timeout: Duration = 1.seconds): MockRequestBase
 
+  interface Listener {
+    fun onRequest(request: MockRequestBase)
+    fun onMessage(message: WebSocketMessage)
+  }
+
   class Builder {
     private var handler: MockServerHandler? = null
     private var handlePings: Boolean? = null
     private var tcpServer: TcpServer? = null
+    private var listener: Listener? = null
 
     fun handler(handler: MockServerHandler) = apply {
       this.handler = handler
@@ -75,11 +93,17 @@ interface MockServer : Closeable {
       this.tcpServer = tcpServer
     }
 
+    fun listener(listener: Listener) = apply {
+      this.listener = listener
+    }
+
+
     fun build(): MockServer {
       return MockServerImpl(
           handler ?: QueueMockServerHandler(),
           handlePings ?: true,
-          tcpServer ?: TcpServer()
+          tcpServer ?: TcpServer(),
+          listener
       )
     }
   }
@@ -89,6 +113,7 @@ internal class MockServerImpl(
     private val mockServerHandler: MockServerHandler,
     private val handlePings: Boolean,
     private val server: TcpServer,
+    private val listener: MockServer.Listener?
 ) : MockServer {
   private val requests = Channel<MockRequestBase>(Channel.UNLIMITED)
   private val scope = CoroutineScope(SupervisorJob())
@@ -101,7 +126,7 @@ internal class MockServerImpl(
     scope.launch {
       //println("Socket bound: ${url()}")
       try {
-        handleRequests(mockServerHandler, socket) {
+        handleRequests(mockServerHandler, socket, listener) {
           requests.trySend(it)
         }
       } catch (e: Exception) {
@@ -128,7 +153,7 @@ internal class MockServerImpl(
     }
   }
 
-  private suspend fun handleRequests(handler: MockServerHandler, socket: TcpSocket, onRequest: (MockRequestBase) -> Unit) {
+  private suspend fun handleRequests(handler: MockServerHandler, socket: TcpSocket, listener: MockServer.Listener?, onRequest: (MockRequestBase) -> Unit) {
     val buffer = Buffer()
     val reader = object : Reader {
       override val buffer: Buffer
@@ -142,6 +167,8 @@ internal class MockServerImpl(
 
     while (true) {
       val request = readRequest(reader)
+      listener?.onRequest(request)
+
       onRequest(request)
 
       val response = handler.handle(request)
@@ -152,6 +179,7 @@ internal class MockServerImpl(
         if (request is WebsocketMockRequest) {
           launch {
             readFrames(reader) { message ->
+              listener?.onMessage(message)
               when {
                 handlePings && message is PingFrame -> {
                   socket.send(pongFrame())
@@ -206,11 +234,11 @@ internal class MockServerImpl(
 }
 
 @JsName("createMockServer")
-fun MockServer(): MockServer = MockServerImpl(QueueMockServerHandler(), true, TcpServer())
+fun MockServer(): MockServer = MockServerImpl(QueueMockServerHandler(), true, TcpServer(), null)
 
 @Deprecated("Use MockServer.Builder() instead", level = DeprecationLevel.ERROR)
 @ApolloDeprecatedSince(ApolloDeprecatedSince.Version.v4_0_0)
-fun MockServer(handler: MockServerHandler): MockServer = MockServerImpl(handler, true, TcpServer())
+fun MockServer(handler: MockServerHandler): MockServer = MockServerImpl(handler, true, TcpServer(), null)
 
 @Deprecated("Use enqueueString instead", ReplaceWith("enqueueString"), DeprecationLevel.ERROR)
 @ApolloDeprecatedSince(ApolloDeprecatedSince.Version.v4_0_0)
@@ -265,12 +293,13 @@ interface WebSocketBody {
 
 @ApolloExperimental
 fun MockServer.enqueueWebSocket(
+    statusCode: Int = 101,
     headers: Map<String, String> = emptyMap(),
 ): WebSocketBody {
   val webSocketBody = WebSocketBodyImpl()
   enqueue(
       MockResponse.Builder()
-          .statusCode(101)
+          .statusCode(statusCode)
           .body(webSocketBody.consumeAsFlow())
           .headers(headers)
           .addHeader("Upgrade", "websocket")

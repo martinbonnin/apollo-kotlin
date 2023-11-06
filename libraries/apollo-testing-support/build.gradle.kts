@@ -15,9 +15,7 @@ kotlin {
         api(project(":apollo-runtime"))
         api(project(":apollo-mockserver"))
         api(libs.kotlinx.coroutines)
-        implementation(libs.atomicfu.get().toString()) {
-          because("We need locks in TestNetworkTransportHandler (we don't use the gradle plugin rewrite)")
-        }
+        implementation(libs.atomicfu)
         implementation(libs.kotlinx.coroutines.test)
       }
     }
