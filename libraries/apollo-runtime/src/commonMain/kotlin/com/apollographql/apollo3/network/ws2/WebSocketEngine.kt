@@ -23,7 +23,7 @@ interface WebSocketEngine {
 
 interface WebSocketListener {
   /**
-   * The HTTP 101 Switching Protocols response has been received
+   * The HTTP 101 Switching Protocols response has been received and is valid
    */
   fun onOpen()
 
@@ -39,19 +39,19 @@ interface WebSocketListener {
   fun onMessage(data: ByteArray)
 
   /**
-   * An error happened
+   * An error happened, no more calls to the listener are made
    */
   fun onError(throwable: Throwable)
 
   /**
-   * The server sent a close frame
+   * The server sent a close frame, no more calls to the listener are made
    */
   fun onClosed(code: Int?, reason: String?)
 }
 
 interface WebSocket {
   /**
-   * Opens and starts reading the socket
+   * Opens and starts reading the socket. No calls to the listener are made before [connect]
    */
   fun connect()
 
