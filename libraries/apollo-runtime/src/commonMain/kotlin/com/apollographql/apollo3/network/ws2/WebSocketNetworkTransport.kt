@@ -18,6 +18,7 @@ import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ProducerScope
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,13 +26,13 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.retryWhen
 
-class WebSocketNetworkTransport(
+class WebSocketNetworkTransport private constructor(
     private val serverUrl: (suspend () -> String),
     private val headers: List<HttpHeader>,
-    private val webSocketEngine: WebSocketEngine = WebSocketEngine(),
-    private val idleTimeoutMillis: Long = 60_000,
-    private val reopenWhen: (suspend (Throwable, attempt: Long) -> Boolean) = { _, _ -> false },
-    private val connectionParams: (suspend () -> Any?) = { null },
+    private val webSocketEngine: WebSocketEngine,
+    private val idleTimeoutMillis: Long,
+    private val reopenWhen: (suspend (Throwable, attempt: Long) -> Boolean),
+    private val connectionParams: (suspend () -> Any?),
 ) : NetworkTransport {
 
   private val isConnectedPrivate = MutableStateFlow(false)
@@ -41,6 +42,8 @@ class WebSocketNetworkTransport(
 
   @ApolloExperimental
   val isConnected = isConnectedPrivate.asStateFlow()
+
+  val subscriptionCount = MutableStateFlow(0)
 
   private fun onWebSocketInitialized() {
     isConnectedPrivate.value = true
@@ -69,6 +72,7 @@ class WebSocketNetworkTransport(
 
     val flow = callbackFlow {
 
+
       val newRequest = if (renewUuid) {
         request.newBuilder().requestUuid(uuid4()).build()
       } else {
@@ -81,7 +85,7 @@ class WebSocketNetworkTransport(
         if (subscribableWebSocket == null) {
           subscribableWebSocket = SubscribableWebSocket(
               webSocketEngine = webSocketEngine,
-              url = serverUrl,
+              url = serverUrl(),
               headers = headers,
               idleTimeoutMillis = idleTimeoutMillis,
               onInitialized = ::onWebSocketInitialized,
@@ -95,13 +99,13 @@ class WebSocketNetworkTransport(
         subscribableWebSocket!!.startOperation(newRequest, operationListener)
       }
 
-      invokeOnClose {
+      awaitClose {
         reg.stop()
       }
     }
 
     return flow.buffer(Channel.UNLIMITED).retryWhen { cause, _ ->
-      cause is RetrySubscription
+      cause is RetryException
     }
   }
 
@@ -109,8 +113,53 @@ class WebSocketNetworkTransport(
 
   }
 
-  class RetrySubscription(throwable: Throwable) : Exception("The subscription should retry", throwable)
+  class Builder {
+    private var serverUrl: (suspend () -> String)? = null
+    private var headers: List<HttpHeader>? = null
+    private var webSocketEngine: WebSocketEngine? = null
+    private var idleTimeoutMillis: Long? = null
+    private var reopenWhen: (suspend (Throwable, attempt: Long) -> Boolean)? = null
+    private var connectionParams: (suspend () -> Any?)? = null
+
+    fun serverUrl(serverUrl: suspend () -> String) = apply {
+      this.serverUrl = serverUrl
+    }
+    fun serverUrl(serverUrl: String) = apply {
+      this.serverUrl = {serverUrl}
+    }
+
+    fun headers(headers: List<HttpHeader>) = apply {
+      this.headers = headers
+    }
+
+    fun webSocketEngine(webSocketEngine: WebSocketEngine) = apply {
+      this.webSocketEngine = webSocketEngine
+    }
+
+    fun idleTimeoutMillis(idleTimeoutMillis: Long) = apply {
+      this.idleTimeoutMillis = idleTimeoutMillis
+    }
+
+    fun reopenWhen(reopenWhen: suspend (Throwable, attempt: Long) -> Boolean) = apply {
+      this.reopenWhen = reopenWhen
+    }
+
+    fun connectionParams(connectionParams: suspend () -> Any?) = apply {
+      this.connectionParams = connectionParams
+    }
+
+    fun build() = WebSocketNetworkTransport(
+        serverUrl = serverUrl ?: error("You need to set serverUrl"),
+        headers = headers ?: emptyList(),
+        webSocketEngine = webSocketEngine ?: WebSocketEngine(),
+        idleTimeoutMillis = idleTimeoutMillis ?: 60_000,
+        reopenWhen = reopenWhen ?: { _, _ -> false },
+        connectionParams = connectionParams ?: { null }
+    )
+  }
 }
+
+private class RetryException(throwable: Throwable) : Exception("The subscription should retry", throwable)
 
 private class DefaultOperationListener<D : Operation.Data>(
     private val request: ApolloRequest<D>,
@@ -147,7 +196,7 @@ private class DefaultOperationListener<D : Operation.Data>(
   }
 
   override fun onError(throwable: Throwable) {
-    producerScope.trySend(ApolloResponse.Builder(request.operation, request.requestUuid, DefaultApolloException("Invalid payload", throwable)).build())
+    producerScope.trySend(ApolloResponse.Builder(request.operation, request.requestUuid, DefaultApolloException("Error while executing operation", throwable)).build())
     producerScope.channel.close()
   }
 
@@ -156,6 +205,6 @@ private class DefaultOperationListener<D : Operation.Data>(
   }
 
   override fun onRetry(throwable: Throwable) {
-    producerScope.channel.close(WebSocketNetworkTransport.RetrySubscription(throwable))
+    producerScope.channel.close(RetryException(throwable))
   }
 }

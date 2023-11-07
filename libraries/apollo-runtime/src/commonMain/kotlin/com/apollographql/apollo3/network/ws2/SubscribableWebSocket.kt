@@ -14,6 +14,7 @@ import com.apollographql.apollo3.network.ws2.internal.Error
 import com.apollographql.apollo3.network.ws2.internal.ParseError
 import com.apollographql.apollo3.network.ws2.internal.apolloConnectionInitMessage
 import com.apollographql.apollo3.network.ws2.internal.toServerMessage
+import com.apollographql.apollo3.network.ws2.internal.toStartMessage
 import com.apollographql.apollo3.network.ws2.internal.toStopMessage
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
@@ -66,9 +67,9 @@ interface OperationListener {
 
 @OptIn(DelicateCoroutinesApi::class)
 class SubscribableWebSocket(
-    private val webSocketEngine: WebSocketEngine,
-    private val url: suspend () -> String,
-    private val headers: List<HttpHeader>,
+    webSocketEngine: WebSocketEngine,
+    url: String,
+    headers: List<HttpHeader>,
     private val idleTimeoutMillis: Long,
     private val onInitialized: () -> Unit,
     private val onDisconnected: () -> Unit,
@@ -77,10 +78,8 @@ class SubscribableWebSocket(
     private val connectionParams: suspend () -> Any?,
     private val reopenWhen: suspend (Throwable) -> Boolean,
 ) : WebSocketListener {
-
-
   // webSocket is thread safe, no need to lock
-  private lateinit var webSocket: WebSocket
+  private var webSocket: WebSocket = webSocketEngine.newWebSocket(url, headers, this@SubscribableWebSocket)
 
   // locked fields, these fields may be accessed from different threads and require locking
   private val lock = reentrantLock()
@@ -91,10 +90,7 @@ class SubscribableWebSocket(
   // end of locked fields
 
   init {
-    GlobalScope.launch(dispatcher) {
-      webSocket = webSocketEngine.newWebSocket(url(), headers, this@SubscribableWebSocket)
-      webSocket.connect()
-    }
+    webSocket.connect()
   }
 
   private suspend fun disconnect(throwable: Throwable) {
@@ -133,6 +129,7 @@ class SubscribableWebSocket(
             webSocket.send(apolloConnectionInitMessage(connectionParams()))
           }
           timeoutJob = GlobalScope.launch(dispatcher) {
+            delay(10_000)
             webSocket.close(CLOSE_GOING_AWAY, "Timeout while waiting for connection_ack")
             disconnect(DefaultApolloException("Timeout while waiting for ack"))
           }
@@ -149,6 +146,8 @@ class SubscribableWebSocket(
   override fun onMessage(text: String) {
     when (val message = text.toServerMessage()) {
       ConnectionAck -> {
+        timeoutJob?.cancel()
+        timeoutJob = null
         onInitialized()
         lock.withLock {
           state = State.Connected
@@ -225,19 +224,22 @@ class SubscribableWebSocket(
     }
 
     return when (result) {
-      AddResult.Added -> object : StartedOperation {
-        override fun stop() {
-          lock.withLock {
-            val id = request.requestUuid.toString()
-            if (activeListeners.remove(id) != null) {
-              webSocket.send(request.toStopMessage())
-            }
+      AddResult.Added -> {
+        webSocket.send(request.toStartMessage())
+        object : StartedOperation {
+          override fun stop() {
+            lock.withLock {
+              val id = request.requestUuid.toString()
+              if (activeListeners.remove(id) != null) {
+                webSocket.send(request.toStopMessage())
+              }
 
-            if (activeListeners.isEmpty()) {
-              idleJob?.cancel()
-              idleJob = GlobalScope.launch {
-                delay(idleTimeoutMillis)
-                disconnect(DefaultApolloException("WebSocket is idle"))
+              if (activeListeners.isEmpty()) {
+                idleJob?.cancel()
+                idleJob = GlobalScope.launch {
+                  delay(idleTimeoutMillis)
+                  disconnect(DefaultApolloException("WebSocket is idle"))
+                }
               }
             }
           }
@@ -256,7 +258,7 @@ class SubscribableWebSocket(
   }
 }
 
-enum class AddResult {
+private enum class AddResult {
   Disconnected,
   AlreadyExists,
   Added

@@ -2,11 +2,7 @@
 import com.apollographql.apollo.sample.server.SampleServer
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.exception.SubscriptionOperationException
-import com.apollographql.apollo3.network.ws.SubscriptionWsProtocolAdapter
-import com.apollographql.apollo3.network.ws.WebSocketConnection
-import com.apollographql.apollo3.network.ws.WebSocketNetworkTransport
-import com.apollographql.apollo3.network.ws.WsProtocol
-import kotlinx.coroutines.CoroutineScope
+import com.apollographql.apollo3.network.ws2.WebSocketNetworkTransport
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
@@ -47,7 +43,10 @@ class SampleServerTest {
   @Test
   fun simple() {
     val apolloClient = ApolloClient.Builder()
-        .serverUrl(sampleServer.subscriptionsUrl())
+        .serverUrl("unused")
+        .subscriptionNetworkTransport(WebSocketNetworkTransport.Builder()
+            .serverUrl(sampleServer.subscriptionsUrl())
+            .build())
         .build()
 
     runBlocking {
@@ -100,9 +99,11 @@ class SampleServerTest {
 
     runBlocking {
       apolloClient.subscription(CountSubscription(50, 1000)).toFlow().first()
-
-      withTimeout(500) {
-        transport.subscriptionCount.first { it == 0 }
+      check(transport.isConnected.value)
+      delay(500)
+      check(transport.isConnected.value)
+      withTimeout(1000) {
+        transport.isConnected.first { !it }
       }
 
       delay(1500)
