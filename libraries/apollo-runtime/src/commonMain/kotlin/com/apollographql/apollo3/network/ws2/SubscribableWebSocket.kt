@@ -5,17 +5,6 @@ import com.apollographql.apollo3.api.Operation
 import com.apollographql.apollo3.api.http.HttpHeader
 import com.apollographql.apollo3.exception.ApolloWebSocketClosedException
 import com.apollographql.apollo3.exception.DefaultApolloException
-import com.apollographql.apollo3.network.ws2.internal.Complete
-import com.apollographql.apollo3.network.ws2.internal.ConnectionAck
-import com.apollographql.apollo3.network.ws2.internal.ConnectionError
-import com.apollographql.apollo3.network.ws2.internal.ConnectionKeepAlive
-import com.apollographql.apollo3.network.ws2.internal.Data
-import com.apollographql.apollo3.network.ws2.internal.Error
-import com.apollographql.apollo3.network.ws2.internal.ParseError
-import com.apollographql.apollo3.network.ws2.internal.apolloConnectionInitMessage
-import com.apollographql.apollo3.network.ws2.internal.toServerMessage
-import com.apollographql.apollo3.network.ws2.internal.toStartMessage
-import com.apollographql.apollo3.network.ws2.internal.toStopMessage
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.CoroutineDispatcher
@@ -50,12 +39,12 @@ interface OperationListener {
   fun onResponse(response: Any?)
 
   /**
-   * The operation terminated successfully
+   * The operation terminated successfully. No calls to listener will be made
    */
   fun onComplete()
 
   /**
-   * The operation cannot be executed or failed.
+   * The operation cannot be executed or failed. No calls to listener will be made
    */
   fun onError(throwable: Throwable)
 
@@ -71,13 +60,16 @@ class SubscribableWebSocket(
     url: String,
     headers: List<HttpHeader>,
     private val idleTimeoutMillis: Long,
-    private val onInitialized: () -> Unit,
+    private val onConnected: () -> Unit,
     private val onDisconnected: () -> Unit,
     private val onDisposed: () -> Unit,
     private val dispatcher: CoroutineDispatcher,
-    private val connectionParams: suspend () -> Any?,
+    private val wsProtocol: WsProtocol,
     private val reopenWhen: suspend (Throwable) -> Boolean,
+    private val pingIntervalMillis: Long,
+    private val connectionAcknowledgeTimeoutMillis: Long,
 ) : WebSocketListener {
+
   // webSocket is thread safe, no need to lock
   private var webSocket: WebSocket = webSocketEngine.newWebSocket(url, headers, this@SubscribableWebSocket)
 
@@ -87,30 +79,36 @@ class SubscribableWebSocket(
   private var state: State = State.Initial
   private var activeListeners = mutableMapOf<String, OperationListener>()
   private var idleJob: Job? = null
+  private var pingJob: Job? = null
   // end of locked fields
 
-  init {
+  fun connect() {
     webSocket.connect()
   }
 
   private suspend fun disconnect(throwable: Throwable) {
-    var listeners: Collection<OperationListener>
-    lock.withLock {
+    // Tell upstream that this socket is disconnected
+    // No new listener are added after this
+    onDisconnected()
+
+    val listeners = lock.withLock {
+      pingJob?.cancel()
+      pingJob = null
       if (state != State.Disconnected) {
         state = State.Disconnected
-        listeners = activeListeners.values.toList()
+        activeListeners.values.toList()
       } else {
         return
       }
     }
-    onDisconnected()
 
-    val reopen = reopenWhen.invoke(throwable)
+    val reopen = if (listeners.isNotEmpty()) {
+      reopenWhen.invoke(throwable)
+    } else {
+      false
+    }
 
     onDisposed()
-    listeners = lock.withLock {
-      activeListeners.values.toList()
-    }
 
     listeners.forEach {
       if (reopen) {
@@ -126,10 +124,10 @@ class SubscribableWebSocket(
       when (state) {
         State.Initial -> {
           GlobalScope.launch(dispatcher) {
-            webSocket.send(apolloConnectionInitMessage(connectionParams()))
+            webSocket.send(wsProtocol.connectionInit())
           }
           timeoutJob = GlobalScope.launch(dispatcher) {
-            delay(10_000)
+            delay(connectionAcknowledgeTimeoutMillis)
             webSocket.close(CLOSE_GOING_AWAY, "Timeout while waiting for connection_ack")
             disconnect(DefaultApolloException("Timeout while waiting for ack"))
           }
@@ -144,13 +142,21 @@ class SubscribableWebSocket(
   }
 
   override fun onMessage(text: String) {
-    when (val message = text.toServerMessage()) {
+    when (val message = wsProtocol.parseServerMessage(text)) {
       ConnectionAck -> {
         timeoutJob?.cancel()
         timeoutJob = null
-        onInitialized()
+        onConnected()
         lock.withLock {
           state = State.Connected
+          if (pingIntervalMillis > 0) {
+            pingJob = GlobalScope.launch {
+              while (true) {
+                delay(pingIntervalMillis)
+                wsProtocol.ping()?.let { webSocket.send(it) }
+              }
+            }
+          }
         }
       }
 
@@ -165,10 +171,15 @@ class SubscribableWebSocket(
         // nothing so far?
       }
 
-      is Data -> {
+      is Response -> {
         lock.withLock {
           activeListeners.get(message.id)
-        }?.onResponse(message.payload)
+        }?.let {
+          it.onResponse(message.response)
+          if (message.complete) {
+            it.onComplete()
+          }
+        }
       }
 
       is Complete -> {
@@ -176,15 +187,30 @@ class SubscribableWebSocket(
           activeListeners.get(message.id)
         }?.onComplete()
       }
-      is Error -> {
+
+      is OperationError -> {
         lock.withLock {
           activeListeners.get(message.id)
         }?.onError(DefaultApolloException("Server send an error ${message.payload}"))
       }
+
       is ParseError -> {
         // This is an unknown or malformed message
         // It's not 100% clear what we should do here. Should we terminate the operation?
-        println("Cannot parse message: '${message.message}'")
+        println("Cannot parse message: '${message.errorMessage}'")
+      }
+
+      Ping -> {
+        GlobalScope.launch {
+          val pong = wsProtocol.pong()
+          if (pong != null) {
+            webSocket.send(pong)
+          }
+        }
+      }
+
+      Pong -> {
+        // nothing to do
       }
     }
   }
@@ -206,62 +232,50 @@ class SubscribableWebSocket(
   }
 
   fun <D : Operation.Data> startOperation(request: ApolloRequest<D>, listener: OperationListener): StartedOperation {
-    val result = lock.withLock {
+    val added = lock.withLock {
       idleJob?.cancel()
       idleJob = null
 
-      if (state == State.Disconnected) {
-        // We have disconnected this socket
-        AddResult.Disconnected
+      if (activeListeners.containsKey(request.requestUuid.toString())) {
+        false
       } else {
-        if (activeListeners.containsKey(request.requestUuid.toString())) {
-          AddResult.AlreadyExists
-        } else {
-          activeListeners.put(request.requestUuid.toString(), listener)
-          AddResult.Added
-        }
+        activeListeners.put(request.requestUuid.toString(), listener)
+        true
       }
     }
 
-    return when (result) {
-      AddResult.Added -> {
-        webSocket.send(request.toStartMessage())
-        object : StartedOperation {
-          override fun stop() {
-            lock.withLock {
-              val id = request.requestUuid.toString()
-              if (activeListeners.remove(id) != null) {
-                webSocket.send(request.toStopMessage())
-              }
+    if (!added) {
+      listener.onError(DefaultApolloException("There is already a subscription with that id"))
+      return StartedOperationNoOp
+    }
 
-              if (activeListeners.isEmpty()) {
-                idleJob?.cancel()
-                idleJob = GlobalScope.launch {
-                  delay(idleTimeoutMillis)
-                  disconnect(DefaultApolloException("WebSocket is idle"))
-                }
-              }
-            }
+    GlobalScope.launch { webSocket.send(wsProtocol.operationStart(request)) }
+
+    return DefaultStartedOperation(request)
+  }
+
+  fun closeConnection(throwable: Throwable) {
+    GlobalScope.launch { disconnect(throwable) }
+  }
+
+  inner class DefaultStartedOperation<D: Operation.Data>(val request: ApolloRequest<D>): StartedOperation {
+    override fun stop() {
+      lock.withLock {
+        val id = request.requestUuid.toString()
+        if (activeListeners.remove(id) != null) {
+          GlobalScope.launch { webSocket.send(wsProtocol.operationStop(request)) }
+        }
+
+        if (activeListeners.isEmpty()) {
+          idleJob?.cancel()
+          idleJob = GlobalScope.launch {
+            delay(idleTimeoutMillis)
+            disconnect(DefaultApolloException("WebSocket is idle"))
           }
         }
       }
-
-      AddResult.Disconnected -> {
-        listener.onRetry(DefaultApolloException("The WebSocket was already disconnected"))
-        StartedOperationNoOp
-      }
-      AddResult.AlreadyExists -> {
-        listener.onError(DefaultApolloException("There is already a subscription with that id"))
-        StartedOperationNoOp
-      }
     }
   }
-}
-
-private enum class AddResult {
-  Disconnected,
-  AlreadyExists,
-  Added
 }
 
 private enum class State {
@@ -274,4 +288,11 @@ private enum class State {
 
 private val StartedOperationNoOp = object : StartedOperation {
   override fun stop() {}
+}
+
+private fun WebSocket.send(clientMessage: ClientMessage) {
+  when (clientMessage) {
+    is TextClientMessage -> send(clientMessage.text)
+    is DataClientMessage -> send(clientMessage.data)
+  }
 }

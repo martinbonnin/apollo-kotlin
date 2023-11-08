@@ -31,33 +31,53 @@ class WebSocketNetworkTransport private constructor(
     private val headers: List<HttpHeader>,
     private val webSocketEngine: WebSocketEngine,
     private val idleTimeoutMillis: Long,
+    private val wsProtocol: WsProtocol,
     private val reopenWhen: (suspend (Throwable, attempt: Long) -> Boolean),
-    private val connectionParams: (suspend () -> Any?),
+    private val pingIntervalMillis: Long,
+    private val connectionAcknowledgeTimeoutMillis: Long,
 ) : NetworkTransport {
 
   private val isConnectedPrivate = MutableStateFlow(false)
   private var attempt = 0L
+
   private val lock = reentrantLock()
-  private var subscribableWebSocket: SubscribableWebSocket? = null
+  /**
+   * [currentSocket] is set to null as soon as it is disconnected and moved to [previousSocket]
+   * while [reopenWhen] is called to decide if the subscriptions should be retried or not.
+   * During that time, any new socket is left in a non-started state.
+   * When [previousSocket] is disposed, it is set to null and at that time [currentSocket] can be started
+   */
+  private var currentSocket: SubscribableWebSocket? = null
+  private var previousSocket: SubscribableWebSocket? = null
 
   @ApolloExperimental
   val isConnected = isConnectedPrivate.asStateFlow()
 
   val subscriptionCount = MutableStateFlow(0)
 
-  private fun onWebSocketInitialized() {
+  private fun onWebSocketConnected() {
     isConnectedPrivate.value = true
     attempt = 0
   }
 
-  private fun onWebSocketDisposed() {
+  private fun onWebSocketDisconnected() {
+    isConnectedPrivate.value = false
+
     lock.withLock {
-      subscribableWebSocket = null
+      previousSocket = currentSocket
+      currentSocket = null
     }
   }
 
-  private fun onWebSocketDisconnected() {
-    isConnectedPrivate.value = false
+  private fun onWebSocketDisposed() {
+    lock.withLock {
+      if (previousSocket != null) {
+        previousSocket = null
+        if (currentSocket != null) {
+          currentSocket!!.connect()
+        }
+      }
+    }
   }
 
   private suspend fun reopenWebSocketWhen(throwable: Throwable): Boolean {
@@ -82,21 +102,26 @@ class WebSocketNetworkTransport private constructor(
 
       val operationListener = DefaultOperationListener(newRequest, this)
       val reg = lock.withLock {
-        if (subscribableWebSocket == null) {
-          subscribableWebSocket = SubscribableWebSocket(
+        if (currentSocket == null) {
+          currentSocket = SubscribableWebSocket(
               webSocketEngine = webSocketEngine,
               url = serverUrl(),
               headers = headers,
               idleTimeoutMillis = idleTimeoutMillis,
-              onInitialized = ::onWebSocketInitialized,
-              onDisposed = ::onWebSocketDisposed,
+              onConnected = ::onWebSocketConnected,
               onDisconnected = ::onWebSocketDisconnected,
+              onDisposed = ::onWebSocketDisposed,
               dispatcher = Dispatchers.Default,
-              connectionParams = connectionParams,
+              wsProtocol = wsProtocol,
               reopenWhen = ::reopenWebSocketWhen,
+              pingIntervalMillis = pingIntervalMillis,
+              connectionAcknowledgeTimeoutMillis = connectionAcknowledgeTimeoutMillis
           )
         }
-        subscribableWebSocket!!.startOperation(newRequest, operationListener)
+        if (previousSocket == null) {
+          currentSocket!!.connect()
+        }
+        currentSocket!!.startOperation(newRequest, operationListener)
       }
 
       awaitClose {
@@ -113,19 +138,35 @@ class WebSocketNetworkTransport private constructor(
 
   }
 
+  /**
+   * Close the connection to the server (if it's open).
+   *
+   * This can be used to force a reconnection to the server, for instance when new auth tokens should be passed to the headers.
+   *
+   * The given [reason] will be propagated to [Builder.reopenWhen] to determine if the connection should be reopened. If not, it will be
+   * propagated to any Flows waiting for responses.
+   */
+  fun closeConnection(reason: Throwable) {
+    currentSocket?.closeConnection(reason)
+  }
+
+
   class Builder {
     private var serverUrl: (suspend () -> String)? = null
     private var headers: List<HttpHeader>? = null
     private var webSocketEngine: WebSocketEngine? = null
     private var idleTimeoutMillis: Long? = null
     private var reopenWhen: (suspend (Throwable, attempt: Long) -> Boolean)? = null
-    private var connectionParams: (suspend () -> Any?)? = null
+    private var wsProtocol: WsProtocol? = null
+    private var pingIntervalMillis: Long? = null
+    private var connectionAcknowledgeTimeoutMillis: Long? = null
 
     fun serverUrl(serverUrl: suspend () -> String) = apply {
       this.serverUrl = serverUrl
     }
+
     fun serverUrl(serverUrl: String) = apply {
-      this.serverUrl = {serverUrl}
+      this.serverUrl = { serverUrl }
     }
 
     fun headers(headers: List<HttpHeader>) = apply {
@@ -144,8 +185,16 @@ class WebSocketNetworkTransport private constructor(
       this.reopenWhen = reopenWhen
     }
 
-    fun connectionParams(connectionParams: suspend () -> Any?) = apply {
-      this.connectionParams = connectionParams
+    fun wsProtocol(wsProtocol: WsProtocol) = apply {
+      this.wsProtocol = wsProtocol
+    }
+
+    fun pingIntervalMillis(pingIntervalMillis: Long) = apply {
+      this.pingIntervalMillis = pingIntervalMillis
+    }
+
+    fun connectionAcknowledgeTimeoutMillis(connectionAcknowledgeTimeoutMillis: Long) = apply {
+      this.connectionAcknowledgeTimeoutMillis = connectionAcknowledgeTimeoutMillis
     }
 
     fun build() = WebSocketNetworkTransport(
@@ -154,7 +203,9 @@ class WebSocketNetworkTransport private constructor(
         webSocketEngine = webSocketEngine ?: WebSocketEngine(),
         idleTimeoutMillis = idleTimeoutMillis ?: 60_000,
         reopenWhen = reopenWhen ?: { _, _ -> false },
-        connectionParams = connectionParams ?: { null }
+        wsProtocol = wsProtocol ?: GraphQLWsProtocol { null },
+        pingIntervalMillis = pingIntervalMillis ?: -1L,
+        connectionAcknowledgeTimeoutMillis = connectionAcknowledgeTimeoutMillis ?: 10_000L
     )
   }
 }
