@@ -1,6 +1,5 @@
 package com.apollographql.apollo3.gradle.internal
 
-import com.apollographql.apollo3.compiler.APOLLO_VERSION
 import com.apollographql.apollo3.gradle.api.ApolloExtension
 import com.apollographql.apollo3.gradle.api.ApolloGradleToolingModel
 import org.gradle.api.Plugin
@@ -47,12 +46,6 @@ constructor(private val toolingModelRegistry: ToolingModelBuilderRegistry) : Plu
       }
     }
   }
-
-
-  companion object {
-    internal val extraHeaders = mapOf(
-        "apollographql-client-name" to "apollo-gradle-plugin",
-        "apollographql-client-version" to APOLLO_VERSION
-    )
-  }
 }
+
+val APOLLO_VERSION = "4.0.0-beta.5-SNAPSHOT"

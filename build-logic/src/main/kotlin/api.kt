@@ -32,9 +32,9 @@ fun Project.apolloLibrary(
   // Within the 'tests' project (a composite build), dependencies are automatically substituted to use the project's one.
   // But we don't want this, for example apollo-tooling depends on a published version of apollo-api.
   // So disable this behavior (see https://docs.gradle.org/current/userguide/composite_builds.html#deactivate_included_build_substitutions).
-  configurations.all {
-    resolutionStrategy.useGlobalDependencySubstitutionRules.set(false)
-  }
+//  configurations.all {
+//    resolutionStrategy.useGlobalDependencySubstitutionRules.set(false)
+//  }
 
   if (extensions.findByName("kotlin") is KotlinMultiplatformExtension) {
     configureMpp(

@@ -179,6 +179,7 @@ public final class com/apollographql/apollo3/compiler/FileUtils {
 	public static final fun readIrSchema (Ljava/io/File;)Lcom/apollographql/apollo3/compiler/ir/IrSchema;
 	public static final fun readOperationOutput (Ljava/io/File;)Ljava/util/Map;
 	public static final fun readPersistedQueryManifest (Ljava/io/File;)Lcom/apollographql/apollo3/compiler/pqm/PersistedQueryManifest;
+	public static final fun readUsedCoordinates (Ljava/io/File;)Ljava/util/Map;
 	public static final fun writeCodegenMetadata (Lcom/apollographql/apollo3/compiler/CodegenMetadata;Ljava/io/File;)V
 	public static final fun writeCodegenOptions (Lcom/apollographql/apollo3/compiler/CodegenOptions;Ljava/io/File;)V
 	public static final fun writeCodegenSchema (Lcom/apollographql/apollo3/compiler/CodegenSchema;Ljava/io/File;)V
@@ -188,6 +189,7 @@ public final class com/apollographql/apollo3/compiler/FileUtils {
 	public static final fun writeIrSchema (Lcom/apollographql/apollo3/compiler/ir/IrSchema;Ljava/io/File;)V
 	public static final fun writeOperationOutput (Ljava/util/Map;Ljava/io/File;)V
 	public static final fun writePersistedQueryManifest (Lcom/apollographql/apollo3/compiler/pqm/PersistedQueryManifest;Ljava/io/File;)V
+	public static final fun writeUsedCoordinates (Ljava/util/Map;Ljava/io/File;)V
 }
 
 public final class com/apollographql/apollo3/compiler/GeneratedMethod : java/lang/Enum {

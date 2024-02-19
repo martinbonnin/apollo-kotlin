@@ -7,7 +7,6 @@ import com.android.build.gradle.TestedExtension
 import com.android.build.gradle.api.BaseVariant
 import com.android.build.gradle.api.TestVariant
 import com.android.build.gradle.api.UnitTestVariant
-import com.apollographql.apollo3.compiler.capitalizeFirstLetter
 import com.apollographql.apollo3.gradle.api.androidExtensionOrThrow
 import com.apollographql.apollo3.gradle.api.kotlinProjectExtension
 import org.gradle.api.NamedDomainObjectContainer
@@ -16,6 +15,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.configurationcache.extensions.capitalized
 import java.io.File
 import java.lang.reflect.Method
 import java.lang.reflect.ParameterizedType
@@ -139,11 +139,11 @@ fun connectToAndroidVariant(project: Project, variant: Any, outputDir: Provider<
      */
     val sourceSetName = when {
       variant is TestVariant && variant.name.endsWith("AndroidTest") -> {
-        "androidTest${variant.name.removeSuffix("AndroidTest").capitalizeFirstLetter()}"
+        "androidTest${variant.name.removeSuffix("AndroidTest").capitalized()}"
       }
 
       variant is UnitTestVariant && variant.name.endsWith("UnitTest") -> {
-        "test${variant.name.removeSuffix("UnitTest").capitalizeFirstLetter()}"
+        "test${variant.name.removeSuffix("UnitTest").capitalized()}"
       }
 
       else -> variant.name

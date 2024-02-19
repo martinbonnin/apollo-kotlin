@@ -1,13 +1,13 @@
 package com.apollographql.apollo3.gradle.internal
 
-import com.apollographql.apollo3.compiler.capitalizeFirstLetter
 import com.apollographql.apollo3.gradle.api.Service
+import org.gradle.configurationcache.extensions.capitalized
 
 object ModelNames {
   private fun camelCase(vararg elements: String): String {
     return elements.mapIndexed { index, s ->
       if (index != 0) {
-        s.capitalizeFirstLetter()
+        s.capitalized()
       } else {
         s
       }
@@ -27,6 +27,7 @@ object ModelNames {
   fun pushApolloSchema() = camelCase("pushApolloSchema")
   fun checkApolloVersions() = "checkApolloVersions"
   fun convertApolloSchema() = "convertApolloSchema"
+  fun extractUsedCoordinates(service: Service) = camelCase("extract", service.name, "ApolloUsedCoordinates")
 
   // Configuration names
   fun metadataConfiguration() = "apolloMetadata"

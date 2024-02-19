@@ -1,4 +1,4 @@
-import com.apollographql.apollo3.compiler.MODELS_RESPONSE_BASED
+import com.apollographql.apollo3.gradle.api.MODELS_RESPONSE_BASED
 
 plugins {
   id("org.jetbrains.kotlin.jvm")

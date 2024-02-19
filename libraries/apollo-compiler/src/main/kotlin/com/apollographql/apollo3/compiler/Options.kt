@@ -634,14 +634,15 @@ class ScalarInfo(
     val userDefined: Boolean = true,
 )
 
-private val NoOpLogger = object : ApolloCompiler.Logger {
+private val StdoutLogger = object : ApolloCompiler.Logger {
   override fun warning(message: String) {
+    println(message)
   }
 }
 
 internal val defaultAlwaysGenerateTypesMatching = emptySet<String>()
 internal val defaultOperationOutputGenerator = OperationOutputGenerator.Default(OperationIdGenerator.Sha256)
-internal val defaultLogger = NoOpLogger
+internal val defaultLogger = StdoutLogger
 internal const val defaultUseSemanticNaming = true
 internal const val defaultWarnOnDeprecatedUsages = true
 internal const val defaultFailOnWarnings = false

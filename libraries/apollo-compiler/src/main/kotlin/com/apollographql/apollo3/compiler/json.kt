@@ -8,6 +8,9 @@ import com.apollographql.apollo3.compiler.ir.IrSchema
 import com.apollographql.apollo3.compiler.operationoutput.OperationDescriptor
 import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo3.compiler.pqm.PersistedQueryManifest
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -30,6 +33,8 @@ private inline fun <reified T> File.parseFromJson(): T {
   return json.decodeFromString<T>(readText())
 }
 
+private val usedCoordinatesSerializer = MapSerializer(String.serializer(), SetSerializer(String.serializer()))
+
 /**
  * Reading options
  */
@@ -39,6 +44,8 @@ fun File.toCodegenSchemaOptions(): CodegenSchemaOptions = parseFromJson()
 fun File.toIrOptions(): IrOptions = parseFromJson()
 @JvmName("readCodegenOptions")
 fun File.toCodegenOptions(): CodegenOptions = parseFromJson()
+@JvmName("readUsedCoordinates")
+fun File.toUsedCoordinates(): UsedCoordinates = json.decodeFromString(usedCoordinatesSerializer, readText())
 
 /**
  * Writing options to files need to be public to start
@@ -49,6 +56,8 @@ fun CodegenSchemaOptions.writeTo(file: File) = encodeToJson(file)
 fun IrOptions.writeTo(file: File) = encodeToJson(file)
 @JvmName("writeCodegenOptions")
 fun CodegenOptions.writeTo(file: File) = encodeToJson(file)
+@JvmName("writeUsedCoordinates")
+fun UsedCoordinates.writeTo(file: File) = file.writeText(json.encodeToString(usedCoordinatesSerializer,this))
 
 /**
  * Reading compiler outputs

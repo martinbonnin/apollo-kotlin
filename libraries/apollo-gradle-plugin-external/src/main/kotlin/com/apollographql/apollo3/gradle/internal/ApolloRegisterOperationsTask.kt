@@ -11,89 +11,70 @@ import com.apollographql.apollo3.tooling.PersistedQuery
 import com.apollographql.apollo3.tooling.PublishOperationsSuccess
 import com.apollographql.apollo3.tooling.RegisterOperations
 import com.apollographql.apollo3.tooling.publishOperations
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.provider.Property
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.TaskAction
+import gratatouille.GInputFile
+import gratatouille.GTaskAction
 
-abstract class ApolloRegisterOperationsTask: DefaultTask() {
-  @get:InputFile
-  @get:Optional
-  abstract val operationOutput: RegularFileProperty
 
-  @get:Input
-  @get:Optional
-  abstract val operationManifestFormat: Property<String>
+@GTaskAction
+fun registerOperations(
+    listId: String?,
+    operationManifestFormat: String,
+    operationOutput: GInputFile,
+    key: String?,
+    graph: String?,
+    graphVariant: String?,
+) {
 
-  @get:Input
-  @get:Optional
-  abstract val listId: Property<String>
-
-  @get:Input
-  abstract val key: Property<String>
-
-  @get:Input
-  abstract val graph: Property<String>
-
-  @get:Input
-  @get:Optional
-  abstract val graphVariant: Property<String>
-
-  @TaskAction
-  fun taskAction() {
-    if (listId.isPresent) {
-      check(operationManifestFormat.get() == MANIFEST_PERSISTED_QUERY) {
-        """Apollo: registering operations to a persisted query list requires operationManifestFormat = "$MANIFEST_PERSISTED_QUERY":
+  if (listId != null) {
+    check(operationManifestFormat == MANIFEST_PERSISTED_QUERY) {
+      """Apollo: registering operations to a persisted query list requires operationManifestFormat = "$MANIFEST_PERSISTED_QUERY":
           |apollo {
           |  service("service") {
           |    operationManifestFormat.set("$MANIFEST_PERSISTED_QUERY")
           |  }
           |}
         """.trimMargin()
-      }
-      val result = publishOperations(
-          listId = listId.get(),
-          persistedQueries = operationOutput.get().asFile.toPersistedQueryManifest().operations.map {
-            PersistedQuery(
-                name = it.name,
-                id = it.id,
-                body = it.body,
-                operationType = it.type
-            )
-          },
-          apolloKey = key.get(),
-          graph = graph.get()
-      )
+    }
+    val result = publishOperations(
+        listId = listId,
+        persistedQueries = operationOutput.toPersistedQueryManifest().operations.map {
+          PersistedQuery(
+              name = it.name,
+              id = it.id,
+              body = it.body,
+              operationType = it.type
+          )
+        },
+        apolloKey = key ?: error("key is required to register operations"),
+        graph = graph
+    )
 
-      when(result) {
-        is PublishOperationsSuccess -> {
-          logger.info("Apollo: persisted query list uploaded successfully")
-        }
-
-        is CannotModifyOperationBody -> error("Cannot upload persisted query list: cannot modify operation body ('${result.message}')")
-        GraphNotFound ->  error("Cannot upload persisted query list: graph '$graph' not found")
-        is PermissionError -> error("Cannot upload persisted query list: permission error ('${result.message}')")
+    when(result) {
+      is PublishOperationsSuccess -> {
+        logger().warning("Apollo: persisted query list uploaded successfully")
       }
-    } else {
-      logger.warn("Apollo: registering operations without a listId is deprecated")
-      check(operationManifestFormat.get() == MANIFEST_OPERATION_OUTPUT) {
-        """Apollo: registering legacy operations requires operationManifestFormat = "$MANIFEST_OPERATION_OUTPUT":
+
+      is CannotModifyOperationBody -> error("Cannot upload persisted query list: cannot modify operation body ('${result.message}')")
+      GraphNotFound ->  error("Cannot upload persisted query list: graph '$graph' not found")
+      is PermissionError -> error("Cannot upload persisted query list: permission error ('${result.message}')")
+    }
+  } else {
+    logger().warning("Apollo: registering operations without a listId is deprecated")
+    check(operationManifestFormat == MANIFEST_OPERATION_OUTPUT) {
+      """Apollo: registering legacy operations requires operationManifestFormat = "$MANIFEST_OPERATION_OUTPUT":
           |apollo {
           |  service("service") {
           |    operationManifestFormat.set("$MANIFEST_OPERATION_OUTPUT")
           |  }
           |}
         """.trimMargin()
-      }
-      RegisterOperations.registerOperations(
-          key = key.get() ?: error("key is required to register operations"),
-          graphID = graph.get() ?: error("graphID is required to register operations"),
-          graphVariant = graphVariant.get() ?: error("graphVariant is required to register operations"),
-          operationOutput = operationOutput.get().asFile.toOperationOutput()
-      )
     }
+    @Suppress("DEPRECATION")
+    RegisterOperations.registerOperations(
+        key = key ?: error("key is required to register operations"),
+        graphID = graph ?: error("graphID is required to register operations"),
+        graphVariant = graphVariant ?: error("graphVariant is required to register operations"),
+        operationOutput = operationOutput.toOperationOutput()
+    )
   }
 }
