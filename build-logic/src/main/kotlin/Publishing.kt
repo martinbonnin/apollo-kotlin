@@ -341,6 +341,11 @@ private fun Project.configurePublishingInternal() {
           password = System.getenv("REPSY_PASSWORD")
         }
       }
+
+      maven {
+        name = "gcs"
+        setUrl("gcs://martin-maven/m2")
+      }
     }
   }
 

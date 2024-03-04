@@ -19,6 +19,7 @@ local.properties
 
 # Secret used by sample apps
 github_token
+service-account.json
 
 # XCode 
 xcuserdata
