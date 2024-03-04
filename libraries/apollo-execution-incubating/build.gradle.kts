@@ -4,7 +4,6 @@ plugins {
 
 apolloLibrary(
     namespace = "com.apollographql.apollo3.execution",
-    publish = false,
 )
 
 kotlin {

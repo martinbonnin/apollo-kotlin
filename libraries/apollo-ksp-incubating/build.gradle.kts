@@ -3,8 +3,7 @@ plugins {
 }
 
 apolloLibrary(
-  namespace = "com.apollographql.apollo3.ksp",
-    publish = false,
+    namespace = "com.apollographql.apollo3.ksp",
 )
 
 dependencies {
