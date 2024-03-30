@@ -6,6 +6,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinExecutableSchemaContext
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols
+import com.apollographql.apollo3.compiler.decapitalizeFirstLetter
 import com.apollographql.apollo3.compiler.ir.IrTargetObject
 import com.apollographql.apollo3.compiler.ir.asKotlinPoet
 import com.squareup.kotlinpoet.ClassName
@@ -64,20 +65,14 @@ internal class ExecutableSchemaBuilderBuilder(
                 .add(".schema(schema)\n")
                 .add(".resolver(%L)\n", mainResolver)
                 .add(".adapterRegistry(%L)\n", adapterRegistry)
-                .add(".roots(%L.create(", KotlinSymbols.Roots)
                 .apply {
                   rootIrTargetObjects.map { irTargetObject ->
-                    if (irTargetObject == null) {
-                      CodeBlock.of("null")
-                    } else {
-                      CodeBlock.of("root${irTargetObject.operationType?.capitalizeFirstLetter()}Object")
+                    if (irTargetObject != null) {
+                      val name = irTargetObject.operationType!!
+                      add(".${name}Root(root${name.capitalizeFirstLetter()}Object)")
                     }
-                  }.joinToCode(", ")
-                      .let {
-                        add(it)
-                      }
+                  }
                 }
-                .add("))\n")
                 .build()
         )
         .build()

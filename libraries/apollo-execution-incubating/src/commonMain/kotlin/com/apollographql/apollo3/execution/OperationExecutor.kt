@@ -25,7 +25,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
-private object UnusedRoot
+sealed interface DefaultRoot
+data object DefaultQueryRoot: DefaultRoot
+data object DefaultMutationRoot: DefaultRoot
+data object DefaultSubscriptionRoot: DefaultRoot
 
 internal class OperationExecutor(
     val operation: GQLOperationDefinition,
@@ -54,7 +57,7 @@ internal class OperationExecutor(
       "subscription" -> error("Use executeSubscription() to execute subscriptions")
       else -> error("Unknown operation type '${operationDefinition.operationType}")
     }
-    val data = adaptToJson(emptyList(), rootObject ?: UnusedRoot, GQLNamedType(null, rootTypename), operationDefinition.selections)
+    val data = adaptToJson(emptyList(), rootObject, GQLNamedType(null, rootTypename), operationDefinition.selections)
 
     return GraphQLResponse(data, errors, null)
   }
@@ -93,7 +96,7 @@ internal class OperationExecutor(
     }
 
     val resolveInfo = ResolveInfo(
-        rootObject ?: UnusedRoot,
+        rootObject,
         executionContext,
         MergedField(field, selections = field.selections),
         schema = schema,

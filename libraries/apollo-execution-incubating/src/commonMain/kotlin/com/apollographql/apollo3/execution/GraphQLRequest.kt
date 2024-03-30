@@ -58,54 +58,57 @@ class GraphQLRequest internal constructor(
   }
 }
 
+
 sealed interface GraphQLRequestResult
 
 class GraphQLRequestError internal constructor(
     val message: String,
 ) : GraphQLRequestResult
 
-fun Map<String, Any?>.toGraphQLRequest(): GraphQLRequestResult {
+fun Map<String, Any?>.toGraphQLRequest(): Result<GraphQLRequest> {
   val map = this
 
   val document = map.get("query")
   if (document !is String) {
-    return GraphQLRequestError("Expected 'query' to be a string")
+    return Result.failure(Exception("Expected 'query' to be a string"))
   }
 
   val variables = map.get("variables")
   if (variables !is Map<*, *>?) {
-    return GraphQLRequestError("Expected 'variables' to be an object")
+    return Result.failure(Exception("Expected 'variables' to be an object"))
   }
 
   val extensions = map.get("extensions")
   if (extensions !is Map<*, *>?) {
-    return GraphQLRequestError("Expected 'extensions' to be an object")
+    return Result.failure(Exception("Expected 'extensions' to be an object"))
   }
 
   val operationName = map.get("operationName")
   if (operationName !is String?) {
-    return GraphQLRequestError("Expected 'operationName' to be a string")
+    return Result.failure(Exception("Expected 'operationName' to be a string"))
   }
   return GraphQLRequest.Builder()
       .document(document)
       .variables(variables as Map<String, Any?>?)
       .extensions(extensions as Map<String, Any?>?)
       .operationName(operationName)
-      .build()
+      .build().let {
+        Result.success(it)
+      }
 }
 
 @OptIn(ApolloInternal::class)
-fun BufferedSource.parsePostGraphQLRequest(): GraphQLRequestResult {
+fun BufferedSource.parsePostGraphQLRequest(): Result<GraphQLRequest> {
   val map = try {
     jsonReader().use {
       it.readAny()
     }
   } catch (e: Exception) {
-    return GraphQLRequestError(e.message ?: "Invalid JSON received")
+    return Result.failure(e)
   }
 
   if (map !is Map<*, *>) {
-    return GraphQLRequestError("The received JSON is not an object")
+    return Result.failure(Exception("The received JSON is not an object"))
   }
 
   map as Map<String, Any?>
@@ -113,8 +116,11 @@ fun BufferedSource.parsePostGraphQLRequest(): GraphQLRequestResult {
   return map.toGraphQLRequest()
 }
 
+/**
+ * Parses a query string to a GraphQL request
+ */
 @OptIn(ApolloInternal::class)
-fun String.parseGetGraphQLRequest(): GraphQLRequestResult {
+fun String.parseGetGraphQLRequest(): Result<GraphQLRequest> {
   var fragmentStart = indexOfLast { it == '#' }
   if (fragmentStart < 0) {
     fragmentStart = length
@@ -146,15 +152,15 @@ fun String.parseGetGraphQLRequest(): GraphQLRequestResult {
           val variablesJson = try {
             get(1).urlDecode()
           } catch (e: Exception) {
-            return GraphQLRequestError("Cannot decode 'variables' ('${get(1)}')")
+            return Result.failure(Exception("Cannot decode 'variables' ('${get(1)}')", e))
           }
           val map = try {
             Buffer().writeUtf8(variablesJson).jsonReader().readAny()
           } catch (e: Exception) {
-            return GraphQLRequestError("'variables' is not a valid JSON ('${variablesJson}')")
+            return Result.failure(Exception("'variables' is not a valid JSON ('${variablesJson}')", e))
           }
           if (map !is Map<*, *>?) {
-            return GraphQLRequestError("Expected 'variables' to be an object")
+            return Result.failure(Exception("Expected 'variables' to be an object"))
           }
           builder.variables(map as Map<String, Any>?)
         }
@@ -163,15 +169,15 @@ fun String.parseGetGraphQLRequest(): GraphQLRequestResult {
           val extensions = try {
             get(1).urlDecode()
           } catch (e: Exception) {
-            return GraphQLRequestError("Cannot decode 'extensions' ('${get(1)}')")
+            return Result.failure(Exception("Cannot decode 'extensions' ('${get(1)}')", e))
           }
           val map = try {
             Buffer().writeUtf8(extensions).jsonReader().readAny()
           } catch (e: Exception) {
-            return GraphQLRequestError("'extensions' is not a valid JSON ('${extensions}')")
+            return Result.failure(Exception("'extensions' is not a valid JSON ('${extensions}')", e))
           }
           if (map !is Map<*, *>?) {
-            return GraphQLRequestError("Expected 'extensions' to be an object")
+            return Result.failure(Exception("Expected 'extensions' to be an object"))
           }
           builder.extensions(map as Map<String, Any>?)
         }
@@ -181,7 +187,7 @@ fun String.parseGetGraphQLRequest(): GraphQLRequestResult {
     }
   }
 
-  return builder.build()
+  return Result.success(builder.build())
 }
 
 internal sealed interface ApolloWebsocketClientMessageResult
@@ -318,10 +324,11 @@ internal fun String.parseApolloWebsocketClientMessage(): ApolloWebsocketClientMe
           return ApolloWebsocketClientMessageParseError("'payload' must be an Object in $this")
         }
 
-        return when (val request = (payload as Map<String, Any?>).toGraphQLRequest()) {
-          is GraphQLRequestError -> ApolloWebsocketClientMessageParseError("Cannot parse start payload: '${request.message}'")
-          is GraphQLRequest -> ApolloWebsocketStart(id, request = request)
-        }
+        val request = (payload as Map<String, Any?>).toGraphQLRequest()
+        return request.fold(
+            onFailure = { ApolloWebsocketClientMessageParseError("Cannot parse start payload: '${it.message}'") },
+            onSuccess = { ApolloWebsocketStart(id, request = it) }
+        )
       } else {
         return ApolloWebsocketStop(id)
       }

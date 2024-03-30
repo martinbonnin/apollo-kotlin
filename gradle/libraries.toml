@@ -34,7 +34,7 @@ kotlinx-coroutines = "1.8.0"
 kotlinx-datetime = "0.5.0"
 kotlinx-serialization-runtime = "1.6.2"
 ksp = "2.0.0-Beta5-1.0.19"
-ktor = "2.3.7"
+ktor = "2.3.9"
 moshix = "0.14.1"
 node-fetch = "2.6.7"
 node-ws = "8.14.2"
@@ -166,6 +166,7 @@ ktor-client-darwin = { group = "io.ktor", name = "ktor-client-darwin", version.r
 ktor-client-js = { group = "io.ktor", name = "ktor-client-js", version.ref = "ktor" }
 ktor-client-websockets = { group = "io.ktor", name = "ktor-client-websockets", version.ref = "ktor" }
 ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 ktor-network = { module = "io.ktor:ktor-network", version.ref = "ktor" }
@@ -200,6 +201,8 @@ turbine = { group = "app.cash.turbine", name = "turbine", version = "1.1.0" }
 uuid = { group = "com.benasher44", name = "uuid", version = "0.8.2" }
 vespene = { group = "net.mbonnin.vespene", name = "vespene-lib", version = "0.5" }
 slf4j = "org.slf4j:slf4j-simple:2.0.9"
+ktor-server-netty-jvm = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
+logback-classic = "ch.qos.logback:logback-classic:1.4.14"
 
 [plugins]
 apollo = { id = "com.apollographql.apollo3", version.ref = "apollo" }

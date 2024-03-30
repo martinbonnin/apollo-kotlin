@@ -35,7 +35,9 @@ class ExecutableSchema internal constructor(
     private var resolver: MainResolver? = null
     private var adapterRegistry: CustomScalarAdapters? = null
     private var schema: Schema? = null
-    private var roots: Roots? = null
+    private var queryRoot: (() -> Any)? = null
+    private var mutationRoot: (() -> Any)? = null
+    private var subscriptionRoot: (() -> Any)? = null
 
     fun persistedDocumentCache(persistedDocumentCache: PersistedDocumentCache?): Builder = apply {
       this.persistedDocumentCache = persistedDocumentCache
@@ -61,10 +63,6 @@ class ExecutableSchema internal constructor(
       this.resolver = mainResolver
     }
 
-    fun roots(roots: Roots): Builder = apply {
-      this.roots = roots
-    }
-
     fun build(): ExecutableSchema {
       return ExecutableSchema(
           schema ?: error("A schema is required to build an ExecutableSchema"),
@@ -72,8 +70,24 @@ class ExecutableSchema internal constructor(
           instrumentations,
           resolver ?: ThrowingResolver,
           adapterRegistry ?: CustomScalarAdapters.Empty,
-          roots ?: NullRoots
+          Roots.create(
+              queryRoot = queryRoot,
+              mutationRoot = mutationRoot,
+              subscriptionRoot = subscriptionRoot
+          )
       )
+    }
+
+    fun queryRoot(queryRoot: () -> Any) = apply {
+      this.queryRoot = queryRoot
+    }
+
+    fun mutationRoot(mutationRoot: () -> Any) = apply {
+      this.mutationRoot = mutationRoot
+    }
+
+    fun subscriptionRoot(subscriptionRoot: () -> Any) = apply {
+      this.subscriptionRoot = subscriptionRoot
     }
   }
 

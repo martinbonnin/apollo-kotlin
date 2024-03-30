@@ -18,7 +18,6 @@ internal object KotlinSymbols {
   val ExecutableSchemaBuilder = ClassName(ClassNames.apolloExecutionPackageName, "ExecutableSchema", "Builder")
   val Resolver = ClassName(ClassNames.apolloExecutionPackageName, "Resolver")
   val ResolveInfo = ClassName(ClassNames.apolloExecutionPackageName, "ResolveInfo")
-  val Roots = ClassName(ClassNames.apolloExecutionPackageName, "Roots")
   val Schema = ClassName(ClassNames.apolloAstPackageName, "Schema")
   val ObjectType = ClassNames.ObjectType.toKotlinPoetClassName()
   val ObjectTypeBuilder = ClassNames.ObjectTypeBuilder.toKotlinPoetClassName()

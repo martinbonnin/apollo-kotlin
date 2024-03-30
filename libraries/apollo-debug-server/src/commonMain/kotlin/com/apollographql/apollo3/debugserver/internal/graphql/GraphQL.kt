@@ -40,13 +40,13 @@ internal class GraphQL(
   }
 
   fun executeGraphQL(jsonBody: String): String {
-    val graphQLRequestResult = Buffer().writeUtf8(jsonBody).parsePostGraphQLRequest()
-    if (graphQLRequestResult is GraphQLRequestError) {
-      return graphQLRequestResult.message
-    }
-    graphQLRequestResult as GraphQLRequest
+    val result = Buffer().writeUtf8(jsonBody).parsePostGraphQLRequest()
+    val request = result.fold(
+        onFailure = { return it.message!! },
+        onSuccess = { it }
+    )
 
-    val graphQlResponse = executableSchema.execute(graphQLRequestResult, ExecutionContext.Empty)
+    val graphQlResponse = executableSchema.execute(request, ExecutionContext.Empty)
 
     val buffer = Buffer()
     graphQlResponse.serialize(buffer)

@@ -23,51 +23,54 @@ import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
 
 fun interface Resolver {
+  /**
+   * Resolves a field. A typical implementation is to use [ResolveInfo.parentObject]:
+   *
+   * ```kotlin
+   * fun resolve(resolveInfo: ResolveInfo): Any? {
+   *   val parent = resolveInfo.parentObject as Map<String, Any?>
+   *   return parent[resolveInfo.fieldName]
+   * }
+   * ```
+   *
+   */
   fun resolve(resolveInfo: ResolveInfo): Any?
 }
 
 /**
  * A [Resolver] that also has global knowledge about the graph and is able to resolve the typename of any given instance
  */
-interface MainResolver: Resolver {
+interface MainResolver : Resolver {
+  /**
+   * Returns the typename of the given [obj]
+   *
+   * This is used for polymorphic types to return the correct __typename depending on the runtime type of [obj].
+   * This function must return a non-null String for any Kotlin instance that represents a GraphQL type that implements an interface or is part of an union.
+   */
   fun typename(obj: Any): String?
 }
 
 interface Roots {
-  fun query(): Any?
-  fun mutation(): Any?
-  fun subscription(): Any?
+  fun query(): Any
+  fun mutation(): Any
+  fun subscription(): Any
 
   companion object {
-    fun create(queryObject: () -> Any?, mutationObject: (() -> Any?)?, subscriptionObject: (() -> Any?)?): Roots {
+    fun create(queryRoot: (() -> Any)?, mutationRoot: (() -> Any)?, subscriptionRoot: (() -> Any)?): Roots {
       return object : Roots {
-        override fun query(): Any? {
-          return queryObject()
+        override fun query(): Any {
+          return queryRoot?.invoke() ?: DefaultQueryRoot
         }
 
-        override fun mutation(): Any? {
-          return mutationObject?.invoke()
+        override fun mutation(): Any {
+          return mutationRoot?.invoke() ?: DefaultMutationRoot
         }
 
-        override fun subscription(): Any? {
-          return subscriptionObject?.invoke()
+        override fun subscription(): Any {
+          return subscriptionRoot?.invoke() ?: DefaultSubscriptionRoot
         }
       }
     }
-  }
-}
-
-object NullRoots: Roots {
-  override fun query(): Any? {
-    return null
-  }
-
-  override fun mutation(): Any? {
-    return null
-  }
-
-  override fun subscription(): Any? {
-    return null
   }
 }
 
@@ -75,7 +78,7 @@ object NullRoots: Roots {
  * A resolver that will always throw
  * Only useful to test introspection and/or errors
  */
-object ThrowingResolver: MainResolver {
+object ThrowingResolver : MainResolver {
   override fun typename(obj: Any): String? {
     TODO("Not implemented")
   }
@@ -94,6 +97,13 @@ interface Instrumentation {
 
 @Suppress("UNCHECKED_CAST")
 class ResolveInfo(
+    /**
+     * The parent object, maybe be [DefaultRoot]
+     *
+     * @see [ExecutableSchema.Builder.queryRoot]
+     * @see [ExecutableSchema.Builder.mutationRoot]
+     * @see [ExecutableSchema.Builder.subscriptionRoot]
+     */
     val parentObject: Any,
     val executionContext: ExecutionContext,
     val field: MergedField,
@@ -177,7 +187,7 @@ internal fun GQLValue.toJson(variables: Map<String, Any?>?): Any? {
 
     is GQLStringValue -> this.value
     is GQLVariableValue -> {
-      check (variables != null) {
+      check(variables != null) {
         "Cannot use this value in non-const context"
       }
       check(variables.containsKey(this.name)) {

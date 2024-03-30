@@ -291,17 +291,16 @@ class DownloadSchemaTests {
   class GraphQLHttpHandler(val executableSchema: ExecutableSchema, val executionContext: ExecutionContext) : HttpHandler {
     override fun invoke(request: Request): Response {
 
-      val graphQLRequestResult = when (request.method) {
+      val result = when (request.method) {
         org.http4k.core.Method.POST -> request.body.stream.source().buffer().use { it.parsePostGraphQLRequest() }
         else -> error("")
       }
 
-      if (graphQLRequestResult is GraphQLRequestError) {
-        return Response(Status.BAD_REQUEST).body(graphQLRequestResult.message)
+      if (result.isFailure) {
+        return Response(Status.BAD_REQUEST).body(result.exceptionOrNull()?.message ?: "")
       }
-      graphQLRequestResult as GraphQLRequest
 
-      val response = executableSchema.execute(graphQLRequestResult, executionContext)
+      val response = executableSchema.execute(result.getOrThrow(), executionContext)
 
       val buffer = Buffer()
       response.serialize(buffer)
