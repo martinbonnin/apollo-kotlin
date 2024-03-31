@@ -20,7 +20,6 @@ import com.squareup.kotlinpoet.joinToCode
 internal class ExecutableSchemaBuilderBuilder(
     private val context: KotlinExecutableSchemaContext,
     private val serviceName: String,
-    private val mainResolver: ClassName,
     private val adapterRegistry: MemberName,
     private val irTargetObjects: List<IrTargetObject>,
 ) : CgFileBuilder {
@@ -61,18 +60,28 @@ internal class ExecutableSchemaBuilderBuilder(
         }
         .addCode(
             CodeBlock.builder()
-                .add("return %L()\n", KotlinSymbols.ExecutableSchemaBuilder)
+                .add("val schemaBuilder = %L()\n", KotlinSymbols.ExecutableSchemaBuilder)
+                .indent()
                 .add(".schema(schema)\n")
-                .add(".resolver(%L)\n", mainResolver)
+                .apply {
+                  irTargetObjects.forEach { irTargetObject ->
+                    add(".addTypeChecker(%S)·{·it·is·%T·}\n", irTargetObject.name, irTargetObject.targetClassName.asKotlinPoet())
+                    irTargetObject.fields.forEach { irTargetField ->
+                      val coordinates = "${irTargetObject.name}.${irTargetField.name}"
+                      add(".addResolver(%S)·%L\n", coordinates, resolverBody(irTargetObject, irTargetField, context.resolver))
+                    }
+                  }
+                }
                 .add(".adapterRegistry(%L)\n", adapterRegistry)
                 .apply {
                   rootIrTargetObjects.map { irTargetObject ->
                     if (irTargetObject != null) {
                       val name = irTargetObject.operationType!!
-                      add(".${name}Root(root${name.capitalizeFirstLetter()}Object)")
+                      add(".${name}Root(root${name.capitalizeFirstLetter()}Object)\n")
                     }
                   }
                 }
+                .add("return schemaBuilder")
                 .build()
         )
         .build()

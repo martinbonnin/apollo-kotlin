@@ -6,7 +6,6 @@ import com.apollographql.apollo3.ast.toGQLDocument
 import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.execution.ExecutableSchema
 import com.apollographql.apollo3.execution.GraphQLRequest
-import com.apollographql.apollo3.execution.GraphQLRequestError
 import com.apollographql.apollo3.execution.WebSocketBinaryMessage
 import com.apollographql.apollo3.execution.WebSocketMessage
 import com.apollographql.apollo3.execution.WebSocketTextMessage
@@ -46,9 +45,7 @@ import org.http4k.websocket.WsHandler
 import org.http4k.websocket.WsMessage
 import org.http4k.websocket.WsResponse
 import org.http4k.websocket.WsStatus
-import sample.server.execution.SampleserverAdapterRegistry
 import sample.server.execution.SampleserverExecutableSchemaBuilder
-import sample.server.execution.SampleserverResolver
 import java.io.Closeable
 import java.time.Duration
 import org.http4k.routing.ws.bind as wsBind
@@ -69,18 +66,17 @@ fun ExecutableSchema(tag: String): ExecutableSchema {
 class GraphQLHttpHandler(val executableSchema: ExecutableSchema, val executionContext: ExecutionContext) : HttpHandler {
   override fun invoke(request: Request): Response {
 
-    val graphQLRequestResult = when (request.method) {
+    val result = when (request.method) {
       Method.GET -> request.uri.toString().parseGetGraphQLRequest()
       Method.POST -> request.body.stream.source().buffer().use { it.parsePostGraphQLRequest() }
       else -> error("")
     }
 
-    if (graphQLRequestResult is GraphQLRequestError) {
-      return Response(BAD_REQUEST).body(graphQLRequestResult.message)
+    if (result.isFailure) {
+      return Response(BAD_REQUEST).body(result.exceptionOrNull()?.message ?: "")
     }
-    graphQLRequestResult as GraphQLRequest
 
-    val response = executableSchema.execute(graphQLRequestResult, executionContext)
+    val response = executableSchema.execute(result.getOrThrow(), executionContext)
 
     val buffer = Buffer()
     response.serialize(buffer)

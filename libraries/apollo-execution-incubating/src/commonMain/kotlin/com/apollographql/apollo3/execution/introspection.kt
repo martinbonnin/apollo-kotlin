@@ -25,18 +25,8 @@ private inline fun <reified T> Any.cast() = this as T
 
 private object SchemaObject
 
-internal class IntrospectionResolvers(val schema: Schema) {
-
-    private val typenames = mapOf(
-        SchemaObject::class to "__Schema",
-        IntrospectionType::class to "__Type",
-        GQLFieldDefinition::class to "__Field",
-        GQLEnumValueDefinition::class to "__EnumValue",
-        GQLInputValueDefinition::class to "__InputValue",
-        GQLDirectiveDefinition::class to "__Directive"
-    )
-
-    private val resolvers = mapOf(
+internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
+    return mapOf(
         schema.queryTypeDefinition.name to mapOf(
             "__schema" to Resolver { SchemaObject },
             "__type" to Resolver {
@@ -272,16 +262,13 @@ internal class IntrospectionResolvers(val schema: Schema) {
                 }
             }
         )
-    )
-
-    fun typename(obj: Any): String? {
-        return typenames[obj::class]
-    }
-
-    fun resolver(typename: String, field: String): Resolver? {
-        return resolvers.get(typename)?.get(field)
-    }
+    ).entries.flatMap { (type, fields) ->
+        fields.entries.map { (field, resolver) ->
+            "$type.$field" to resolver
+        }
+    }.toMap()
 }
+
 
 
 private fun IntrospectionType(type: GQLType, schema: Schema): IntrospectionType {

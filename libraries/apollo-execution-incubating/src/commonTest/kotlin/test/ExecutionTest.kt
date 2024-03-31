@@ -10,12 +10,11 @@ import com.apollographql.apollo3.ast.GQLType
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.execution.ExecutableSchema
 import com.apollographql.apollo3.execution.GraphQLRequest
-import com.apollographql.apollo3.execution.MainResolver
 import com.apollographql.apollo3.execution.ResolveInfo
 import com.apollographql.apollo3.execution.Resolver
 import kotlin.test.Test
 
-private val randomResolver = object : MainResolver {
+private val randomResolver = object : Resolver {
     fun GQLType.randomValue(schema: Schema): Any? {
         return when (this) {
             is GQLNonNullType -> type.randomValue(schema)
@@ -41,11 +40,6 @@ private val randomResolver = object : MainResolver {
 
         return type.randomValue(resolveInfo.schema)
     }
-
-    override fun typename(obj: Any): String? {
-        @Suppress("UNCHECKED_CAST")
-        return (obj as Map<String, String?>).get("__typename")
-    }
 }
 
 internal fun String.toGraphQLRequest(): GraphQLRequest = GraphQLRequest.Builder()
@@ -70,20 +64,16 @@ class ExecutionTest {
             }
         """.trimIndent()
 
-        val simpleMainResolver = object : MainResolver {
+        val simpleMainResolver = object : Resolver {
             override fun resolve(resolveInfo: ResolveInfo): Any? {
                 if (resolveInfo.parentType != "Query" || resolveInfo.fieldName != "foo") return null
                 return Resolver { 42 }
-            }
-
-            override fun typename(obj: Any): String? {
-                return null
             }
         }
 
         val response = ExecutableSchema.Builder()
             .schema(schema)
-            .resolver(simpleMainResolver)
+            .defaultResolver(simpleMainResolver)
             .build()
             .execute(document.toGraphQLRequest(), ExecutionContext.Empty)
         println(response.data)
@@ -107,7 +97,11 @@ class ExecutionTest {
 
         val response = ExecutableSchema.Builder()
             .schema(schema)
-            .resolver(randomResolver)
+            .defaultResolver(randomResolver)
+            .resolveType { obj, _ ->
+                @Suppress("UNCHECKED_CAST")
+                (obj as Map<String, String?>).get("__typename")
+            }
             .build()
             .execute(document.toGraphQLRequest(), ExecutionContext.Empty)
         println(response.data)

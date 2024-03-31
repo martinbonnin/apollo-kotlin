@@ -16,6 +16,7 @@ import com.apollographql.apollo3.ast.GQLObjectTypeDefinition
 import com.apollographql.apollo3.ast.GQLOperationDefinition
 import com.apollographql.apollo3.ast.GQLSelection
 import com.apollographql.apollo3.ast.GQLType
+import com.apollographql.apollo3.ast.GQLTypeDefinition
 import com.apollographql.apollo3.ast.GQLUnionTypeDefinition
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
@@ -30,20 +31,42 @@ data object DefaultQueryRoot: DefaultRoot
 data object DefaultMutationRoot: DefaultRoot
 data object DefaultSubscriptionRoot: DefaultRoot
 
+/**
+ * Returns the typename of the given [obj]
+ *
+ * This is used for polymorphic types to return the correct __typename depending on the runtime type of [obj].
+ * This function must return a non-null String for any Kotlin instance that represents a GraphQL type that implements an interface or is part of an union.
+ *
+ * Example:
+ * ```
+ * when (it) {
+ *   is Product -> "Product"
+ * }
+ * ```
+ *
+ * Returns the name of the GraphQL type for this runtime instance or null if this runtime instance is not found, which will trigger a GraphQL error.
+ */
+typealias ResolveType = (obj: Any, resolveTypeInfo: ResolveTypeInfo) -> String?
+
+/**
+ * Returns true if [obj] is a runtime instance of the GraphQL type for which this [TypeChecker] was added.
+ */
+typealias TypeChecker = (obj: Any) -> Boolean
+
 internal class OperationExecutor(
     val operation: GQLOperationDefinition,
     val fragments: Map<String, GQLFragmentDefinition>,
     val executionContext: ExecutionContext,
     val variables: Map<String, Any?>,
     val schema: Schema,
-    val mainResolver: MainResolver,
+    val resolvers: Map<String, Resolver>,
+    val defaultResolver: Resolver,
+    val resolveType: ResolveType,
     val adapters: CustomScalarAdapters,
     val instrumentations: List<Instrumentation>,
     val roots: Roots,
 ) {
-
   private var errors = mutableListOf<Error>()
-  private val introspectionResolvers = IntrospectionResolvers(schema)
 
   fun execute(): GraphQLResponse {
     val operationDefinition = operation
@@ -107,7 +130,8 @@ internal class OperationExecutor(
 
     instrumentations.forEach { it.beforeResolve(resolveInfo) }
     val flow = try {
-      mainResolver.resolve(resolveInfo)
+      val resolver = resolvers.get(resolveInfo.coordinates()) ?: defaultResolver
+      resolver.resolve(resolveInfo)
     } catch (e: Exception) {
       return errorFlow(e.message ?: "Cannot resolve root field")
     }
@@ -144,21 +168,25 @@ internal class OperationExecutor(
       path: List<Any>,
       selections: List<GQLSelection>,
       parentObject: Any,
-      knownTypename: String?,
+      typeDefinition: GQLTypeDefinition,
   ): Map<String, Any?>? {
-    val typename = knownTypename ?: introspectionResolvers.typename(parentObject) ?: mainResolver.typename(parentObject)
+    val typename = if (typeDefinition is GQLObjectTypeDefinition) {
+      typeDefinition.name
+    } else {
+      resolveType(parentObject, ResolveTypeInfo(typeDefinition.name, schema))
+    }
     if (typename == null) {
       errors.add(
-          Error.Builder("Cannot determine typename of $parentObject")
+          Error.Builder("Cannot resolve object __typename for instance '$parentObject' of abstract type '${typeDefinition.name}'.\nConfigure `resolveType` or `typeCheckers`.")
               .build()
       )
       return null
     }
+
     val mergedFields = collectAndMergeFields(selections, typename)
     return mergedFields.associate { mergedField ->
       val responseName = mergedField.first.responseName()
       val fieldPath = path + responseName
-
 
       val resolveInfo = ResolveInfo(
           parentObject = parentObject,
@@ -172,12 +200,10 @@ internal class OperationExecutor(
 
       instrumentations.forEach { it.beforeResolve(resolveInfo) }
 
-
       val ret = when {
         resolveInfo.fieldName == "__typename" -> typename
         else -> {
-          val resolver = introspectionResolvers.resolver(typename, mergedField.first.name) ?: mainResolver
-          resolver.tryResolve(fieldPath, resolveInfo)
+          (resolvers.get(resolveInfo.coordinates()) ?: defaultResolver).tryResolve(fieldPath, resolveInfo)
         }
       }
 
@@ -223,13 +249,9 @@ internal class OperationExecutor(
             is GQLInterfaceTypeDefinition,
             is GQLUnionTypeDefinition,
             -> {
-              val knownTypename = if (typeDefinition is GQLObjectTypeDefinition) {
-                typeDefinition.name
-              } else {
-                null
-              }
+
               try {
-                resolveObject(path, selections, value, knownTypename)
+                resolveObject(path, selections, value, typeDefinition)
               } catch (e: UnexpectedNull) {
                 null
               }

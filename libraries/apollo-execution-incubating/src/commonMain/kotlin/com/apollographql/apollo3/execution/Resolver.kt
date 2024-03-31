@@ -37,19 +37,6 @@ fun interface Resolver {
   fun resolve(resolveInfo: ResolveInfo): Any?
 }
 
-/**
- * A [Resolver] that also has global knowledge about the graph and is able to resolve the typename of any given instance
- */
-interface MainResolver : Resolver {
-  /**
-   * Returns the typename of the given [obj]
-   *
-   * This is used for polymorphic types to return the correct __typename depending on the runtime type of [obj].
-   * This function must return a non-null String for any Kotlin instance that represents a GraphQL type that implements an interface or is part of an union.
-   */
-  fun typename(obj: Any): String?
-}
-
 interface Roots {
   fun query(): Any
   fun mutation(): Any
@@ -75,16 +62,11 @@ interface Roots {
 }
 
 /**
- * A resolver that will always throw
- * Only useful to test introspection and/or errors
+ * A resolver that always throws
  */
-object ThrowingResolver : MainResolver {
-  override fun typename(obj: Any): String? {
-    TODO("Not implemented")
-  }
-
+internal object ThrowingResolver : Resolver {
   override fun resolve(resolveInfo: ResolveInfo): Any? {
-    TODO("Not implemented")
+    error("No resolver found for '${resolveInfo.coordinates()}' and no defaultResolver set.")
   }
 }
 
@@ -94,6 +76,11 @@ interface Instrumentation {
    */
   fun beforeResolve(resolveInfo: ResolveInfo)
 }
+
+class ResolveTypeInfo(
+    val type: String,
+    val schema: Schema
+)
 
 @Suppress("UNCHECKED_CAST")
 class ResolveInfo(
@@ -167,6 +154,10 @@ class ResolveInfo(
         }
       }
     }
+  }
+
+  fun coordinates(): String {
+    return "$parentType.$fieldName"
   }
 }
 

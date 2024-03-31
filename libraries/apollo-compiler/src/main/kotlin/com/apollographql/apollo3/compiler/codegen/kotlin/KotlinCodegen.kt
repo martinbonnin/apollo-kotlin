@@ -14,7 +14,6 @@ import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
 import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.AdapterRegistryBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.ExecutableSchemaBuilderBuilder
-import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.MainResolverBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.addInternal
 import com.apollographql.apollo3.compiler.codegen.kotlin.operations.FragmentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.operations.FragmentModelsBuilder
@@ -339,12 +338,6 @@ internal object KotlinCodegen {
           targetLanguage = targetLanguage,
       )
 
-      val mainResolverBuilder = MainResolverBuilder(
-          context = context,
-          serviceName = serviceName,
-          irTargetObjects = irTargetObjects
-      )
-      builders.add(mainResolverBuilder)
 
       val adapterRegistryBuilder = AdapterRegistryBuilder(
           context = context,
@@ -357,7 +350,6 @@ internal object KotlinCodegen {
           ExecutableSchemaBuilderBuilder(
               context = context,
               serviceName = serviceName,
-              mainResolver = mainResolverBuilder.className,
               adapterRegistry = adapterRegistryBuilder.memberName,
               irTargetObjects = irTargetObjects
           )

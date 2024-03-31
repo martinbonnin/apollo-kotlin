@@ -1,7 +1,6 @@
 package com.apollographql.apollo3.execution
 
 import com.apollographql.apollo3.annotations.ApolloExperimental
-import com.apollographql.apollo3.annotations.ApolloInternal
 import com.apollographql.apollo3.api.CustomScalarAdapters
 import com.apollographql.apollo3.api.Error
 import com.apollographql.apollo3.api.ExecutionContext
@@ -24,7 +23,9 @@ class ExecutableSchema internal constructor(
     private val schema: Schema,
     private val persistedDocumentCache: PersistedDocumentCache?,
     private val instrumentations: List<Instrumentation>,
-    private val mainResolver: MainResolver,
+    private val resolvers: Map<String, Resolver>,
+    private val defaultResolver: Resolver,
+    private val resolveType: ResolveType,
     private val adapterRegistry: CustomScalarAdapters,
     private val roots: Roots,
 ) {
@@ -32,12 +33,15 @@ class ExecutableSchema internal constructor(
   class Builder {
     private var persistedDocumentCache: PersistedDocumentCache? = null
     private var instrumentations = mutableListOf<Instrumentation>()
-    private var resolver: MainResolver? = null
     private var adapterRegistry: CustomScalarAdapters? = null
     private var schema: Schema? = null
     private var queryRoot: (() -> Any)? = null
     private var mutationRoot: (() -> Any)? = null
     private var subscriptionRoot: (() -> Any)? = null
+    private val resolvers = mutableMapOf<String, Resolver>()
+    private var defaultResolver: Resolver? = null
+    private val typeCheckers = mutableMapOf<String, TypeChecker>()
+    private var resolveType: ResolveType? = null
 
     fun persistedDocumentCache(persistedDocumentCache: PersistedDocumentCache?): Builder = apply {
       this.persistedDocumentCache = persistedDocumentCache
@@ -59,16 +63,55 @@ class ExecutableSchema internal constructor(
       this.schema = schema.toGQLDocument().toSchema()
     }
 
-    fun resolver(mainResolver: MainResolver): Builder = apply {
-      this.resolver = mainResolver
+    fun addResolver(type: String, field: String, resolver: Resolver): Builder = apply {
+      addResolver("$type.$field", resolver)
+    }
+
+    /**
+     * Adds the given resolver for field with coordinates [coordinates].
+     *
+     * [addResolver] replace any existing resolver for those coordinates.
+     *
+     * @param coordinates GraphQL coordinates such as "Query.hello"
+     */
+    fun addResolver(coordinates: String, resolver: Resolver): Builder = apply {
+      resolvers[coordinates] = resolver
+    }
+
+    fun defaultResolver(defaultResolver: Resolver): Builder = apply {
+      this.defaultResolver = defaultResolver
+    }
+
+    fun resolveType(resolveType: ResolveType): Builder = apply {
+      this.resolveType = resolveType
+    }
+
+    fun addTypeChecker(type: String, typeChecker: TypeChecker): Builder = apply {
+      this.typeCheckers.put(type, typeChecker)
     }
 
     fun build(): ExecutableSchema {
+      val schema = schema ?: error("A schema is required to build an ExecutableSchema")
+      val resolvers = buildMap {
+        putAll(introspectionResolvers(schema))
+        putAll(resolvers)
+      }
+      val resolveType = if (resolveType != null) {
+        check(typeCheckers.isEmpty()) {
+          "Setting both 'resolveType' and 'typeCheckers' is an error. 'typeCheckers' are not used if 'resolveType' is set"
+        }
+        resolveType!!
+      } else {
+        resolveType(typeCheckers)
+      }
+
       return ExecutableSchema(
-          schema ?: error("A schema is required to build an ExecutableSchema"),
+          schema,
           persistedDocumentCache,
           instrumentations,
-          resolver ?: ThrowingResolver,
+          resolvers,
+          defaultResolver ?: ThrowingResolver,
+          resolveType,
           adapterRegistry ?: CustomScalarAdapters.Empty,
           Roots.create(
               queryRoot = queryRoot,
@@ -91,7 +134,6 @@ class ExecutableSchema internal constructor(
     }
   }
 
-  @OptIn(ApolloInternal::class)
   private fun validateDocument(document: String): PersistedDocument {
     val parseResult = document.parseAsGQLDocument()
     if (parseResult.issues.any { it is GraphQLIssue }) {
@@ -219,7 +261,9 @@ class ExecutableSchema internal constructor(
             executionContext = context,
             variables = variablesIncludingDefault,
             schema = schema,
-            mainResolver = mainResolver,
+            resolvers = resolvers,
+            defaultResolver = defaultResolver,
+            resolveType = resolveType,
             adapters = adapterRegistry,
             instrumentations = instrumentations,
             roots = roots
@@ -252,6 +296,14 @@ class ExecutableSchema internal constructor(
       ).locations(
           listOf(Error.Location(it.sourceLocation!!.line, it.sourceLocation!!.column))
       ).build()
+    }
+  }
+}
+
+private fun resolveType(typeCheckers: Map<String, TypeChecker>) : ResolveType {
+  return { obj, resolveTypeInfo ->
+    resolveTypeInfo.schema.possibleTypes(resolveTypeInfo.type).first {
+      typeCheckers.get(it)?.invoke(obj) == true
     }
   }
 }
