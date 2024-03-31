@@ -5,8 +5,6 @@ import com.apollographql.apollo3.annotations.ApolloInternal
 import com.apollographql.apollo3.ast.GQLFieldDefinition
 import com.apollographql.apollo3.ast.GQLObjectTypeDefinition
 import com.apollographql.apollo3.ast.GQLTypeDefinition
-import com.apollographql.apollo3.ast.toGQLDocument
-import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.compiler.ApolloCompiler
 import com.apollographql.apollo3.compiler.CodegenMetadata
 import com.apollographql.apollo3.compiler.CodegenSchema
@@ -19,8 +17,9 @@ import com.apollographql.apollo3.compiler.ir.IrExecutionContextTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrGraphqlTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrTargetField
-import com.apollographql.apollo3.compiler.ir.IrTargetObject
+import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
 import com.google.devtools.ksp.getConstructors
+import com.google.devtools.ksp.isAbstract
 import com.google.devtools.ksp.isPrivate
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
@@ -40,10 +39,7 @@ import com.google.devtools.ksp.symbol.KSTypeAlias
 import com.google.devtools.ksp.symbol.KSValueParameter
 import com.google.devtools.ksp.visitor.KSEmptyVisitor
 
-internal class ObjectInfo(
-    val className: IrClassName,
-    val classDeclaration: KSClassDeclaration,
-)
+
 
 @OptIn(ApolloInternal::class, ApolloExperimental::class)
 class ApolloProcessor(
@@ -54,35 +50,34 @@ class ApolloProcessor(
 ) : SymbolProcessor {
   private lateinit var codegenSchema: CodegenSchema
   private lateinit var codegenMetadata: CodegenMetadata
-  private var step = 0
-  private var objectMapping = mutableMapOf<String, ObjectInfo>()
-  private var scalarMapping = mutableMapOf<String, ScalarInfo>()
-  private val resourceName = "schema.graphqls"
 
-  val schema =
-      javaClass.classLoader.getResourceAsStream(resourceName)
-          .use { it!!.reader().readText().toGQLDocument().toSchema() }
+  private fun Resolver.getRootSymbol(annotationName: String): List<KSClassDeclaration> {
+    val ret = getSymbolsWithAnnotation(annotationName).toList()
 
-  override fun process(resolver: Resolver): List<KSAnnotated> {
-    return when (step) {
-      0 -> {
-        generateSchema(resolver).also { step++ }
-      }
+    if (ret.size > 1) {
+      val locations = ret.map { it.location }.joinToString("\n")
+      logger.error("There can be only one '$annotationName' annotated class, found ${ret.size}:\n$locations", ret.first())
+      return emptyList()
+    }
 
-      1 -> {
-        generateMainResolver().also { step++ }
-      }
-
-      else -> {
-        emptyList()
+    ret.forEach {
+      if (it !is KSClassDeclaration || it.isAbstract()) {
+        logger.error("'$annotationName' cannot be set on node $it", it)
+        return emptyList()
       }
     }
+
+    @Suppress("UNCHECKED_CAST")
+    return ret as List<KSClassDeclaration>
   }
-
-  private fun generateSchema(resolver: Resolver): List<KSAnnotated> {
-
+  override fun process(resolver: Resolver): List<KSAnnotated> {
     val allFiles = resolver.getAllFiles()
 
+    val roots = resolver.getRootSymbol("GraphqlQueryRoot") +
+        resolver.getRootSymbol("GraphqlMutationRoot") +
+        resolver.getRootSymbol("GraphqlSubscriptionRoot")
+
+    val typeDefinitions = roots.typeDefinitions()
     var dirtyFiles = 0
 
     // Retrieve the scalar and objects mappings
@@ -212,7 +207,7 @@ class ApolloProcessor(
       "No @GraphQLObject found. If this error comes from a compilation where you don't want to generate code, use `ksp.allow.all.target.configuration=false`"
     }
 
-    val irTargetObjects = objectMapping.map { entry ->
+    val irObjectsDefinition = objectMapping.map { entry ->
       val objectName = entry.key
       val typeDefinition = schema.typeDefinition(objectName)
 
@@ -235,7 +230,7 @@ class ApolloProcessor(
         schema.rootTypeNameFor(it) == objectName
       }
 
-      IrTargetObject(
+      IrObjectDefinition(
           name = objectName,
           targetClassName = entry.value.className,
           fields = fields.toList(),
@@ -248,7 +243,7 @@ class ApolloProcessor(
     ApolloCompiler.buildExecutableSchemaSources(
         codegenSchema = codegenSchema,
         codegenMetadata = codegenMetadata,
-        irTargetObjects = irTargetObjects,
+        irTypeDefinitions = irObjectsDefinition,
         packageName = packageName,
         serviceName = serviceName
     ).writeTo(codeGenerator)

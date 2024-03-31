@@ -6,13 +6,13 @@ import com.apollographql.apollo3.compiler.ir.IrExecutionContextTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrGraphqlTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrTargetArgument
 import com.apollographql.apollo3.compiler.ir.IrTargetField
-import com.apollographql.apollo3.compiler.ir.IrTargetObject
+import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
 import com.apollographql.apollo3.compiler.ir.asKotlinPoet
 import com.apollographql.apollo3.compiler.ir.optional
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.joinToCode
 
-internal fun resolverBody(irTargetObject: IrTargetObject, irTargetField: IrTargetField, resolver: KotlinResolver): CodeBlock {
+internal fun resolverBody(irObjectDefinition: IrObjectDefinition, irTargetField: IrTargetField, resolver: KotlinResolver): CodeBlock {
   val singleLine = irTargetField.arguments.size < 2
 
   return CodeBlock.Builder()
@@ -24,7 +24,7 @@ internal fun resolverBody(irTargetObject: IrTargetObject, irTargetField: IrTarge
           add("{·")
         }
       }
-      .add("(it.parentObject·as·%T).%L", irTargetObject.targetClassName.asKotlinPoet(), irTargetField.targetName)
+      .add("(it.parentObject·as·%T).%L", irObjectDefinition.targetClassName.asKotlinPoet(), irTargetField.targetName)
       .applyIf(irTargetField.isFunction) {
         if (singleLine) {
           add("(")
@@ -63,7 +63,7 @@ private fun argumentCodeBlock(irTargetArgument: IrTargetArgument, resolver: Kotl
   when (irTargetArgument) {
     is IrGraphqlTargetArgument -> {
       /**
-       * Unwrap the optional because getArgument always return an optional value
+       * Unwrap the optional because getArgument always returns an optional value
        */
       val type = if (irTargetArgument.type.optional) {
         irTargetArgument.type.optional(false)

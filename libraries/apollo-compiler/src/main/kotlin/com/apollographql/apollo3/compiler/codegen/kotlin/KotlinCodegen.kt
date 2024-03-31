@@ -52,7 +52,8 @@ import com.apollographql.apollo3.compiler.generateMethodsKotlin
 import com.apollographql.apollo3.compiler.ir.DefaultIrSchema
 import com.apollographql.apollo3.compiler.ir.IrOperations
 import com.apollographql.apollo3.compiler.ir.IrSchema
-import com.apollographql.apollo3.compiler.ir.IrTargetObject
+import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
+import com.apollographql.apollo3.compiler.ir.IrTypeDefinition
 import com.apollographql.apollo3.compiler.maybeTransform
 import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo3.compiler.operationoutput.findOperationId
@@ -317,7 +318,7 @@ internal object KotlinCodegen {
   fun buildExecutableSchema(
       codegenSchema: CodegenSchema,
       codegenMetadata: CodegenMetadata,
-      irTargetObjects: List<IrTargetObject>,
+      irTypeDefinitions: List<IrTypeDefinition>,
       layout: ExecutableSchemaLayout,
       serviceName: String,
   ): KotlinOutput {
@@ -345,13 +346,20 @@ internal object KotlinCodegen {
           codegenSchema = codegenSchema
       )
       builders.add(adapterRegistryBuilder)
+      val schemaDocumentBuilder = SchemaDocumentBuilder(
+          context = context,
+          serviceName = serviceName,
+          irTypeDefinitions = irTypeDefinitions
+      )
 
+      builders.add(schemaDocumentBuilder)
       builders.add(
           ExecutableSchemaBuilderBuilder(
               context = context,
               serviceName = serviceName,
               adapterRegistry = adapterRegistryBuilder.memberName,
-              irTargetObjects = irTargetObjects
+              schemaDocumentClassName = schemaDocumentBuilder.className,
+              irObjectDefinitions = irTypeDefinitions.filterIsInstance<IrObjectDefinition>()
           )
       )
     }

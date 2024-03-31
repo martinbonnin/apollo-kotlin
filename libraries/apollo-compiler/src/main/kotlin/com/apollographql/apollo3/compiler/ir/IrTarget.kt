@@ -38,11 +38,79 @@ class IrGraphqlTargetArgument(
 ): IrTargetArgument
 
 @ApolloInternal
-class IrTargetObject(
+sealed interface IrTypeDefinition
+
+@ApolloInternal
+class IrScalarDefinition(
+    /**
+     * The GraphQL name
+     */
     val name: String,
+    val description: String,
+): IrTypeDefinition
+
+@ApolloInternal
+class IrObjectDefinition(
+    /**
+     * The GraphQL name
+     */
+    val name: String,
+    val description: String,
     val targetClassName: IrClassName,
     val isSingleton: Boolean,
     val hasNoArgsConstructor: Boolean,
+    /**
+     * If this is a root type, what root it is for
+     */
     val operationType: String?,
     val fields: List<IrTargetField>,
+): IrTypeDefinition
+
+@ApolloInternal
+class IrInterfaceDefinition(
+    /**
+     * The GraphQL name
+     */
+    val name: String,
+    val description: String,
+    val possibleTypes: List<String>,
+    val fields: List<IrTargetField>,
+): IrTypeDefinition
+
+@ApolloInternal
+class IrUnionDefinition(
+    /**
+     * The GraphQL name
+     */
+    val name: String,
+    val description: String,
+    val possibleTypes: List<String>,
+): IrTypeDefinition
+
+@ApolloInternal
+class IrEnumDefinition(
+    /**
+     * The GraphQL name
+     */
+    val name: String,
+    val description: String,
+    val values: List<IrEnumValueDefinition>,
+): IrTypeDefinition
+
+@ApolloInternal
+class IrInputObjectDefinition(
+    /**
+     * The GraphQL name
+     */
+    val name: String,
+    val description: String,
+    val inputFields: List<IrInputFieldDefinition>,
+): IrTypeDefinition
+
+class IrInputFieldDefinition(
+    val name: String
+)
+
+class IrEnumValueDefinition(
+    val name: String
 )

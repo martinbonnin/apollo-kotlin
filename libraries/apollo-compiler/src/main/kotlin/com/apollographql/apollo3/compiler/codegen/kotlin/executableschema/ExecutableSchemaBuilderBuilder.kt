@@ -6,22 +6,21 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinExecutableSchemaContext
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols
-import com.apollographql.apollo3.compiler.decapitalizeFirstLetter
-import com.apollographql.apollo3.compiler.ir.IrTargetObject
+import com.apollographql.apollo3.compiler.ir.IrClassName
+import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
 import com.apollographql.apollo3.compiler.ir.asKotlinPoet
-import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.LambdaTypeName
 import com.squareup.kotlinpoet.MemberName
 import com.squareup.kotlinpoet.ParameterSpec
-import com.squareup.kotlinpoet.joinToCode
 
 internal class ExecutableSchemaBuilderBuilder(
     private val context: KotlinExecutableSchemaContext,
     private val serviceName: String,
     private val adapterRegistry: MemberName,
-    private val irTargetObjects: List<IrTargetObject>,
+    private val schemaDocumentClassName: IrClassName,
+    private val irObjectDefinitions: List<IrObjectDefinition>,
 ) : CgFileBuilder {
   val simpleName = "${serviceName}ExecutableSchemaBuilder".capitalizeFirstLetter()
   override fun prepare() {
@@ -35,7 +34,7 @@ internal class ExecutableSchemaBuilderBuilder(
 
   private fun funSpec(): FunSpec {
     val rootIrTargetObjects = listOf("query", "mutation", "subscription").map { operationType ->
-      irTargetObjects.find { it.operationType == operationType }
+      irObjectDefinitions.find { it.operationType == operationType }
     }
 
     return FunSpec.builder(simpleName)
@@ -62,9 +61,9 @@ internal class ExecutableSchemaBuilderBuilder(
             CodeBlock.builder()
                 .add("val schemaBuilder = %L()\n", KotlinSymbols.ExecutableSchemaBuilder)
                 .indent()
-                .add(".schema(schema)\n")
+                .add(".schema(%M)\n", schemaDocumentClassName.asKotlinPoet())
                 .apply {
-                  irTargetObjects.forEach { irTargetObject ->
+                  irObjectDefinitions.forEach { irTargetObject ->
                     add(".addTypeChecker(%S)·{·it·is·%T·}\n", irTargetObject.name, irTargetObject.targetClassName.asKotlinPoet())
                     irTargetObject.fields.forEach { irTargetField ->
                       val coordinates = "${irTargetObject.name}.${irTargetField.name}"

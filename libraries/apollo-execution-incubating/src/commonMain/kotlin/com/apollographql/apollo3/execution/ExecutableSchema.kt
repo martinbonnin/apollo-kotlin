@@ -59,8 +59,12 @@ class ExecutableSchema internal constructor(
       this.schema = schema
     }
 
+    fun schema(schema: GQLDocument): Builder = apply {
+      schema(schema.toSchema())
+    }
+
     fun schema(schema: String): Builder = apply {
-      this.schema = schema.toGQLDocument().toSchema()
+      schema(schema.toGQLDocument())
     }
 
     fun addResolver(type: String, field: String, resolver: Resolver): Builder = apply {

@@ -49,7 +49,7 @@ import com.apollographql.apollo3.compiler.ir.IrOperations
 import com.apollographql.apollo3.compiler.ir.IrOperationsBuilder
 import com.apollographql.apollo3.compiler.ir.IrSchema
 import com.apollographql.apollo3.compiler.ir.IrSchemaBuilder
-import com.apollographql.apollo3.compiler.ir.IrTargetObject
+import com.apollographql.apollo3.compiler.ir.IrTypeDefinition
 import com.apollographql.apollo3.compiler.operationoutput.OperationDescriptor
 import com.apollographql.apollo3.compiler.pqm.toPersistedQueryManifest
 import java.io.File
@@ -503,7 +503,7 @@ object ApolloCompiler {
   fun buildExecutableSchemaSources(
       codegenSchema: CodegenSchema,
       codegenMetadata: CodegenMetadata,
-      irTargetObjects: List<IrTargetObject>,
+      irTypeDefinitions: List<IrTypeDefinition>,
       packageName: String,
       serviceName: String,
   ): SourceOutput {
@@ -519,7 +519,7 @@ object ApolloCompiler {
     return KotlinCodegen.buildExecutableSchema(
         codegenSchema = codegenSchema,
         codegenMetadata = codegenMetadata,
-        irTargetObjects = irTargetObjects,
+        irTypeDefinitions = irTypeDefinitions,
         layout = layout,
         serviceName = serviceName
     ).toSourceOutput()

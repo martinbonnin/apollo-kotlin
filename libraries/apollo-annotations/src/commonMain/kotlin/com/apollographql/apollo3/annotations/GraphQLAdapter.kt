@@ -5,7 +5,5 @@ package com.apollographql.apollo3.annotations
  *
  * @param forScalar the name of the scalar that this adapter can handle
  */
-@Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS, AnnotationTarget.TYPEALIAS)
-@MustBeDocumented
 annotation class GraphQLAdapter(val forScalar: String)
