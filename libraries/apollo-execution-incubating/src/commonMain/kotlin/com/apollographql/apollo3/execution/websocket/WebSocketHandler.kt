@@ -1,4 +1,4 @@
-package com.apollographql.apollo3.execution
+package com.apollographql.apollo3.execution.websocket
 
 sealed interface WebSocketMessage
 class WebSocketTextMessage(val data: String): WebSocketMessage

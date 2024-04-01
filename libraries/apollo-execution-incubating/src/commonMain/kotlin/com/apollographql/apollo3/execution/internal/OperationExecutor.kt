@@ -1,4 +1,4 @@
-package com.apollographql.apollo3.execution
+package com.apollographql.apollo3.execution.internal
 
 import com.apollographql.apollo3.api.Error
 import com.apollographql.apollo3.api.ExecutionContext
@@ -25,11 +25,17 @@ import com.apollographql.apollo3.ast.GQLVariableValue
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
 import com.apollographql.apollo3.ast.responseName
-import com.apollographql.apollo3.execution.internal.ExternalValue
-import com.apollographql.apollo3.execution.internal.InternalValue
-import com.apollographql.apollo3.execution.internal.ResolverValue
-import com.apollographql.apollo3.execution.internal.coerceArgumentValues
-import com.apollographql.apollo3.execution.internal.coerceVariablesValues
+import com.apollographql.apollo3.execution.Coercing
+import com.apollographql.apollo3.execution.GraphQLResponse
+import com.apollographql.apollo3.execution.Instrumentation
+import com.apollographql.apollo3.execution.ResolveInfo
+import com.apollographql.apollo3.execution.ResolveTypeInfo
+import com.apollographql.apollo3.execution.Resolver
+import com.apollographql.apollo3.execution.Roots
+import com.apollographql.apollo3.execution.SubscriptionError
+import com.apollographql.apollo3.execution.SubscriptionEvent
+import com.apollographql.apollo3.execution.SubscriptionResponse
+import com.apollographql.apollo3.execution.errorResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map

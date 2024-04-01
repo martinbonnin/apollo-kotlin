@@ -1,27 +1,24 @@
 package com.apollographql.apollo3.execution
 
-import com.apollographql.apollo3.api.CustomScalarAdapters
 import com.apollographql.apollo3.api.ExecutionContext
 import com.apollographql.apollo3.api.Optional
-import com.apollographql.apollo3.api.json.MapJsonReader
 import com.apollographql.apollo3.ast.GQLBooleanValue
 import com.apollographql.apollo3.ast.GQLEnumValue
 import com.apollographql.apollo3.ast.GQLField
 import com.apollographql.apollo3.ast.GQLFieldDefinition
 import com.apollographql.apollo3.ast.GQLFloatValue
 import com.apollographql.apollo3.ast.GQLIntValue
-import com.apollographql.apollo3.ast.GQLListType
 import com.apollographql.apollo3.ast.GQLListValue
-import com.apollographql.apollo3.ast.GQLNamedType
-import com.apollographql.apollo3.ast.GQLNonNullType
 import com.apollographql.apollo3.ast.GQLNullValue
 import com.apollographql.apollo3.ast.GQLObjectValue
 import com.apollographql.apollo3.ast.GQLStringValue
-import com.apollographql.apollo3.ast.GQLType
 import com.apollographql.apollo3.ast.GQLValue
 import com.apollographql.apollo3.ast.GQLVariableValue
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
+import com.apollographql.apollo3.execution.internal.DefaultMutationRoot
+import com.apollographql.apollo3.execution.internal.DefaultQueryRoot
+import com.apollographql.apollo3.execution.internal.DefaultSubscriptionRoot
 import com.apollographql.apollo3.execution.internal.InternalValue
 
 fun interface Resolver {
@@ -39,7 +36,7 @@ fun interface Resolver {
   fun resolve(resolveInfo: ResolveInfo): Any?
 }
 
-interface Roots {
+internal interface Roots {
   fun query(): Any
   fun mutation(): Any
   fun subscription(): Any
@@ -84,10 +81,9 @@ class ResolveTypeInfo(
     val schema: Schema
 )
 
-@Suppress("UNCHECKED_CAST")
 class ResolveInfo internal constructor(
     /**
-     * The parent object, maybe be [DefaultRoot]
+     * The parent object
      *
      * @see [ExecutableSchema.Builder.queryRoot]
      * @see [ExecutableSchema.Builder.mutationRoot]
@@ -130,33 +126,5 @@ class ResolveInfo internal constructor(
 
   fun coordinates(): String {
     return "$parentType.$fieldName"
-  }
-}
-
-internal fun GQLValue.toJson(variables: Map<String, Any?>?): Any? {
-  return when (this) {
-    is GQLBooleanValue -> value
-    is GQLEnumValue -> value
-    is GQLFloatValue -> value.toDouble()
-    is GQLIntValue -> value.toInt()
-    is GQLListValue -> this.values.map {
-      it.toJson(variables)
-    }
-
-    is GQLNullValue -> null
-    is GQLObjectValue -> this.fields.associate {
-      it.name to it.value.toJson(variables)
-    }
-
-    is GQLStringValue -> this.value
-    is GQLVariableValue -> {
-      check(variables != null) {
-        "Cannot use this value in non-const context"
-      }
-      check(variables.containsKey(this.name)) {
-        "No variable found for '$name'"
-      }
-      variables.get(this.name)
-    }
   }
 }

@@ -13,6 +13,10 @@ import com.apollographql.apollo3.ast.parseAsGQLDocument
 import com.apollographql.apollo3.ast.toGQLDocument
 import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.ast.validateAsExecutable
+import com.apollographql.apollo3.execution.internal.OperationExecutor
+import com.apollographql.apollo3.execution.internal.ResolveType
+import com.apollographql.apollo3.execution.internal.TypeChecker
+import com.apollographql.apollo3.execution.internal.introspectionResolvers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -249,21 +253,13 @@ class ExecutableSchema internal constructor(
       }
     }
     val fragments = document.definitions.filterIsInstance<GQLFragmentDefinition>().associateBy { it.name }
-
-    val variablesIncludingDefault = operation.variableDefinitions.mapNotNull {
-      when {
-        request.variables.containsKey(it.name) -> it.name to request.variables.get(it.name)
-        it.defaultValue != null -> it.name to it.defaultValue!!.toJson(null)
-        else -> null
-      }
-    }.toMap()
-
+    
     return OperationExecutorSuccess(
         OperationExecutor(
             operation = operation,
             fragments = fragments,
             executionContext = context,
-            variables = variablesIncludingDefault,
+            variables = request.variables,
             schema = schema,
             resolvers = resolvers,
             defaultResolver = defaultResolver,

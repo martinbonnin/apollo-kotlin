@@ -17,10 +17,6 @@ import com.apollographql.apollo3.execution.ApolloWebsocketTerminate
 import com.apollographql.apollo3.execution.ExecutableSchema
 import com.apollographql.apollo3.execution.SubscriptionError
 import com.apollographql.apollo3.execution.SubscriptionResponse
-import com.apollographql.apollo3.execution.WebSocketBinaryMessage
-import com.apollographql.apollo3.execution.WebSocketHandler
-import com.apollographql.apollo3.execution.WebSocketMessage
-import com.apollographql.apollo3.execution.WebSocketTextMessage
 import com.apollographql.apollo3.execution.parseApolloWebsocketClientMessage
 import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock

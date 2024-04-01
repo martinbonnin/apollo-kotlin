@@ -5,10 +5,9 @@ import com.apollographql.apollo3.api.ExecutionContext
 import com.apollographql.apollo3.ast.toGQLDocument
 import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.execution.ExecutableSchema
-import com.apollographql.apollo3.execution.GraphQLRequest
-import com.apollographql.apollo3.execution.WebSocketBinaryMessage
-import com.apollographql.apollo3.execution.WebSocketMessage
-import com.apollographql.apollo3.execution.WebSocketTextMessage
+import com.apollographql.apollo3.execution.websocket.WebSocketBinaryMessage
+import com.apollographql.apollo3.execution.websocket.WebSocketMessage
+import com.apollographql.apollo3.execution.websocket.WebSocketTextMessage
 import com.apollographql.apollo3.execution.parseGetGraphQLRequest
 import com.apollographql.apollo3.execution.parsePostGraphQLRequest
 import com.apollographql.apollo3.execution.websocket.ApolloWebSocketHandler

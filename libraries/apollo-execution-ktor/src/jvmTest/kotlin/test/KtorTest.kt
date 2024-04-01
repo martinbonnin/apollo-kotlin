@@ -1,6 +1,6 @@
 package test
 
-import com.apollographql.apollo3.execution.DefaultQueryRoot
+import com.apollographql.apollo3.execution.internal.DefaultQueryRoot
 import com.apollographql.apollo3.execution.ExecutableSchema
 import com.apollographql.apollo3.execution.ResolveInfo
 import com.apollographql.apollo3.execution.Resolver

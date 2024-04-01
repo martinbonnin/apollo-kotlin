@@ -1,4 +1,4 @@
-package com.apollographql.apollo3.execution
+package com.apollographql.apollo3.execution.internal
 
 import com.apollographql.apollo3.api.getOrElse
 import com.apollographql.apollo3.ast.GQLDirectiveDefinition
@@ -20,6 +20,7 @@ import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.findDeprecationReason
 import com.apollographql.apollo3.ast.findSpecifiedBy
 import com.apollographql.apollo3.ast.toUtf8
+import com.apollographql.apollo3.execution.Resolver
 
 private inline fun <reified T> Any?.cast() = this as T
 
