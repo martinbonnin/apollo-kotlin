@@ -97,6 +97,10 @@ internal class OperationExecutor(
     return flowOf(errorResponse(message))
   }
 
+  private fun subscriptionError(message: String): Flow<SubscriptionError> {
+    return flowOf(SubscriptionError(listOf(Error.Builder(message).build())))
+  }
+
   private fun resolveFieldEventStream(subscriptionType: GQLObjectTypeDefinition, rootValue: ResolverValue, fields: List<GQLField>, coercedArgumentValues: Map<String, InternalValue>): Flow<ResolverValue> {
     val resolveInfo = ResolveInfo(
         parentObject = rootValue,
@@ -142,23 +146,24 @@ internal class OperationExecutor(
     return resolveFieldEventStream(typeDefinition, initialValue, fields, coerceArgumentValues(schema, typeDefinition.name, fields.first(), coercings, coercedVariables))
   }
 
-  fun executeSubscription(): Flow<GraphQLResponse> {
+  fun executeSubscription(): Flow<SubscriptionEvent> {
     val rootObject = when (operation.operationType) {
       "subscription" -> roots.subscription()
-      else -> return errorFlow("Unknown operation type '${operation.operationType}.")
+      else -> return subscriptionError("Unknown operation type '${operation.operationType}.")
     }
 
     val eventStream = try {
       createSourceEventStream(rootObject)
     } catch (e: Exception) {
-      return errorFlow(e.message ?: "cannot create source event stream")
+      return subscriptionError(e.message ?: "cannot create source event stream")
     }
     return mapSourceToResponseEvent(eventStream)
   }
 
-  private fun mapSourceToResponseEvent(sourceStream: Flow<ResolverValue>): Flow<GraphQLResponse> {
+  private fun mapSourceToResponseEvent(sourceStream: Flow<ResolverValue>): Flow<SubscriptionEvent> {
     return sourceStream.map {
-      executeSubscriptionEvent(it)
+      // TODO: allow implementers to terminal the stream with an exception
+      SubscriptionResponse(executeSubscriptionEvent(it))
     }
   }
 
@@ -177,7 +182,7 @@ internal class OperationExecutor(
     val field = fields.first()
     val arguments = coerceArgumentValues(schema, objectType.name, field, coercings, coercedVariables)
 
-    val resolvedValue = resolveFieldValue(objectType, objectValue, fields, arguments, path)
+    val resolvedValue = resolveFieldValue(objectType, objectValue, fields, arguments)
     return completeValue(fieldType, fields, resolvedValue, coercedVariables, path)
   }
 
@@ -241,7 +246,7 @@ internal class OperationExecutor(
     }
   }
 
-  private fun resolveFieldValue(typeDefinition: GQLObjectTypeDefinition, objectValue: ResolverValue, fields: List<GQLField>, arguments: Map<String, InternalValue>, path: List<Any>): ResolverValue {
+  private fun resolveFieldValue(typeDefinition: GQLObjectTypeDefinition, objectValue: ResolverValue, fields: List<GQLField>, arguments: Map<String, InternalValue>): ResolverValue {
     val resolveInfo = ResolveInfo(
         parentObject = objectValue,
         executionContext = executionContext,

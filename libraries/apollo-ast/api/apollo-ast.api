@@ -654,7 +654,7 @@ public final class com/apollographql/apollo3/ast/GQLSchemaExtension : com/apollo
 	public fun writeInternal (Lcom/apollographql/apollo3/ast/SDLWriter;)V
 }
 
-public abstract class com/apollographql/apollo3/ast/GQLSelection : com/apollographql/apollo3/ast/GQLNode {
+public abstract class com/apollographql/apollo3/ast/GQLSelection : com/apollographql/apollo3/ast/GQLHasDirectives, com/apollographql/apollo3/ast/GQLNode {
 }
 
 public final class com/apollographql/apollo3/ast/GQLSelectionSet : com/apollographql/apollo3/ast/GQLNode {

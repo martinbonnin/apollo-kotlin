@@ -282,9 +282,9 @@ class ExecutableSchema internal constructor(
     }
   }
 
-  fun executeSubscription(request: GraphQLRequest, context: ExecutionContext): Flow<GraphQLResponse> {
+  fun executeSubscription(request: GraphQLRequest, context: ExecutionContext): Flow<SubscriptionEvent> {
     return when (val result = getOperationExecutor(request, context)) {
-      is OperationExecutorError -> flowOf(GraphQLResponse(null, result.errors, null))
+      is OperationExecutorError -> flowOf(SubscriptionError(result.errors))
       is OperationExecutorSuccess -> result.operationExecutor.executeSubscription()
     }
   }
@@ -318,6 +318,14 @@ internal fun errorResponse(message: String): GraphQLResponse {
       .build()
 }
 
-sealed interface SubscriptionItem
-class SubscriptionItemResponse(val response: GraphQLResponse): SubscriptionItem
-class SubscriptionItemError(val error: Error): SubscriptionItem
+sealed interface SubscriptionEvent
+
+/**
+ * A response from the stream. May contain field errors
+ */
+class SubscriptionResponse(val response: GraphQLResponse): SubscriptionEvent
+/**
+ * This subscription failed. This event is terminal and the client can decide whether to retry or give up.
+ * For convenience, [SubscriptionError] uses the same error type as the GraphQL errors but this is not related.
+ */
+class SubscriptionError(val errors: List<Error>): SubscriptionEvent

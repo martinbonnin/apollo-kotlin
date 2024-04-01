@@ -689,6 +689,11 @@ public final class com/apollographql/apollo3/compiler/ir/IrEnumValue$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
 }
 
+public final class com/apollographql/apollo3/compiler/ir/IrEnumValueDefinition {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getName ()Ljava/lang/String;
+}
+
 public final class com/apollographql/apollo3/compiler/ir/IrField$$serializer : kotlinx/serialization/internal/GeneratedSerializer {
 	public static final field INSTANCE Lcom/apollographql/apollo3/compiler/ir/IrField$$serializer;
 	public fun childSerializers ()[Lkotlinx/serialization/KSerializer;
@@ -762,6 +767,11 @@ public final class com/apollographql/apollo3/compiler/ir/IrFragmentDefinition$$s
 
 public final class com/apollographql/apollo3/compiler/ir/IrFragmentDefinition$Companion {
 	public final fun serializer ()Lkotlinx/serialization/KSerializer;
+}
+
+public final class com/apollographql/apollo3/compiler/ir/IrInputFieldDefinition {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun getName ()Ljava/lang/String;
 }
 
 public final class com/apollographql/apollo3/compiler/ir/IrInputObjectType$$serializer : kotlinx/serialization/internal/GeneratedSerializer {

@@ -346,22 +346,22 @@ internal object KotlinCodegen {
           codegenSchema = codegenSchema
       )
       builders.add(adapterRegistryBuilder)
-      val schemaDocumentBuilder = SchemaDocumentBuilder(
-          context = context,
-          serviceName = serviceName,
-          irTypeDefinitions = irTypeDefinitions
-      )
+//      val schemaDocumentBuilder = SchemaDocumentBuilder(
+//          context = context,
+//          serviceName = serviceName,
+//          irTypeDefinitions = irTypeDefinitions
+//      )
 
-      builders.add(schemaDocumentBuilder)
-      builders.add(
-          ExecutableSchemaBuilderBuilder(
-              context = context,
-              serviceName = serviceName,
-              adapterRegistry = adapterRegistryBuilder.memberName,
-              schemaDocumentClassName = schemaDocumentBuilder.className,
-              irObjectDefinitions = irTypeDefinitions.filterIsInstance<IrObjectDefinition>()
-          )
-      )
+//      builders.add(schemaDocumentBuilder)
+//      builders.add(
+//          ExecutableSchemaBuilderBuilder(
+//              context = context,
+//              serviceName = serviceName,
+//              adapterRegistry = adapterRegistryBuilder.memberName,
+//              schemaDocumentClassName = schemaDocumentBuilder.className,
+//              irObjectDefinitions = irTypeDefinitions.filterIsInstance<IrObjectDefinition>()
+//          )
+//      )
     }
   }
 }

@@ -11,6 +11,7 @@ import com.apollographql.apollo3.api.json.JsonWriter
 import com.apollographql.apollo3.api.json.jsonReader
 import com.apollographql.apollo3.api.json.readAny
 import com.apollographql.apollo3.api.json.writeAny
+import com.apollographql.apollo3.api.json.writeArray
 import com.apollographql.apollo3.api.json.writeObject
 import okio.Buffer
 import okio.BufferedSink
@@ -263,8 +264,10 @@ internal class ApolloWebsocketData(
 
 internal class ApolloWebsocketError(
     val id: String?,
-    val error: Error,
+    val errors: List<Error>,
 ) : ApolloWebsocketServerMessage {
+  constructor(id: String?, error: Error): this(id, listOf(error))
+
   override fun serialize(sink: Sink) {
     sink.writeMessage("error") {
       if (id != null) {
@@ -272,7 +275,11 @@ internal class ApolloWebsocketError(
         value(id)
       }
       name("payload")
-      writeError(error)
+      writeArray {
+        errors.forEach {
+          writeError(it)
+        }
+      }
     }
   }
 }

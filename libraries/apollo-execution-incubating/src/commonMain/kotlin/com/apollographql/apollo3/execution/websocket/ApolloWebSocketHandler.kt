@@ -15,8 +15,8 @@ import com.apollographql.apollo3.execution.ApolloWebsocketStart
 import com.apollographql.apollo3.execution.ApolloWebsocketStop
 import com.apollographql.apollo3.execution.ApolloWebsocketTerminate
 import com.apollographql.apollo3.execution.ExecutableSchema
-import com.apollographql.apollo3.execution.SubscriptionItemError
-import com.apollographql.apollo3.execution.SubscriptionItemResponse
+import com.apollographql.apollo3.execution.SubscriptionError
+import com.apollographql.apollo3.execution.SubscriptionResponse
 import com.apollographql.apollo3.execution.WebSocketBinaryMessage
 import com.apollographql.apollo3.execution.WebSocketHandler
 import com.apollographql.apollo3.execution.WebSocketMessage
@@ -96,12 +96,12 @@ class ApolloWebSocketHandler(
         val job = scope.launch {
           flow.collect {
             when (it) {
-              is SubscriptionItemResponse -> {
+              is SubscriptionResponse -> {
                 sendMessage(ApolloWebsocketData(id = clientMessage.id, response = it.response).toWsMessage())
               }
 
-              is SubscriptionItemError -> {
-                sendMessage(ApolloWebsocketError(id = clientMessage.id, error = it.error).toWsMessage())
+              is SubscriptionError -> {
+                sendMessage(ApolloWebsocketError(id = clientMessage.id, errors = it.errors).toWsMessage())
               }
             }
           }
