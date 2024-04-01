@@ -21,8 +21,9 @@ import com.apollographql.apollo3.ast.GQLVariableValue
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
 import com.apollographql.apollo3.execution.Coercing
+import com.apollographql.apollo3.execution.coercingParseLiteral
 
-internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLField, coercings: Map<String, Coercing>, coercedVariables: Map<String, InternalValue>): Map<String, InternalValue> {
+internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLField, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): Map<String, InternalValue> {
   val coercedValues = mutableMapOf<String, InternalValue>()
   val argumentValues = field.arguments.associate { it.name to it.value }
   val argumentDefinitions = field.definitionFromScope(schema, typename)!!.arguments
@@ -80,7 +81,7 @@ internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLFi
 /**
  *
  */
-internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQLType, coercings: Map<String, Coercing>, coercedVariables: Map<String, InternalValue>): InternalValue {
+internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQLType, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): InternalValue {
   if (value is GQLNullValue) {
     check(type !is GQLNonNullType) {
       error("'null' found in non-null position")
@@ -158,18 +159,14 @@ internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQL
         }
 
         is GQLScalarTypeDefinition -> {
-          val coercing = coercings.get(definition.name)
-          check(coercing != null) {
-            "No coercing found for scalar type '${definition.name}'"
-          }
-          coercing.parseLiteral(value)
+          coercingParseLiteral(value, coercings, definition.name)
         }
       }
     }
   }
 }
 
-private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefinition, literalValue: GQLValue, coercings: Map<String, Coercing>, coercedVariables: Map<String, InternalValue>): InternalValue {
+private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefinition, literalValue: GQLValue, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): InternalValue {
   if (literalValue !is GQLObjectValue) {
     error("Don't know how to coerce '$literalValue' to a '${definition.name}' input object")
   }

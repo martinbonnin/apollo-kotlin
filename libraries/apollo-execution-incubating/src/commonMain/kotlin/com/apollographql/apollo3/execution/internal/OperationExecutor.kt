@@ -35,6 +35,7 @@ import com.apollographql.apollo3.execution.Roots
 import com.apollographql.apollo3.execution.SubscriptionError
 import com.apollographql.apollo3.execution.SubscriptionEvent
 import com.apollographql.apollo3.execution.SubscriptionResponse
+import com.apollographql.apollo3.execution.coercingSerialize
 import com.apollographql.apollo3.execution.errorResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -74,7 +75,7 @@ internal class OperationExecutor(
     val variables: Map<String, ExternalValue>,
     val schema: Schema,
     val resolvers: Map<String, Resolver>,
-    val coercings: Map<String, Coercing>,
+    val coercings: Map<String, Coercing<*>>,
     val defaultResolver: Resolver,
     val resolveType: ResolveType,
     val instrumentations: List<Instrumentation>,
@@ -219,14 +220,7 @@ internal class OperationExecutor(
       is GQLEnumTypeDefinition,
       -> {
         // leaf type
-        val coercing = coercings.get(typeDefinition.name)
-        if (coercing == null) {
-          error("Cannot get coercing for '${typeDefinition.name}'")
-        }
-        // TODO: stream the response
-        val writer = MapJsonWriter()
-        coercing.serialize(writer, result)
-        writer.root()
+        coercingSerialize(result, coercings, typeDefinition.name)
       }
 
       is GQLInterfaceTypeDefinition,

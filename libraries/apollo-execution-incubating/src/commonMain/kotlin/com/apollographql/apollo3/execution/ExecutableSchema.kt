@@ -27,7 +27,7 @@ class ExecutableSchema internal constructor(
     private val persistedDocumentCache: PersistedDocumentCache?,
     private val instrumentations: List<Instrumentation>,
     private val resolvers: Map<String, Resolver>,
-    private val coercings: Map<String, Coercing>,
+    private val coercings: Map<String, Coercing<*>>,
     private val defaultResolver: Resolver,
     private val resolveType: ResolveType,
     private val roots: Roots,
@@ -36,7 +36,7 @@ class ExecutableSchema internal constructor(
   class Builder {
     private var persistedDocumentCache: PersistedDocumentCache? = null
     private var instrumentations = mutableListOf<Instrumentation>()
-    private var coercings = mutableMapOf<String, Coercing>()
+    private var coercings = mutableMapOf<String, Coercing<*>>()
     private var schema: Schema? = null
     private var queryRoot: (() -> Any)? = null
     private var mutationRoot: (() -> Any)? = null
@@ -54,7 +54,7 @@ class ExecutableSchema internal constructor(
       this.instrumentations.add(instrumentation)
     }
 
-    fun addCoercing(scalar: String, coercing: Coercing): Builder = apply {
+    fun addCoercing(scalar: String, coercing: Coercing<*>): Builder = apply {
       this.coercings.put(scalar, coercing)
     }
 
@@ -253,7 +253,7 @@ class ExecutableSchema internal constructor(
       }
     }
     val fragments = document.definitions.filterIsInstance<GQLFragmentDefinition>().associateBy { it.name }
-    
+
     return OperationExecutorSuccess(
         OperationExecutor(
             operation = operation,

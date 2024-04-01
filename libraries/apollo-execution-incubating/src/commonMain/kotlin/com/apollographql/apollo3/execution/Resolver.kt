@@ -32,6 +32,11 @@ fun interface Resolver {
    * }
    * ```
    *
+   * @return the resolved result:
+   * - If the field type is a non-nullable type and [resolve] returns null, a field error is raised.
+   * - For leaf types (scalars and enums), the resolved result must be coercible according to the type of the field.
+   * - For composite types, the resolved result is an opaque type that is passed down to child resolvers.
+   * - For list types, the resolved result must be a kotlin List.
    */
   fun resolve(resolveInfo: ResolveInfo): Any?
 }
