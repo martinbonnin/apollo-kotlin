@@ -1,7 +1,7 @@
 package com.apollographql.apollo3.debugserver.internal.graphql
 
 import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.annotations.GraphQLAdapter
+import com.apollographql.apollo3.annotations.GraphQLCoercing
 import com.apollographql.apollo3.annotations.GraphQLName
 import com.apollographql.apollo3.annotations.GraphQLObject
 import com.apollographql.apollo3.api.Adapter
@@ -17,8 +17,6 @@ import com.apollographql.apollo3.cache.normalized.api.Record
 import com.apollographql.apollo3.cache.normalized.apolloStore
 import com.apollographql.apollo3.debugserver.internal.graphql.execution.ApolloDebugServerExecutableSchemaBuilder
 import com.apollographql.apollo3.execution.ExecutableSchema
-import com.apollographql.apollo3.execution.GraphQLRequest
-import com.apollographql.apollo3.execution.GraphQLRequestError
 import com.apollographql.apollo3.execution.parsePostGraphQLRequest
 import okio.Buffer
 import java.util.concurrent.atomic.AtomicReference
@@ -123,7 +121,7 @@ internal class GraphQLRecord(
   fun sizeInBytes(): Int = record.sizeInBytes
 }
 
-@GraphQLAdapter(forScalar = "Fields")
+@GraphQLCoercing(forScalar = "Fields")
 internal class FieldsAdapter : Adapter<Map<String, Any?>> {
   override fun fromJson(reader: JsonReader, customScalarAdapters: CustomScalarAdapters): Map<String, Any?> {
     throw UnsupportedOperationException()

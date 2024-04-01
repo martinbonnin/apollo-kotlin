@@ -10,7 +10,11 @@ import okio.Sink
 /**
  * @property errors if non-null, errors must contain at least 1 error
  */
-class GraphQLResponse internal constructor(val data: Any?, val errors: List<Error>?, val extensions: Map<String, Any?>?) {
+class GraphQLResponse internal constructor(
+    val data: Any?, // ExternalValue
+    val errors: List<Error>?,
+    val extensions: Map<String, Any?>?
+) {
   class Builder {
     var data: Map<String, Any?>? = null
     var errors: List<Error>? = null

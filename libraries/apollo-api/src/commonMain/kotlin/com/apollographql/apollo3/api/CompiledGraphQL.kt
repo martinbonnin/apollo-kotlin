@@ -350,7 +350,9 @@ class CompiledVariable(val name: String)
 /**
  * The Kotlin representation of a GraphQL value
  *
- * [CompiledValue] can be any of [ApolloJsonElement] or [CompiledVariable]
+ * [CompiledValue] can be:
+ * - any of [ApolloJsonElement] except dynamic
+ * - [CompiledVariable]
  *
  * Enum values are mapped to strings
  * Int and Float values are mapped to [com.apollographql.apollo3.api.json.JsonNumber]

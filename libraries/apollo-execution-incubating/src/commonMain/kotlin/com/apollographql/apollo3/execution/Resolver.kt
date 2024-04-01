@@ -6,6 +6,7 @@ import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.api.json.MapJsonReader
 import com.apollographql.apollo3.ast.GQLBooleanValue
 import com.apollographql.apollo3.ast.GQLEnumValue
+import com.apollographql.apollo3.ast.GQLField
 import com.apollographql.apollo3.ast.GQLFieldDefinition
 import com.apollographql.apollo3.ast.GQLFloatValue
 import com.apollographql.apollo3.ast.GQLIntValue
@@ -21,6 +22,7 @@ import com.apollographql.apollo3.ast.GQLValue
 import com.apollographql.apollo3.ast.GQLVariableValue
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
+import com.apollographql.apollo3.execution.internal.InternalValue
 
 fun interface Resolver {
   /**
@@ -83,7 +85,7 @@ class ResolveTypeInfo(
 )
 
 @Suppress("UNCHECKED_CAST")
-class ResolveInfo(
+class ResolveInfo internal constructor(
     /**
      * The parent object, maybe be [DefaultRoot]
      *
@@ -91,68 +93,38 @@ class ResolveInfo(
      * @see [ExecutableSchema.Builder.mutationRoot]
      * @see [ExecutableSchema.Builder.subscriptionRoot]
      */
-    val parentObject: Any,
+    val parentObject: Any?,
     val executionContext: ExecutionContext,
-    val field: MergedField,
+    val fields: List<GQLField>,
     val schema: Schema,
+    /**
+     * Coerced variables
+     */
     val variables: Map<String, Any?>,
-    val adapters: CustomScalarAdapters,
+    /**
+     * Coerced arguments
+     */
+    private val arguments: Map<String, Any?>,
     val parentType: String,
 ) {
-  val fieldName: String = field.first.name
+  val field: GQLField
+    get() = fields.first()
+
+  val fieldName: String
+    get() = fields.first().name
 
   fun fieldDefinition(): GQLFieldDefinition {
-    return field.first.definitionFromScope(schema, parentType)
-        ?: error("Cannot find fieldDefinition $parentType.${field.first.name}")
+    return field.definitionFromScope(schema, parentType)
+        ?: error("Cannot find fieldDefinition $parentType.${field.name}")
   }
 
-  fun <T> getArgument(
+  fun getArgument(
       name: String,
-  ): Optional<T> {
-    val fieldDefinition = fieldDefinition()
-    val argument = field.first.arguments.firstOrNull { it.name == name }
-    val argumentDefinition = fieldDefinition.arguments.first { it.name == name }
-
-    val argumentValue = when {
-      argument != null -> argument.value
-      else -> argumentDefinition.defaultValue
-    }
-
-    if (argumentValue == null) {
-      return Optional.absent()
-    }
-
-    val jsonMap = argumentValue.toJson(variables)
-    return Optional.present(jsonMap.adaptFromJson(argumentDefinition.type)) as Optional<T>
-  }
-
-  fun Any?.adaptFromJson(type: GQLType): Any? {
-    return when (type) {
-      is GQLNonNullType -> {
-        check(this != null)
-        adaptFromJson(type.type)
-      }
-
-      is GQLListType -> {
-        if (this == null) {
-          null
-        } else {
-          check(this is List<*>)
-          map { it.adaptFromJson(type.type) }
-        }
-      }
-
-      is GQLNamedType -> {
-        if (this == null) {
-          null
-        } else {
-          val adapter = adapters.adapterFor<Any>(type.name)
-          when {
-            adapter != null -> adapter.fromJson(MapJsonReader(this), CustomScalarAdapters.Empty)
-            else -> this
-          }
-        }
-      }
+  ): Optional<InternalValue> {
+    return if (arguments.containsKey(name)) {
+      Optional.present(arguments.get(name))
+    } else {
+      Optional.absent()
     }
   }
 

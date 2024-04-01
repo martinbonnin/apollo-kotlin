@@ -12,4 +12,5 @@ package com.apollographql.apollo3.annotations
  * - Kotlin enum values generate GraphQL enum values of the same name
  */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.PROPERTY, AnnotationTarget.FUNCTION)
+@ApolloExperimental
 annotation class GraphQLName(val name: String)

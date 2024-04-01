@@ -120,7 +120,7 @@ sealed interface GQLExecutableDefinition : GQLDefinition
 sealed interface GQLTypeSystemExtension : GQLDefinition
 sealed interface GQLTypeExtension : GQLTypeSystemExtension, GQLNamed
 
-sealed class GQLSelection : GQLNode
+sealed class GQLSelection : GQLNode, GQLHasDirectives
 
 /**
  * The top level node in a GraphQL document. This can be a schema document or an executable document
