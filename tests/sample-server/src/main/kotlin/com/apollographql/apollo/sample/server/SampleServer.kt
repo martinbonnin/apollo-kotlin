@@ -44,7 +44,7 @@ import org.http4k.websocket.WsHandler
 import org.http4k.websocket.WsMessage
 import org.http4k.websocket.WsResponse
 import org.http4k.websocket.WsStatus
-import sample.server.execution.SampleserverExecutableSchemaBuilder
+//import sample.server.execution.SampleserverExecutableSchemaBuilder
 import java.io.Closeable
 import java.time.Duration
 import org.http4k.routing.ws.bind as wsBind
@@ -58,8 +58,9 @@ fun ExecutableSchema(tag: String): ExecutableSchema {
       .toGQLDocument()
       .toSchema()
 
-  return SampleserverExecutableSchemaBuilder(schema, rootSubscriptionObject = { SubscriptionRoot(tag) })
-      .build()
+  TODO()
+//  return SampleserverExecutableSchemaBuilder(schema, rootSubscriptionObject = { SubscriptionRoot(tag) })
+//      .build()
 }
 
 class GraphQLHttpHandler(val executableSchema: ExecutableSchema, val executionContext: ExecutionContext) : HttpHandler {

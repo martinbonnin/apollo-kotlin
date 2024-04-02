@@ -36,9 +36,5 @@ internal class KotlinOperationsContext(
 ): KotlinContext
 
 internal class KotlinExecutableSchemaContext(
-    override val layout: ExecutableSchemaLayout,
-    override val generateMethods: List<GeneratedMethod>,
-    override val jsExport: Boolean,
-    override val resolver: KotlinResolver,
-    override val targetLanguage: TargetLanguage,
-): KotlinContext
+    val layout: ExecutableSchemaLayout,
+)

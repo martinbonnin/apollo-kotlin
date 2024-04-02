@@ -1,15 +1,19 @@
 package com.apollographql.apollo.sample.server.graphql
 
 import com.apollographql.apollo.sample.server.CurrentWebSocket
-import com.apollographql.apollo3.annotations.GraphQLObject
+import com.apollographql.apollo3.annotations.GraphQLSubscriptionRoot
+import com.apollographql.apollo3.annotations.GraphQLScalar
 import com.apollographql.apollo3.api.ExecutionContext
+import com.apollographql.apollo3.api.json.*
+import com.apollographql.apollo3.ast.*
 import com.apollographql.apollo3.execution.websocket.subscriptionId
+import com.apollographql.apollo3.execution.Coercing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import org.http4k.websocket.WsStatus
 
-@GraphQLObject(name = "Subscription")
+@GraphQLSubscriptionRoot
 class SubscriptionRoot(private val tag: String) {
   fun count(to: Int, intervalMillis: Int): Flow<Int> = flow {
     repeat(to) {
@@ -69,7 +73,6 @@ class SubscriptionRoot(private val tag: String) {
   }
 }
 
-@GraphQLObject
 class State(
     val tag: String,
     val subscriptionId: String

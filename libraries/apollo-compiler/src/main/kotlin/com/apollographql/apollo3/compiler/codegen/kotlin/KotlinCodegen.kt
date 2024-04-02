@@ -12,8 +12,7 @@ import com.apollographql.apollo3.compiler.codegen.OperationsLayout
 import com.apollographql.apollo3.compiler.codegen.ResolverKey
 import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
-import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.AdapterRegistryBuilder
-import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.ExecutableSchemaBuilderBuilder
+import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.SchemaDocumentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.addInternal
 import com.apollographql.apollo3.compiler.codegen.kotlin.operations.FragmentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.operations.FragmentModelsBuilder
@@ -52,8 +51,7 @@ import com.apollographql.apollo3.compiler.generateMethodsKotlin
 import com.apollographql.apollo3.compiler.ir.DefaultIrSchema
 import com.apollographql.apollo3.compiler.ir.IrOperations
 import com.apollographql.apollo3.compiler.ir.IrSchema
-import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
-import com.apollographql.apollo3.compiler.ir.IrTypeDefinition
+import com.apollographql.apollo3.compiler.sir.SirTypeDefinition
 import com.apollographql.apollo3.compiler.maybeTransform
 import com.apollographql.apollo3.compiler.operationoutput.OperationOutput
 import com.apollographql.apollo3.compiler.operationoutput.findOperationId
@@ -63,32 +61,10 @@ private class OutputBuilder {
   val builders: MutableList<CgFileBuilder> = mutableListOf()
 }
 
-private fun buildOutput(
-    codegenSchema: CodegenSchema,
-    upstreamCodegenMetadatas: List<CodegenMetadata>,
-    requiresOptInAnnotation: String?,
-    targetLanguage: TargetLanguage,
-    kotlinOutputTransform: Transform<KotlinOutput>?,
-    generateAsInternal: Boolean,
-    block: OutputBuilder.(KotlinResolver) -> Unit,
-): KotlinOutput {
-
-  upstreamCodegenMetadatas.forEach {
-    check(it.targetLanguage == targetLanguage) {
-      "Apollo: Cannot depend on '${it.targetLanguage}' generated models (expected: '$targetLanguage')."
-    }
-  }
-  val resolver = KotlinResolver(
-      entries = upstreamCodegenMetadatas.flatMap { it.entries },
-      next = null,
-      scalarMapping = codegenSchema.scalarMapping,
-      requiresOptInAnnotation = requiresOptInAnnotation,
-  )
-
+private fun buildOutput(generateAsInternal: Boolean, block: OutputBuilder.() -> Unit): List<FileSpec> {
   val outputBuilder = OutputBuilder()
 
-  outputBuilder.block(resolver)
-
+  outputBuilder.block()
   /**
    * 1st pass: call prepare on all builders
    */
@@ -130,6 +106,36 @@ private fun buildOutput(
         }
         builder.build()
       }
+
+  return fileSpecs
+}
+
+private fun buildOutput(
+    codegenSchema: CodegenSchema,
+    upstreamCodegenMetadatas: List<CodegenMetadata>,
+    requiresOptInAnnotation: String?,
+    targetLanguage: TargetLanguage,
+    kotlinOutputTransform: Transform<KotlinOutput>?,
+    generateAsInternal: Boolean,
+    block: OutputBuilder.(KotlinResolver) -> Unit,
+): KotlinOutput {
+
+  upstreamCodegenMetadatas.forEach {
+    check(it.targetLanguage == targetLanguage) {
+      "Apollo: Cannot depend on '${it.targetLanguage}' generated models (expected: '$targetLanguage')."
+    }
+  }
+  val resolver = KotlinResolver(
+      entries = upstreamCodegenMetadatas.flatMap { it.entries },
+      next = null,
+      scalarMapping = codegenSchema.scalarMapping,
+      requiresOptInAnnotation = requiresOptInAnnotation,
+  )
+
+  val fileSpecs = buildOutput(generateAsInternal) {
+    block(resolver)
+  }
+
   return KotlinOutput(
       fileSpecs = fileSpecs,
       codegenMetadata = CodegenMetadata(targetLanguage = targetLanguage, entries = resolver.entries())
@@ -316,43 +322,31 @@ internal object KotlinCodegen {
   }
 
   fun buildExecutableSchema(
-      codegenSchema: CodegenSchema,
-      codegenMetadata: CodegenMetadata,
-      irTypeDefinitions: List<IrTypeDefinition>,
+      sirTypeDefinitions: List<SirTypeDefinition>,
       layout: ExecutableSchemaLayout,
       serviceName: String,
   ): KotlinOutput {
-    val targetLanguage = TargetLanguage.KOTLIN_1_9
-    return buildOutput(
-        codegenSchema,
-        listOf(codegenMetadata),
-        null,
-        targetLanguage,
-        null,
+    val fileSpecs = buildOutput(
         true,
-    ) { resolver ->
+    ) {
       val context = KotlinExecutableSchemaContext(
-          generateMethods = emptyList(),
-          jsExport = false,
           layout = layout,
-          resolver = resolver,
-          targetLanguage = targetLanguage,
       )
 
-
-      val adapterRegistryBuilder = AdapterRegistryBuilder(
+      val schemaDocumentBuilder = SchemaDocumentBuilder(
           context = context,
           serviceName = serviceName,
-          codegenSchema = codegenSchema
+          sirTypeDefinitions = sirTypeDefinitions
       )
-      builders.add(adapterRegistryBuilder)
-//      val schemaDocumentBuilder = SchemaDocumentBuilder(
+
+      builders.add(schemaDocumentBuilder)
+
+//      val adapterRegistryBuilder = AdapterRegistryBuilder(
 //          context = context,
 //          serviceName = serviceName,
-//          irTypeDefinitions = irTypeDefinitions
+//          codegenSchema = codegenSchema
 //      )
 
-//      builders.add(schemaDocumentBuilder)
 //      builders.add(
 //          ExecutableSchemaBuilderBuilder(
 //              context = context,
@@ -363,6 +357,7 @@ internal object KotlinCodegen {
 //          )
 //      )
     }
+    return KotlinOutput(fileSpecs = fileSpecs, codegenMetadata = CodegenMetadata(TargetLanguage.KOTLIN_1_9, emptyList()))
   }
 }
 

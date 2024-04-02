@@ -1,14 +1,13 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
 import com.apollographql.apollo3.compiler.capitalizeFirstLetter
-import com.apollographql.apollo3.compiler.codegen.executionPackageName
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinExecutableSchemaContext
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols
-import com.apollographql.apollo3.compiler.ir.IrClassName
-import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
-import com.apollographql.apollo3.compiler.ir.asKotlinPoet
+import com.apollographql.apollo3.compiler.sir.SirClassName
+import com.apollographql.apollo3.compiler.sir.SirObjectDefinition
+import com.apollographql.apollo3.compiler.sir.asKotlinPoet
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.LambdaTypeName
@@ -19,8 +18,8 @@ internal class ExecutableSchemaBuilderBuilder(
     private val context: KotlinExecutableSchemaContext,
     private val serviceName: String,
     private val adapterRegistry: MemberName,
-    private val schemaDocumentClassName: IrClassName,
-    private val irObjectDefinitions: List<IrObjectDefinition>,
+    private val schemaDocumentClassName: SirClassName,
+    private val sirObjectDefinitions: List<SirObjectDefinition>,
 ) : CgFileBuilder {
   val simpleName = "${serviceName}ExecutableSchemaBuilder".capitalizeFirstLetter()
   override fun prepare() {
@@ -28,19 +27,19 @@ internal class ExecutableSchemaBuilderBuilder(
   }
 
   override fun build(): CgFile {
-    return CgFile(packageName = context.layout.executionPackageName(), fileName = simpleName, funSpecs = listOf(funSpec())
+    return CgFile(packageName = context.layout.packageName(), fileName = simpleName, funSpecs = listOf(funSpec())
     )
   }
 
   private fun funSpec(): FunSpec {
     val rootIrTargetObjects = listOf("query", "mutation", "subscription").map { operationType ->
-      irObjectDefinitions.find { it.operationType == operationType }
+      sirObjectDefinitions.find { it.operationType == operationType }
     }
 
     return FunSpec.builder(simpleName)
         .returns(KotlinSymbols.ExecutableSchemaBuilder)
         .apply {
-          addParameter(ParameterSpec.builder("schema", KotlinSymbols.Schema).build())
+          addParameter(ParameterSpec.builder("schema", KotlinSymbols.AstSchema).build())
           rootIrTargetObjects.forEach { irTargetObject ->
             if (irTargetObject != null) {
               addParameter(
@@ -63,11 +62,11 @@ internal class ExecutableSchemaBuilderBuilder(
                 .indent()
                 .add(".schema(%M)\n", schemaDocumentClassName.asKotlinPoet())
                 .apply {
-                  irObjectDefinitions.forEach { irTargetObject ->
+                  sirObjectDefinitions.forEach { irTargetObject ->
                     add(".addTypeChecker(%S)·{·it·is·%T·}\n", irTargetObject.name, irTargetObject.targetClassName.asKotlinPoet())
                     irTargetObject.fields.forEach { irTargetField ->
                       val coordinates = "${irTargetObject.name}.${irTargetField.name}"
-                      add(".addResolver(%S)·%L\n", coordinates, resolverBody(irTargetObject, irTargetField, context.resolver))
+                      add(".addResolver(%S)·%L\n", coordinates, resolverBody(irTargetObject, irTargetField, TODO()))
                     }
                   }
                 }

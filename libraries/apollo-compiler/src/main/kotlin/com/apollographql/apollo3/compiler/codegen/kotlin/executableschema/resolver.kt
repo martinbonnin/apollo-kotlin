@@ -2,18 +2,18 @@ package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinResolver
 import com.apollographql.apollo3.compiler.internal.applyIf
-import com.apollographql.apollo3.compiler.ir.IrExecutionContextTargetArgument
-import com.apollographql.apollo3.compiler.ir.IrGraphqlTargetArgument
-import com.apollographql.apollo3.compiler.ir.IrTargetArgument
-import com.apollographql.apollo3.compiler.ir.IrTargetField
-import com.apollographql.apollo3.compiler.ir.IrObjectDefinition
-import com.apollographql.apollo3.compiler.ir.asKotlinPoet
+import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
+import com.apollographql.apollo3.compiler.sir.SirArgument
+import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
+import com.apollographql.apollo3.compiler.sir.SirObjectDefinition
+import com.apollographql.apollo3.compiler.sir.asKotlinPoet
 import com.apollographql.apollo3.compiler.ir.optional
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.joinToCode
 
-internal fun resolverBody(irObjectDefinition: IrObjectDefinition, irTargetField: IrTargetField, resolver: KotlinResolver): CodeBlock {
-  val singleLine = irTargetField.arguments.size < 2
+internal fun resolverBody(sirObjectDefinition: SirObjectDefinition, sirTargetField: SirFieldDefinition, resolver: KotlinResolver): CodeBlock {
+  val singleLine = sirTargetField.arguments.size < 2
 
   return CodeBlock.Builder()
       .apply {
@@ -24,12 +24,12 @@ internal fun resolverBody(irObjectDefinition: IrObjectDefinition, irTargetField:
           add("{·")
         }
       }
-      .add("(it.parentObject·as·%T).%L", irObjectDefinition.targetClassName.asKotlinPoet(), irTargetField.targetName)
-      .applyIf(irTargetField.isFunction) {
+      .add("(it.parentObject·as·%T).%L", sirObjectDefinition.targetClassName.asKotlinPoet(), sirTargetField.targetName)
+      .applyIf(sirTargetField.isFunction) {
         if (singleLine) {
           add("(")
           add(
-              irTargetField.arguments.map { irTargetArgument ->
+              sirTargetField.arguments.map { irTargetArgument ->
                 argumentCodeBlock(irTargetArgument, resolver)
               }.joinToCode(",·")
           )
@@ -38,7 +38,7 @@ internal fun resolverBody(irObjectDefinition: IrObjectDefinition, irTargetField:
           add("(\n")
           indent()
           add(
-              irTargetField.arguments.map { irTargetArgument ->
+              sirTargetField.arguments.map { irTargetArgument ->
                 argumentCodeBlock(irTargetArgument, resolver)
               }.joinToCode(",\n", suffix = "\n")
           )
@@ -58,30 +58,30 @@ internal fun resolverBody(irObjectDefinition: IrObjectDefinition, irTargetField:
       .build()
 }
 
-private fun argumentCodeBlock(irTargetArgument: IrTargetArgument, resolver: KotlinResolver): CodeBlock {
+private fun argumentCodeBlock(sirTargetArgument: SirArgument, resolver: KotlinResolver): CodeBlock {
   val builder = CodeBlock.builder()
-  when (irTargetArgument) {
-    is IrGraphqlTargetArgument -> {
-      /**
-       * Unwrap the optional because getArgument always returns an optional value
-       */
-      val type = if (irTargetArgument.type.optional) {
-        irTargetArgument.type.optional(false)
-      } else {
-        irTargetArgument.type
-      }
-      builder.add(
-          "%L·=·it.getArgument<%T>(%S)",
-          irTargetArgument.targetName,
-          resolver.resolveIrType(type = type, jsExport = false, isInterface = false),
-          irTargetArgument.name,
-      )
-      if (!irTargetArgument.type.optional) {
-        builder.add(".getOrThrow()")
-      }
+  when (sirTargetArgument) {
+    is SirGraphQLArgument -> {
+//      /**
+//       * Unwrap the optional because getArgument always returns an optional value
+//       */
+//      val type = if (sirTargetArgument.type.optional) {
+//        sirTargetArgument.type.optional(false)
+//      } else {
+//        sirTargetArgument.type
+//      }
+//      builder.add(
+//          "%L·=·it.getArgument<%T>(%S)",
+//          sirTargetArgument.targetName,
+//          resolver.resolveIrType(type = type, jsExport = false, isInterface = false),
+//          sirTargetArgument.name,
+//      )
+//      if (!sirTargetArgument.type.optional) {
+//        builder.add(".getOrThrow()")
+//      }
     }
 
-    IrExecutionContextTargetArgument -> {
+    SirExecutionContextArgument -> {
       builder.add("executionContext·=·it.executionContext")
     }
   }

@@ -27,6 +27,7 @@ import com.apollographql.apollo3.ast.pretty
 import com.apollographql.apollo3.ast.toGQLDocument
 import com.apollographql.apollo3.ast.validateAsExecutable
 import com.apollographql.apollo3.ast.validateAsSchemaAndAddApolloDefinition
+import com.apollographql.apollo3.compiler.codegen.ExecutableSchemaLayout
 import com.apollographql.apollo3.compiler.codegen.LayoutImpl
 import com.apollographql.apollo3.compiler.codegen.SchemaAndOperationsLayout
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
@@ -49,7 +50,7 @@ import com.apollographql.apollo3.compiler.ir.IrOperations
 import com.apollographql.apollo3.compiler.ir.IrOperationsBuilder
 import com.apollographql.apollo3.compiler.ir.IrSchema
 import com.apollographql.apollo3.compiler.ir.IrSchemaBuilder
-import com.apollographql.apollo3.compiler.ir.IrTypeDefinition
+import com.apollographql.apollo3.compiler.sir.SirTypeDefinition
 import com.apollographql.apollo3.compiler.operationoutput.OperationDescriptor
 import com.apollographql.apollo3.compiler.pqm.toPersistedQueryManifest
 import java.io.File
@@ -501,25 +502,19 @@ object ApolloCompiler {
   }
 
   fun buildExecutableSchemaSources(
-      codegenSchema: CodegenSchema,
-      codegenMetadata: CodegenMetadata,
-      irTypeDefinitions: List<IrTypeDefinition>,
+      typeDefinitions: List<SirTypeDefinition>,
       packageName: String,
       serviceName: String,
   ): SourceOutput {
     @Suppress("DEPRECATION")
-    val layout = LayoutImpl(
-        codegenSchema = codegenSchema,
-        packageNameGenerator = PackageNameGenerator.Flat(packageName),
-        useSemanticNaming = null,
-        decapitalizeFields = null,
-        generatedSchemaName = null,
-    )
+    val layout = object : ExecutableSchemaLayout {
+      override fun packageName(): String {
+        return packageName
+      }
+    }
 
     return KotlinCodegen.buildExecutableSchema(
-        codegenSchema = codegenSchema,
-        codegenMetadata = codegenMetadata,
-        irTypeDefinitions = irTypeDefinitions,
+        sirTypeDefinitions = typeDefinitions,
         layout = layout,
         serviceName = serviceName
     ).toSourceOutput()

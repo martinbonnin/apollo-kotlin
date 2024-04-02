@@ -3,6 +3,7 @@ package com.apollographql.apollo3.compiler.codegen.kotlin
 import com.apollographql.apollo3.compiler.codegen.ClassNames
 import com.apollographql.apollo3.compiler.codegen.ClassNames.apolloApiJsonPackageName
 import com.apollographql.apollo3.compiler.codegen.ClassNames.apolloApiPackageName
+import com.apollographql.apollo3.compiler.codegen.ClassNames.apolloAstPackageName
 import com.apollographql.apollo3.compiler.codegen.ResolverClassName
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.MemberName
@@ -18,7 +19,9 @@ internal object KotlinSymbols {
   val ExecutableSchemaBuilder = ClassName(ClassNames.apolloExecutionPackageName, "ExecutableSchema", "Builder")
   val Resolver = ClassName(ClassNames.apolloExecutionPackageName, "Resolver")
   val ResolveInfo = ClassName(ClassNames.apolloExecutionPackageName, "ResolveInfo")
-  val Schema = ClassName(ClassNames.apolloAstPackageName, "Schema")
+  val AstDocument = ClassName(apolloAstPackageName, "GQLDocument")
+  val AstScalarTypeDefinition = ClassName(apolloAstPackageName, "GQLScalarTypeDefinition")
+  val AstSchema = ClassName(apolloAstPackageName, "Schema")
   val ObjectType = ClassNames.ObjectType.toKotlinPoetClassName()
   val ObjectTypeBuilder = ClassNames.ObjectTypeBuilder.toKotlinPoetClassName()
   val InterfaceType = ClassNames.InterfaceType.toKotlinPoetClassName()

@@ -1,7 +1,7 @@
 package com.apollographql.apollo3.debugserver.internal.graphql
 
 import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.annotations.GraphQLCoercing
+import com.apollographql.apollo3.annotations.GraphQLScalar
 import com.apollographql.apollo3.annotations.GraphQLName
 import com.apollographql.apollo3.annotations.GraphQLObject
 import com.apollographql.apollo3.api.Adapter
@@ -121,7 +121,7 @@ internal class GraphQLRecord(
   fun sizeInBytes(): Int = record.sizeInBytes
 }
 
-@GraphQLCoercing(forScalar = "Fields")
+@GraphQLScalar(forScalar = "Fields")
 internal class FieldsAdapter : Adapter<Map<String, Any?>> {
   override fun fromJson(reader: JsonReader, customScalarAdapters: CustomScalarAdapters): Map<String, Any?> {
     throw UnsupportedOperationException()

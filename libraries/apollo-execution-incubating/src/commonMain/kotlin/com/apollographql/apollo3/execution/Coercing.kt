@@ -143,3 +143,17 @@ internal fun coercingDeserialize(value: ExternalValue, coercings: Map<String, Co
     }
   }
 }
+
+class MyCoercing: Coercing<Int> {
+  override fun serialize(jsonWriter: JsonWriter, internalValue: Int) {
+    TODO("Not yet implemented")
+  }
+
+  override fun deserialize(jsonReader: JsonReader): Int {
+    TODO("Not yet implemented")
+  }
+
+  override fun parseLiteral(gqlValue: GQLValue): Int {
+    TODO("Not yet implemented")
+  }
+}
