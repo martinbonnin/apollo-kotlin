@@ -44,11 +44,6 @@ internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLFi
       value = argumentValue
     }
     if (!hasValue && defaultValue != null) {
-      /**
-       * Sadly defaultValues are not coerced 😞
-       * This is conceptually wrong but also what the spec is saying so this is what we want I guess
-       * See https://github.com/graphql/graphql-spec/pull/793
-       */
       coercedValues.put(argumentName, defaultValue.toInternalValue())
       return@forEach
     }

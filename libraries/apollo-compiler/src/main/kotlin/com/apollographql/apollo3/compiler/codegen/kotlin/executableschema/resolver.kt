@@ -1,64 +1,43 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
-import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinResolver
-import com.apollographql.apollo3.compiler.internal.applyIf
 import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
 import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
 import com.apollographql.apollo3.compiler.sir.SirArgument
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirObjectDefinition
 import com.apollographql.apollo3.compiler.sir.asKotlinPoet
-import com.apollographql.apollo3.compiler.ir.optional
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.joinToCode
 
-internal fun resolverBody(sirObjectDefinition: SirObjectDefinition, sirTargetField: SirFieldDefinition, resolver: KotlinResolver): CodeBlock {
+internal fun resolverBody(sirObjectDefinition: SirObjectDefinition, sirTargetField: SirFieldDefinition): CodeBlock {
   val singleLine = sirTargetField.arguments.size < 2
+  val nl = if(singleLine) "" else "\n"
+  val sep = if(singleLine) ",·" else ",\n"
 
-  return CodeBlock.Builder()
-      .apply {
-        if ((!singleLine)) {
-          add("{\n")
-          indent()
-        } else {
-          add("{·")
+  return buildCode {
+    indent{
+      add("it.parentObject.cast<%T>().%L", sirObjectDefinition.targetClassName.asKotlinPoet(), sirTargetField.targetName)
+      if (sirTargetField.isFunction) {
+        add("($nl")
+        indent(!singleLine) {
+          add(sirTargetField.arguments.map { argumentCodeBlock(it) }.joinToCode(sep))
         }
+        add(")")
       }
-      .add("(it.parentObject·as·%T).%L", sirObjectDefinition.targetClassName.asKotlinPoet(), sirTargetField.targetName)
-      .applyIf(sirTargetField.isFunction) {
-        if (singleLine) {
-          add("(")
-          add(
-              sirTargetField.arguments.map { irTargetArgument ->
-                argumentCodeBlock(irTargetArgument, resolver)
-              }.joinToCode(",·")
-          )
-          add(")")
-        } else {
-          add("(\n")
-          indent()
-          add(
-              sirTargetField.arguments.map { irTargetArgument ->
-                argumentCodeBlock(irTargetArgument, resolver)
-              }.joinToCode(",\n", suffix = "\n")
-          )
-          unindent()
-          add(")\n")
-        }
-      }
-      .apply {
-        if (!singleLine) {
-          unindent()
-          add("}")
-        } else {
-          add("·}")
-        }
-      }
-
-      .build()
+    }
+  }
 }
 
-private fun argumentCodeBlock(sirTargetArgument: SirArgument, resolver: KotlinResolver): CodeBlock {
+internal fun CodeBlock.Builder.indent(condition: Boolean = true, block: CodeBlock.Builder.() -> Unit) {
+  if (condition) {
+    indent()
+  }
+  block()
+  if (condition) {
+    unindent()
+  }
+}
+private fun argumentCodeBlock(sirTargetArgument: SirArgument): CodeBlock {
   val builder = CodeBlock.builder()
   when (sirTargetArgument) {
     is SirGraphQLArgument -> {

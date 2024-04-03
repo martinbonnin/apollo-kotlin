@@ -12,6 +12,7 @@ import com.apollographql.apollo3.compiler.codegen.OperationsLayout
 import com.apollographql.apollo3.compiler.codegen.ResolverKey
 import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
+import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.ExecutableSchemaBuilderBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.SchemaDocumentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.addInternal
 import com.apollographql.apollo3.compiler.codegen.kotlin.operations.FragmentBuilder
@@ -347,15 +348,14 @@ internal object KotlinCodegen {
 //          codegenSchema = codegenSchema
 //      )
 
-//      builders.add(
-//          ExecutableSchemaBuilderBuilder(
-//              context = context,
-//              serviceName = serviceName,
-//              adapterRegistry = adapterRegistryBuilder.memberName,
-//              schemaDocumentClassName = schemaDocumentBuilder.className,
-//              irObjectDefinitions = irTypeDefinitions.filterIsInstance<IrObjectDefinition>()
-//          )
-//      )
+      builders.add(
+          ExecutableSchemaBuilderBuilder(
+              context = context,
+              serviceName = serviceName,
+              schemaDocument = schemaDocumentBuilder.schemaDocument,
+              sirTypeDefinitions =  sirTypeDefinitions
+          )
+      )
     }
     return KotlinOutput(fileSpecs = fileSpecs, codegenMetadata = CodegenMetadata(TargetLanguage.KOTLIN_1_9, emptyList()))
   }

@@ -18,6 +18,7 @@ internal fun SirClassName.asKotlinPoet(): ClassName = ClassName(packageName, nam
 @ApolloInternal
 class SirFieldDefinition(
     val name: String,
+    val description: String?,
     val targetName: String,
     val isFunction: Boolean,
     val type: SirType,
@@ -33,8 +34,13 @@ object SirExecutionContextArgument: SirArgument
 @ApolloInternal
 class SirGraphQLArgument(
     val name: String,
+    val description: String?,
     val targetName: String,
     val type: SirType,
+    /**
+     * The defaultValue, encoded in GraphQL
+     */
+    val defaultValue: String?
 ): SirArgument
 
 @ApolloInternal
@@ -116,6 +122,7 @@ class SirUnionDefinition(
     val name: String,
     val description: String?,
     override val qualifiedName: String,
+    val memberTypes: List<String>,
 ): SirTypeDefinition
 
 @ApolloInternal
@@ -142,10 +149,13 @@ class SirInputObjectDefinition(
 
 class SirInputFieldDefinition(
     val name: String,
+    val description: String?,
     val type: SirType,
+    val defaultValue: String?
 )
 
 class SirEnumValueDefinition(
     val name: String,
+    val description: String?,
     val className: SirClassName
 )

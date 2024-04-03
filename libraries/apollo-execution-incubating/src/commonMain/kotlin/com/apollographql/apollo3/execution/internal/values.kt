@@ -42,7 +42,10 @@ internal typealias InternalValue = Any?
 internal typealias ResolverValue = Any?
 
 /**
- * This function is a bit weird
+ * This function is a bit weird and only exists because default values are not coerced.
+ *
+ * This is conceptually wrong but also what the spec is saying so this is what we want I guess.
+ * See https://github.com/graphql/graphql-spec/pull/793
  */
 internal fun GQLValue.toInternalValue(): InternalValue {
   return when (this) {

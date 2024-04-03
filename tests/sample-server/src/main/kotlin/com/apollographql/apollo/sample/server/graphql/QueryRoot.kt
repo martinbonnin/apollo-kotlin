@@ -1,8 +1,10 @@
 package com.apollographql.apollo.sample.server.graphql
 
+import com.apollographql.apollo3.annotations.GraphQLName
 import com.apollographql.apollo3.annotations.GraphQLQueryRoot
 
 
+@GraphQLName("Query")
 @GraphQLQueryRoot
 class QueryRoot {
   fun random(): Int = 42

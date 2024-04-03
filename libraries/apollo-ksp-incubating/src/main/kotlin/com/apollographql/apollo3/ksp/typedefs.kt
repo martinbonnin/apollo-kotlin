@@ -133,6 +133,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     }.map {
       SirEnumValueDefinition(
           name = it.graphqlName(),
+          description = it.docString,
           className = it.asClassName()
       )
     }.toList()
@@ -166,6 +167,10 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
 
     return when {
       classKind == ClassKind.CLASS || classKind == ClassKind.OBJECT -> {
+        if (modifiers.contains(Modifier.ABSTRACT)) {
+          logger.error("Abstract classes are not supported", this)
+          return null
+        }
         SirObjectDefinition(
             name = name,
             description = description,
@@ -185,16 +190,18 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
           return null
         }
 
-        getSealedSubclasses().forEach {
+        val subclasses = getSealedSubclasses().map {
           // Look into subclasses
           declarationsToVisit.add(DeclarationToVisit(it, VisitContext.OUTPUT, null))
-        }
+          it.graphqlName()
+        }.toList()
 
         if (allFields.isEmpty()) {
           SirUnionDefinition(
               name = name,
               description = description,
               qualifiedName = qualifiedName,
+              memberTypes = subclasses
           )
         } else {
           SirInterfaceDefinition(
@@ -245,6 +252,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     val name = graphqlNameOrNull() ?: simpleName.asString()
     return SirFieldDefinition(
         name = name,
+        description = docString,
         targetName = simpleName.asString(),
         isFunction = true,
         type = returnType!!.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType),
@@ -267,14 +275,17 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     }
     return SirGraphQLArgument(
         name = name,
+        description = null,
         targetName = targetName,
-        type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null)
+        type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null),
+        defaultValue = null
     )
   }
 
   private fun KSPropertyDeclaration.toSirFieldDefinition(operationType: String?): SirFieldDefinition? {
     return SirFieldDefinition(
         name = graphqlName(),
+        description = docString,
         targetName = simpleName.asString(),
         isFunction = false,
         type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType),
@@ -301,7 +312,9 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       val declaration = it.type.resolve()
       SirInputFieldDefinition(
           name = name,
-          type = declaration.toSirType(SirDebugContext(it), VisitContext.INPUT, null)
+          description = docString,
+          type = declaration.toSirType(SirDebugContext(it), VisitContext.INPUT, null),
+          defaultValue = null
       )
     }
 
