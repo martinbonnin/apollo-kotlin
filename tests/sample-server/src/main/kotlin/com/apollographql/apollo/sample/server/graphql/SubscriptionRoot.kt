@@ -2,12 +2,8 @@ package com.apollographql.apollo.sample.server.graphql
 
 import com.apollographql.apollo.sample.server.CurrentWebSocket
 import com.apollographql.apollo3.annotations.GraphQLSubscriptionRoot
-import com.apollographql.apollo3.annotations.GraphQLScalar
 import com.apollographql.apollo3.api.ExecutionContext
-import com.apollographql.apollo3.api.json.*
-import com.apollographql.apollo3.ast.*
 import com.apollographql.apollo3.execution.websocket.subscriptionId
-import com.apollographql.apollo3.execution.Coercing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

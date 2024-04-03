@@ -1,10 +1,6 @@
 package com.apollographql.apollo3.execution
 
 import com.apollographql.apollo3.api.json.JsonNumber
-import com.apollographql.apollo3.api.json.JsonReader
-import com.apollographql.apollo3.api.json.JsonWriter
-import com.apollographql.apollo3.api.json.MapJsonReader
-import com.apollographql.apollo3.api.json.MapJsonWriter
 import com.apollographql.apollo3.ast.GQLBooleanValue
 import com.apollographql.apollo3.ast.GQLFloatValue
 import com.apollographql.apollo3.ast.GQLIntValue
@@ -15,12 +11,26 @@ import com.apollographql.apollo3.execution.internal.InternalValue
 
 /**
  * See https://www.graphql.de/blog/scalars-in-depth/
+ *
+ * TODO: add a version that can stream
  */
 interface Coercing<T> {
-  fun serialize(jsonWriter: JsonWriter, internalValue: T)
-  fun deserialize(jsonReader: JsonReader): T
+  /**
+   * Serializes from an internal value to an external value.
+   *
+   * For an example Date --> String
+   */
+  fun serialize(internalValue: T): ExternalValue
+
+  /**
+   * Deserializes from an external value to an internal value.
+   *
+   * For an example String --> Date
+   */
+  fun deserialize(value: ExternalValue): T
   fun parseLiteral(gqlValue: GQLValue): T
 }
+
 
 internal fun coercingSerialize(value: InternalValue, coercings: Map<String, Coercing<*>>, typename: String): ExternalValue {
   return when (typename) {
@@ -55,10 +65,7 @@ internal fun coercingSerialize(value: InternalValue, coercings: Map<String, Coer
       if (coercing == null) {
         error("Cannot get coercing for '${typename}'")
       }
-      // TODO: stream the response
-      val writer = MapJsonWriter()
-      coercing.serialize(writer, value)
-      writer.root()
+      coercing.serialize(value)
     }
   }
 }
@@ -139,7 +146,7 @@ internal fun coercingDeserialize(value: ExternalValue, coercings: Map<String, Co
       if (coercing == null) {
         error("Cannot get coercing for '${typename}'")
       }
-      coercing.deserialize(MapJsonReader(value))
+      coercing.deserialize(value)
     }
   }
 }

@@ -80,7 +80,8 @@ class SirCoercing(
 @ApolloInternal
 enum class Instantiation {
   OBJECT,
-  NO_ARG_CONSTRUCTOR
+  NO_ARG_CONSTRUCTOR,
+  UNKNOWN
 }
 
 @ApolloInternal
@@ -93,8 +94,7 @@ class SirObjectDefinition(
     override val qualifiedName: String,
     val interfaces: List<String>,
     val targetClassName: SirClassName,
-    val isSingleton: Boolean,
-    val hasNoArgsConstructor: Boolean,
+    val instantiation: Instantiation,
     /**
      * If this is a root type, what root it is for
      */

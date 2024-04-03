@@ -120,15 +120,9 @@ class ResolveInfo internal constructor(
         ?: error("Cannot find fieldDefinition $parentType.${field.name}")
   }
 
-  fun argumentType(
-      name: String
-  ): GQLType {
-    return fieldDefinition().arguments.firstOrNull { it.name == name }?.type ?: error("Cannot find an argument with type '$name'")
-  }
-
   fun getArgument(
       name: String,
-  ): Optional<Any? /*InternalValue */> {
+  ): Optional<InternalValue> {
     return if (arguments.containsKey(name)) {
       Optional.present(arguments.get(name))
     } else {

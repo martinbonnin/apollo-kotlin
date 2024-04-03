@@ -451,9 +451,6 @@ internal fun KSDeclaration.asClassName(): SirClassName {
   return SirClassName(packageName.asString(), listOf(simpleName.asString()))
 }
 
-internal val flowClassName = SirClassName("kotlinx.coroutines.flow", listOf("Flow"))
-internal val listClassName = SirClassName("kotlin.collections", listOf("List"))
-internal val optionalClassName = SirClassName("com.apollographql.apollo3.api", listOf("Optional"))
 internal val executionContextClassName = SirClassName("com.apollographql.apollo3.api", listOf("ExecutionContext"))
 
 

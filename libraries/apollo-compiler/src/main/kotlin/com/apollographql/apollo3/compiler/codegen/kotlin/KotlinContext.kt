@@ -6,6 +6,7 @@ import com.apollographql.apollo3.compiler.codegen.CommonLayout
 import com.apollographql.apollo3.compiler.codegen.ExecutableSchemaLayout
 import com.apollographql.apollo3.compiler.codegen.OperationsLayout
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
+import com.squareup.kotlinpoet.MemberName
 
 internal interface KotlinContext {
   val layout: CommonLayout
@@ -37,4 +38,6 @@ internal class KotlinOperationsContext(
 
 internal class KotlinExecutableSchemaContext(
     val layout: ExecutableSchemaLayout,
-)
+) {
+  val coercings = mutableMapOf<String, MemberName>()
+}

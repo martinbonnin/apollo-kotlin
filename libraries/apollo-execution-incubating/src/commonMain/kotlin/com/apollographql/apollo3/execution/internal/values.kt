@@ -17,7 +17,12 @@ import com.apollographql.apollo3.ast.GQLVariableValue
  * - Numbers are stored as Int, Long, Double or JsonNumber for arbitrary precision
  * - Enums are stored as Strings
  */
-internal typealias ExternalValue = Any?
+typealias ExternalValue = Any?
+
+/**
+ * A value where scalars are already coerced to [InternalValue] but input objects and enums are still [ExternalValue]s
+ */
+typealias InputValue = Any?
 
 /**
  * An internal value
@@ -30,7 +35,7 @@ internal typealias ExternalValue = Any?
  * Note: the return value of the resolvers are not considered [InternalValue] and are never coerced to [ExternalValue].
  * Only their fields are
  */
-internal typealias InternalValue = Any?
+typealias InternalValue = Any?
 
 /**
  * The result of a resolver

@@ -68,10 +68,8 @@ fun KSAnnotated.coercing(logger: KSPLogger): SirCoercing? {
   val declaration = ksType.declaration
   val instantiation = when {
     declaration is KSClassDeclaration -> {
-      when {
-        declaration.classKind == ClassKind.OBJECT -> Instantiation.OBJECT
-        declaration.hasNoArgsConstructor() -> Instantiation.NO_ARG_CONSTRUCTOR
-        else -> {
+      declaration.instantiation().also {
+        if (it == Instantiation.UNKNOWN) {
           logger.error("Coercing implementation must either be objects or have a no-arg constructor", this)
           return null
         }

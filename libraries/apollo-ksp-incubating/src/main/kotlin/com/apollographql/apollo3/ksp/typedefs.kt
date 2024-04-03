@@ -1,5 +1,6 @@
 package com.apollographql.apollo3.ksp
 
+import com.apollographql.apollo3.compiler.sir.Instantiation
 import com.apollographql.apollo3.compiler.sir.SirArgument
 import com.apollographql.apollo3.compiler.sir.SirEnumDefinition
 import com.apollographql.apollo3.compiler.sir.SirEnumValueDefinition
@@ -177,8 +178,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
             qualifiedName = qualifiedName,
             interfaces = interfaces(),
             targetClassName = asClassName(),
-            isSingleton = classKind == ClassKind.OBJECT,
-            hasNoArgsConstructor = hasNoArgsConstructor(),
+            instantiation = instantiation(),
             operationType = operationType,
             fields = allFields
         )
@@ -406,9 +406,17 @@ private enum class VisitContext {
 
 private class SirDebugContext(
     val node: KSNode?,
-    val name: String?
+    val name: String?,
 ) {
-  constructor(parameter: KSValueParameter): this(parameter.parent, parameter.name?.asString())
-  constructor(property: KSPropertyDeclaration): this(property.parentDeclaration, property.simpleName.asString())
-  constructor(function: KSFunctionDeclaration): this(function.parentDeclaration, function.simpleName.asString())
+  constructor(parameter: KSValueParameter) : this(parameter.parent, parameter.name?.asString())
+  constructor(property: KSPropertyDeclaration) : this(property.parentDeclaration, property.simpleName.asString())
+  constructor(function: KSFunctionDeclaration) : this(function.parentDeclaration, function.simpleName.asString())
+}
+
+internal fun KSClassDeclaration.instantiation(): Instantiation {
+  return when {
+    classKind == ClassKind.OBJECT -> Instantiation.OBJECT
+    hasNoArgsConstructor() -> Instantiation.NO_ARG_CONSTRUCTOR
+    else -> Instantiation.UNKNOWN
+  }
 }

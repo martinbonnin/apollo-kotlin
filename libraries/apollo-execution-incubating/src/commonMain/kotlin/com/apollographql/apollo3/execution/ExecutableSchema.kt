@@ -54,8 +54,8 @@ class ExecutableSchema internal constructor(
       this.instrumentations.add(instrumentation)
     }
 
-    fun addCoercing(scalar: String, coercing: Coercing<*>): Builder = apply {
-      this.coercings.put(scalar, coercing)
+    fun addCoercing(type: String, coercing: Coercing<*>): Builder = apply {
+      this.coercings.put(type, coercing)
     }
 
     fun schema(schema: Schema): Builder = apply {

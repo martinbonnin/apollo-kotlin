@@ -11,11 +11,11 @@ import com.squareup.kotlinpoet.joinToCode
 
 internal fun resolverBody(sirObjectDefinition: SirObjectDefinition, sirTargetField: SirFieldDefinition): CodeBlock {
   val singleLine = sirTargetField.arguments.size < 2
-  val nl = if(singleLine) "" else "\n"
-  val sep = if(singleLine) ",·" else ",\n"
+  val nl = if (singleLine) "" else "\n"
+  val sep = if (singleLine) ",·" else ",\n"
 
   return buildCode {
-    indent{
+    indent {
       add("it.parentObject.cast<%T>().%L", sirObjectDefinition.targetClassName.asKotlinPoet(), sirTargetField.targetName)
       if (sirTargetField.isFunction) {
         add("($nl")
@@ -37,32 +37,21 @@ internal fun CodeBlock.Builder.indent(condition: Boolean = true, block: CodeBloc
     unindent()
   }
 }
-private fun argumentCodeBlock(sirTargetArgument: SirArgument): CodeBlock {
-  val builder = CodeBlock.builder()
-  when (sirTargetArgument) {
-    is SirGraphQLArgument -> {
-//      /**
-//       * Unwrap the optional because getArgument always returns an optional value
-//       */
-//      val type = if (sirTargetArgument.type.optional) {
-//        sirTargetArgument.type.optional(false)
-//      } else {
-//        sirTargetArgument.type
-//      }
-//      builder.add(
-//          "%L·=·it.getArgument<%T>(%S)",
-//          sirTargetArgument.targetName,
-//          resolver.resolveIrType(type = type, jsExport = false, isInterface = false),
-//          sirTargetArgument.name,
-//      )
-//      if (!sirTargetArgument.type.optional) {
-//        builder.add(".getOrThrow()")
-//      }
-    }
 
-    SirExecutionContextArgument -> {
-      builder.add("executionContext·=·it.executionContext")
+private fun argumentCodeBlock(sirArgument: SirArgument): CodeBlock {
+  return buildCode {
+    when (sirArgument) {
+      is SirGraphQLArgument -> {
+        add(
+            "%L·=·it.getArgument(%S).cast()",
+            sirArgument.targetName,
+            sirArgument.name,
+        )
+      }
+
+      SirExecutionContextArgument -> {
+        add("executionContext·=·it.executionContext")
+      }
     }
   }
-  return builder.build()
 }

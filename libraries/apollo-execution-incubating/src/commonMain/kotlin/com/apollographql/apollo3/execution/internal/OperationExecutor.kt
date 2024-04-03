@@ -2,7 +2,6 @@ package com.apollographql.apollo3.execution.internal
 
 import com.apollographql.apollo3.api.Error
 import com.apollographql.apollo3.api.ExecutionContext
-import com.apollographql.apollo3.api.json.MapJsonWriter
 import com.apollographql.apollo3.ast.GQLBooleanValue
 import com.apollographql.apollo3.ast.GQLDirective
 import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
@@ -180,7 +179,11 @@ internal class OperationExecutor(
 
   private fun executeSelectionSetAsResponse(rootValue: ResolverValue): GraphQLResponse {
     val typeDefinition = schema.typeDefinition(schema.rootTypeNameFor(operation.operationType))
-    val data = executeSelectionSet(operation.selections, typeDefinition as GQLObjectTypeDefinition, rootValue, emptyList())
+    val data = try {
+      executeSelectionSet(operation.selections, typeDefinition as GQLObjectTypeDefinition, rootValue, emptyList())
+    } catch (e: BubbleNullException) {
+      null
+    }
 
     return GraphQLResponse(data, errors, null)
   }
@@ -216,8 +219,8 @@ internal class OperationExecutor(
     fieldType as GQLNamedType
     val typeDefinition = schema.typeDefinition(fieldType.name)
     return when (typeDefinition) {
-      is GQLScalarTypeDefinition,
       is GQLEnumTypeDefinition,
+      is GQLScalarTypeDefinition,
       -> {
         // leaf type
         coercingSerialize(result, coercings, typeDefinition.name)
@@ -287,6 +290,7 @@ internal class OperationExecutor(
                   .path(path)
                   .build()
           )
+          e.printStackTrace()
         }
         if (fieldDefinition.type is GQLNonNullType) {
           throw BubbleNullException
@@ -366,7 +370,7 @@ internal class OperationExecutor(
       when (selection) {
         is GQLField -> {
           groupedFields.update(selection.responseName()) {
-            it?.plus(it).orEmpty()
+            (it.orEmpty()).plus(selection)
           }
         }
 

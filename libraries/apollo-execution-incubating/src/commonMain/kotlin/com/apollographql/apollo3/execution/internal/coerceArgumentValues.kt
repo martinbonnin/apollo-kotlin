@@ -1,6 +1,5 @@
 package com.apollographql.apollo3.execution.internal
 
-import com.apollographql.apollo3.api.json.MapJsonReader
 import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
 import com.apollographql.apollo3.ast.GQLEnumValue
 import com.apollographql.apollo3.ast.GQLField
@@ -23,7 +22,13 @@ import com.apollographql.apollo3.ast.definitionFromScope
 import com.apollographql.apollo3.execution.Coercing
 import com.apollographql.apollo3.execution.coercingParseLiteral
 
-internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLField, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): Map<String, InternalValue> {
+internal fun coerceArgumentValues(
+    schema: Schema,
+    typename: String,
+    field: GQLField,
+    coercings: Map<String, Coercing<*>>,
+    coercedVariables: Map<String, InternalValue>,
+): Map<String, InternalValue> {
   val coercedValues = mutableMapOf<String, InternalValue>()
   val argumentValues = field.arguments.associate { it.name to it.value }
   val argumentDefinitions = field.definitionFromScope(schema, typename)!!.arguments
@@ -35,7 +40,7 @@ internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLFi
     var hasValue = argumentValues.containsKey(argumentName)
     val argumentValue = argumentValues.get(argumentName)
     // This may hold either an InternalValue (for coerced variables) or a GQLValue (for argument values)
-    var value: Any?
+    val value: Any?
     if (argumentValue is GQLVariableValue) {
       val variableName = argumentValue.name
       hasValue = coercedVariables.containsKey(variableName)
@@ -62,11 +67,10 @@ internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLFi
       } else if (argumentValue is GQLVariableValue) {
         coercedValues.put(argumentName, value)
       } else if (value is GQLValue) {
-        coercedValues.put(argumentName, coerceLitteralToInternal(schema, value, argumentType, coercings, coercedVariables))
+        coercedValues.put(argumentName, coerceLiteralToInternal(schema, value, argumentType, coercings, coercedVariables))
       } else {
         error("Cannot coerce '$value'")
       }
-
     }
   }
 
@@ -76,7 +80,7 @@ internal fun coerceArgumentValues(schema: Schema, typename: String, field: GQLFi
 /**
  *
  */
-internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQLType, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): InternalValue {
+internal fun coerceLiteralToInternal(schema: Schema, value: GQLValue, type: GQLType, coercings: Map<String, Coercing<*>>, coercedVariables: Map<String, InternalValue>): InternalValue {
   if (value is GQLNullValue) {
     check(type !is GQLNonNullType) {
       error("'null' found in non-null position")
@@ -96,7 +100,7 @@ internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQL
 
   return when (type) {
     is GQLNonNullType -> {
-      coerceLitteralToInternal(schema, value, type.type, coercings, coercedVariables)
+      coerceLiteralToInternal(schema, value, type.type, coercings, coercedVariables)
     }
 
     is GQLListType -> {
@@ -110,7 +114,7 @@ internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQL
               null
             }
           } else {
-            coerceLitteralToInternal(schema, it, type.type, coercings, coercedVariables)
+            coerceLiteralToInternal(schema, it, type.type, coercings, coercedVariables)
           }
         }
       } else {
@@ -122,7 +126,7 @@ internal fun coerceLitteralToInternal(schema: Schema, value: GQLValue, type: GQL
           }
         } else {
           // Single items are mapped to a list of 1
-          listOf(coerceLitteralToInternal(schema, value, type.type, coercings, coercedVariables))
+          listOf(coerceLiteralToInternal(schema, value, type.type, coercings, coercedVariables))
         }
       }
     }
@@ -183,7 +187,7 @@ private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefi
       }
     } else {
       val inputFieldValue = fields.get(inputValueDefinition.name)!!
-      inputValueDefinition.name to coerceLitteralToInternal(schema, inputFieldValue, inputValueDefinition.type, coercings, coercedVariables)
+      inputValueDefinition.name to coerceLiteralToInternal(schema, inputFieldValue, inputValueDefinition.type, coercings, coercedVariables)
     }
   }
 }
