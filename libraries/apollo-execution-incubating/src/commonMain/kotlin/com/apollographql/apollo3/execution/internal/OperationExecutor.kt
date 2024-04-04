@@ -96,7 +96,14 @@ internal class OperationExecutor(
       "subscription" -> return errorResponse("Use executeSubscription() to execute subscriptions")
       else -> errorResponse("Unknown operation type '${operationDefinition.operationType}")
     }
-    return executeSelectionSetAsResponse(rootObject)
+    val typeDefinition = schema.typeDefinition(schema.rootTypeNameFor(operation.operationType))
+    val data = try {
+      executeSelectionSet(operation.selections, typeDefinition as GQLObjectTypeDefinition, rootObject, emptyList())
+    } catch (e: BubbleNullException) {
+      null
+    }
+
+    return GraphQLResponse(data, errors, null)
   }
 
   private fun errorFlow(message: String): Flow<GraphQLResponse> {
@@ -107,21 +114,8 @@ internal class OperationExecutor(
     return flowOf(SubscriptionError(listOf(Error.Builder(message).build())))
   }
 
-  private fun resolveFieldEventStream(subscriptionType: GQLObjectTypeDefinition, rootValue: ResolverValue, fields: List<GQLField>, coercedArgumentValues: Map<String, InternalValue>): Flow<ResolverValue> {
-    val resolveInfo = ResolveInfo(
-        parentObject = rootValue,
-        executionContext = executionContext,
-        fields = fields,
-        schema = schema,
-        variables = coercedVariables,
-        arguments = coercedArgumentValues,
-        parentType = subscriptionType.name,
-    )
-
-    instrumentations.forEach { it.beforeResolve(resolveInfo) }
-    val resolver = resolvers.get(resolveInfo.coordinates()) ?: defaultResolver
-    val flow = resolver.resolve(resolveInfo)
-
+  private fun resolveFieldEventStream(subscriptionType: GQLObjectTypeDefinition, rootValue: ResolverValue, fields: List<GQLField>, coercedArgumentValues: Map<String, InternalValue>, responseName: String): Flow<PendingField> {
+    val flow = resolveFieldValue(subscriptionType, rootValue, fields, arguments = coercedArgumentValues)
     if (flow == null) {
       error("root subscription field returned null")
     }
@@ -130,13 +124,32 @@ internal class OperationExecutor(
       error("Subscription resolvers must return a Flow<> for root fields")
     }
 
-    return flow
+    return flow.map {
+      PendingFieldItem(
+          parentType = subscriptionType.name,
+          objectValue = it,
+          fields = fields,
+          responseName = responseName
+      )
+    }
   }
 
-  private fun createSourceEventStream(initialValue: ResolverValue): Flow<ResolverValue> {
+  sealed interface PendingField
+  private class PendingFieldItem(
+      val parentType: String,
+      val objectValue: InternalValue,
+      val fields: List<GQLField>,
+      val responseName: String,
+  ) : PendingField
+
+  private class PendingFieldError(
+      val message: String,
+  ) : PendingField
+
+  private fun createSourceEventStream(initialValue: ResolverValue): Flow<PendingField> {
     val rootTypename = schema.rootTypeNameOrNullFor(operation.operationType)
     if (rootTypename == null) {
-      return errorFlow("'${operation.operationType}' is not supported")
+      return flowOf(PendingFieldError("'${operation.operationType}' is not supported"))
     }
 
     val typeDefinition = schema.typeDefinition(rootTypename)
@@ -146,10 +159,10 @@ internal class OperationExecutor(
     val selections = operation.selections
     val groupedFieldsSet = collectFields(typeDefinition.name, selections, coercedVariables)
     check(groupedFieldsSet.size == 1) {
-      return errorFlow("Subscriptions must have a single root field")
+      return flowOf(PendingFieldError("Subscriptions must have a single root field"))
     }
     val fields = groupedFieldsSet.values.first()
-    return resolveFieldEventStream(typeDefinition, initialValue, fields, coerceArgumentValues(schema, typeDefinition.name, fields.first(), coercings, coercedVariables))
+    return resolveFieldEventStream(typeDefinition, initialValue, fields, coerceArgumentValues(schema, typeDefinition.name, fields.first(), coercings, coercedVariables), responseName = fields.first().responseName())
   }
 
   fun executeSubscription(): Flow<SubscriptionEvent> {
@@ -167,27 +180,35 @@ internal class OperationExecutor(
     return mapSourceToResponseEvent(eventStream)
   }
 
-  private fun mapSourceToResponseEvent(sourceStream: Flow<ResolverValue>): Flow<SubscriptionEvent> {
+  private fun mapSourceToResponseEvent(sourceStream: Flow<PendingField>): Flow<SubscriptionEvent> {
     return sourceStream.map {
-      // TODO: allow implementers to terminal the stream with an exception
+      // TODO: allow implementers to terminate the stream with an exception
       SubscriptionResponse(executeSubscriptionEvent(it))
     }
   }
 
-  private fun executeSubscriptionEvent(event: ResolverValue): GraphQLResponse {
-    return executeSelectionSetAsResponse(event)
-  }
-
-  private fun executeSelectionSetAsResponse(rootValue: ResolverValue): GraphQLResponse {
-    val typeDefinition = schema.typeDefinition(schema.rootTypeNameFor(operation.operationType))
-    val data = try {
-      executeSelectionSet(operation.selections, typeDefinition as GQLObjectTypeDefinition, rootValue, emptyList())
-    } catch (e: BubbleNullException) {
-      null
+  private fun executeSubscriptionEvent(event: PendingField): GraphQLResponse {
+    return when (event) {
+      is PendingFieldError -> GraphQLResponse.Builder().errors(listOf(Error.Builder(event.message).build())).build()
+      is PendingFieldItem -> {
+        val data = try {
+          mapOf(
+              "data" to completeValue(
+                  event.fields.first().definitionFromScope(schema, event.parentType)!!.type,
+                  fields = event.fields,
+                  event.objectValue,
+                  variables,
+                  listOf(event.responseName)
+              )
+          )
+        } catch (e: Exception) {
+          null
+        }
+        GraphQLResponse(data, errors, null)
+      }
     }
-
-    return GraphQLResponse(data, errors, null)
   }
+
 
   private fun executeField(objectType: GQLObjectTypeDefinition, objectValue: ResolverValue, fieldType: GQLType, fields: List<GQLField>, coercedVariables: Map<String, InternalValue>, path: List<Any>): ExternalValue {
     val field = fields.first()
@@ -302,7 +323,7 @@ internal class OperationExecutor(
     }
   }
 
-  object BubbleNullException: Exception()
+  object BubbleNullException : Exception()
 
   /**
    * Assumes validation and or variable coercion caught errors, crashes else.

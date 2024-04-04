@@ -275,19 +275,27 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       logger.error("Default argument are not supported")
       return null
     }
-    var defaultValue = findAnnotation("GraphQLDefault")?.getArgumentValueAsString("value")
+    val defaultValue = findAnnotation("GraphQLDefault")?.getArgumentValueAsString("value")
     if (defaultValue != null) {
       val result = defaultValue.parseAsGQLValue()
       if (result.issues.isNotEmpty()) {
         logger.error("@GraphQLDefault value is not a valid GraphQL literal: ${result.issues.first().message}")
-        defaultValue = null
+        return null
+      }
+    }
+    val type = type.resolve()
+    val sirType = type.toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null)
+    if (defaultValue == null && sirType !is SirNonNullType) {
+      if (type.declaration.asClassName().asString() != "com.apollographql.apollo3.api.Optional") {
+        logger.error("Argument is nullable and doesn't have a default value: it must also be optional")
+        return null
       }
     }
     return SirGraphQLArgument(
         name = name,
         description = null,
         targetName = targetName,
-        type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null),
+        type = sirType,
         defaultValue = defaultValue
     )
   }

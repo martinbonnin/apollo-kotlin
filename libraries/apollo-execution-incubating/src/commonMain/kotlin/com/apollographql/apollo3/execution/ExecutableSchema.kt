@@ -9,6 +9,7 @@ import com.apollographql.apollo3.ast.GQLOperationDefinition
 import com.apollographql.apollo3.ast.GraphQLIssue
 import com.apollographql.apollo3.ast.Issue
 import com.apollographql.apollo3.ast.Schema
+import com.apollographql.apollo3.ast.builtinDefinitions
 import com.apollographql.apollo3.ast.parseAsGQLDocument
 import com.apollographql.apollo3.ast.toGQLDocument
 import com.apollographql.apollo3.ast.toSchema
@@ -38,7 +39,7 @@ class ExecutableSchema internal constructor(
     private var persistedDocumentCache: PersistedDocumentCache? = null
     private var instrumentations = mutableListOf<Instrumentation>()
     private var coercings = mutableMapOf<String, Coercing<*>>()
-    private var schema: Schema? = null
+    private var schema: GQLDocument? = null
     private var queryRoot: (() -> Any)? = null
     private var mutationRoot: (() -> Any)? = null
     private var subscriptionRoot: (() -> Any)? = null
@@ -59,12 +60,8 @@ class ExecutableSchema internal constructor(
       this.coercings.put(type, coercing)
     }
 
-    fun schema(schema: Schema): Builder = apply {
-      this.schema = schema
-    }
-
     fun schema(schema: GQLDocument): Builder = apply {
-      schema(schema.toSchema())
+      this.schema = schema
     }
 
     fun schema(schema: String): Builder = apply {
@@ -99,7 +96,10 @@ class ExecutableSchema internal constructor(
     }
 
     fun build(): ExecutableSchema {
-      val schema = schema ?: error("A schema is required to build an ExecutableSchema")
+      // TODO should it be possible to override the builtinDefinitions?
+      val definitions = builtinDefinitions() + (schema?.definitions ?: error("A schema is required to build an ExecutableSchema"))
+      val schema = GQLDocument(definitions, null).toSchema()
+
       val resolvers = buildMap {
         putAll(introspectionResolvers(schema))
         putAll(resolvers)

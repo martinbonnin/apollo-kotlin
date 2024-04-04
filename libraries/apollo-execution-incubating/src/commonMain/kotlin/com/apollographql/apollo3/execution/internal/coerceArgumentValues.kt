@@ -1,5 +1,6 @@
 package com.apollographql.apollo3.execution.internal
 
+import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
 import com.apollographql.apollo3.ast.GQLEnumValue
 import com.apollographql.apollo3.ast.GQLField
@@ -62,19 +63,33 @@ internal fun coerceArgumentValues(
     }
 
     if (hasValue) {
-      if (value == null) {
-        coercedValues.put(argumentName, null)
+      val value2 = if (value == null) {
+        null
       } else if (argumentValue is GQLVariableValue) {
-        coercedValues.put(argumentName, value)
+        value
       } else if (value is GQLValue) {
-        coercedValues.put(argumentName, coerceLiteralToInternal(schema, value, argumentType, coercings, coercedVariables))
+        coerceLiteralToInternal(schema, value, argumentType, coercings, coercedVariables)
       } else {
         error("Cannot coerce '$value'")
       }
+      /**
+       * If there is no default value and the type is nullable, this argument is potentially missing: wrap
+       */
+      coercedValues.put(argumentName, value2.maybeWrap(argumentType !is GQLNonNullType && defaultValue == null))
+    } else {
+      Optional.absent()
     }
   }
 
   return coercedValues
+}
+
+private fun Any?.maybeWrap(wrap: Boolean): Any? {
+  return if (wrap) {
+    Optional.present(this)
+  } else {
+    this
+  }
 }
 
 /**

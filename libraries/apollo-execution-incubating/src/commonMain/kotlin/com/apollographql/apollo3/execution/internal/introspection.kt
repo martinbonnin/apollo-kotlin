@@ -17,6 +17,7 @@ import com.apollographql.apollo3.ast.GQLType
 import com.apollographql.apollo3.ast.GQLTypeDefinition
 import com.apollographql.apollo3.ast.GQLUnionTypeDefinition
 import com.apollographql.apollo3.ast.Schema
+import com.apollographql.apollo3.ast.builtinDefinitions
 import com.apollographql.apollo3.ast.findDeprecationReason
 import com.apollographql.apollo3.ast.findSpecifiedBy
 import com.apollographql.apollo3.ast.toUtf8
@@ -26,6 +27,7 @@ import com.apollographql.apollo3.execution.StringCoercing
 private inline fun <reified T> Any?.cast() = this as T
 
 private object SchemaObject
+
 
 internal val introspectionCoercings = mapOf(
     "__TypeKind" to StringCoercing,
@@ -37,7 +39,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
         schema.queryTypeDefinition.name to mapOf(
             "__schema" to Resolver { SchemaObject },
             "__type" to Resolver {
-                val name = it.getArgument("name").getOrThrow().cast<String>()
+                val name = it.getArgument("name").cast<String>()
                 IntrospectionType(GQLNamedType(name = name), schema)
             }
         ),
@@ -110,7 +112,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
                     return@Resolver null
                 }
 
-                val includeDeprecated = it.getArgument("includeDeprecated").getOrElse(false).cast<Boolean>()
+                val includeDeprecated = it.getArgument("includeDeprecated").cast<Boolean>()
                 definitions.filter {
                     includeDeprecated || it.directives.findDeprecationReason() == null
                 }
@@ -149,7 +151,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
                     return@Resolver null
                 }
 
-                val includeDeprecated = it.getArgument("includeDeprecated").getOrElse(false).cast<Boolean>()
+                val includeDeprecated = it.getArgument("includeDeprecated").cast<Boolean>()
 
                 typeDefinition.enumValues.filter {
                     includeDeprecated || it.directives.findDeprecationReason() == null
@@ -161,7 +163,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
                     return@Resolver null
                 }
 
-                val includeDeprecated = it.getArgument("includeDeprecated").getOrElse(false).cast<Boolean>()
+                val includeDeprecated = it.getArgument("includeDeprecated").cast<Boolean>()
 
                 typeDefinition.inputFields.filter {
                     includeDeprecated || it.directives.findDeprecationReason() == null
@@ -186,7 +188,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
                 fieldDefinition.description
             },
             "args" to Resolver {
-                val includeDeprecated = it.getArgument("includeDeprecated").getOrElse(false).cast<Boolean>()
+                val includeDeprecated = it.getArgument("includeDeprecated").cast<Boolean>()
 
                 val fieldDefinition = it.parentObject.cast<GQLFieldDefinition>()
                 fieldDefinition.arguments.filter {
@@ -262,7 +264,7 @@ internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
                 }
             },
             "args" to Resolver {
-                val includeDeprecated = it.getArgument("includeDeprecated").getOrElse(false).cast<Boolean>()
+                val includeDeprecated = it.getArgument("includeDeprecated").cast<Boolean>()
 
                 it.parentObject.cast<GQLDirectiveDefinition>().arguments.filter {
                     includeDeprecated || it.directives.findDeprecationReason() == null

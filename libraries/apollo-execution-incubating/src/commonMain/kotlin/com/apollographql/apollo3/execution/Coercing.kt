@@ -90,11 +90,11 @@ internal fun coercingParseLiteral(value: GQLValue, coercings: Map<String, Coerci
   return when (typename) {
     "Int" -> {
       check(value is GQLIntValue)
-      value.value
+      value.value.toInt()
     }
     "Float" -> {
       check(value is GQLFloatValue)
-      value.value
+      value.value.toDouble()
     }
     "String" -> {
       check(value is GQLStringValue)

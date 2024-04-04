@@ -120,14 +120,20 @@ class ResolveInfo internal constructor(
         ?: error("Cannot find fieldDefinition $parentType.${field.name}")
   }
 
+  /**
+   * Returns the argument for field [name]
+   *
+   * The argument is coerced according to the configured [Coercing] so it is safe to force cast the result.
+   *
+   * If the argument is optional (nullable and no defaultValue), the returned value is wrapped in [Optional]. It is the caller responsibility to unwrap
+   *
+   * @throws Exception if [name] is not an argument defined by the current field
+   */
   fun getArgument(
       name: String,
-  ): Optional<InternalValue> {
-    return if (arguments.containsKey(name)) {
-      Optional.present(arguments.get(name))
-    } else {
-      Optional.absent()
-    }
+  ): InternalValue {
+    check(arguments.containsKey(name))
+    return arguments.get(name)
   }
 
   fun coordinates(): String {
