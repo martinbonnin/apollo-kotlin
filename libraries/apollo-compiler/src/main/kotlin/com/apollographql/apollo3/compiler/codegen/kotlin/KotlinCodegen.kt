@@ -12,6 +12,7 @@ import com.apollographql.apollo3.compiler.codegen.OperationsLayout
 import com.apollographql.apollo3.compiler.codegen.ResolverKey
 import com.apollographql.apollo3.compiler.codegen.ResolverKeyKind
 import com.apollographql.apollo3.compiler.codegen.SchemaLayout
+import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.CoercingsBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.ExecutableSchemaBuilderBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.executableschema.SchemaDocumentBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.helpers.addInternal
@@ -342,12 +343,13 @@ internal object KotlinCodegen {
 
       builders.add(schemaDocumentBuilder)
 
-//      val adapterRegistryBuilder = AdapterRegistryBuilder(
-//          context = context,
-//          serviceName = serviceName,
-//          codegenSchema = codegenSchema
-//      )
-
+      builders.add(
+          CoercingsBuilder(
+              context = context,
+              serviceName = serviceName,
+              sirTypeDefinitions = sirTypeDefinitions
+          )
+      )
       builders.add(
           ExecutableSchemaBuilderBuilder(
               context = context,

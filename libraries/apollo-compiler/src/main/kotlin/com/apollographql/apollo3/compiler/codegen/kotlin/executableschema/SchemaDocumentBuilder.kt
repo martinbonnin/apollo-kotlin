@@ -2,6 +2,7 @@ package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
 import com.apollographql.apollo3.ast.GQLDirective
 import com.apollographql.apollo3.ast.GQLFieldDefinition
+import com.apollographql.apollo3.ast.SourceLocation
 import com.apollographql.apollo3.compiler.capitalizeFirstLetter
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
@@ -13,6 +14,8 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstInputO
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstInputValueDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstInterfaceTypeDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstObjectTypeDefinition
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstOperationTypeDefinition
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstSchemaDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstUnionTypeDefinition
 import com.apollographql.apollo3.compiler.decapitalizeFirstLetter
 import com.apollographql.apollo3.compiler.sir.SirArgument
@@ -53,30 +56,30 @@ internal class SchemaDocumentBuilder(
 
   private fun propertySpec(): PropertySpec {
     return PropertySpec.builder(simpleName, AstDocument)
-        .initializer(CodeBlock.builder()
-            .add("%T(\n", AstDocument)
-            .indent()
-            .add("")
-            .add("definitions = listOf(\n")
-            .indent()
-            .apply {
-              sirTypeDefinitions.forEach {
-                when (it) {
-                  is SirScalarDefinition -> add("%L,\n", it.codeBlock())
-                  is SirEnumDefinition -> add("%L,\n", it.codeBlock())
-                  is SirInputObjectDefinition -> add("%L,\n", it.codeBlock())
-                  is SirInterfaceDefinition -> add("%L,\n", it.codeBlock())
-                  is SirObjectDefinition -> add("%L,\n", it.codeBlock())
-                  is SirUnionDefinition -> add("%L,\n", it.codeBlock())
+        .initializer(
+            buildCode {
+              add("%T(\n", AstDocument)
+              indent {
+                add("")
+                add("definitions = listOf(\n")
+                indent {
+                  sirTypeDefinitions.forEach {
+                    when (it) {
+                      is SirScalarDefinition -> add("%L,\n", it.codeBlock())
+                      is SirEnumDefinition -> add("%L,\n", it.codeBlock())
+                      is SirInputObjectDefinition -> add("%L,\n", it.codeBlock())
+                      is SirInterfaceDefinition -> add("%L,\n", it.codeBlock())
+                      is SirObjectDefinition -> add("%L,\n", it.codeBlock())
+                      is SirUnionDefinition -> add("%L,\n", it.codeBlock())
+                    }
+                  }
+                  add("%L,\n", sirTypeDefinitions.schemaDefinitionCodeBlock())
                 }
+                add("),\n")
+                add("sourceLocation = null,\n")
               }
+              add(")\n")
             }
-            .unindent()
-            .add("),\n")
-            .add("sourceLocation = null,\n")
-            .unindent()
-            .add(")\n")
-            .build()
         )
         .build()
   }
@@ -91,6 +94,43 @@ internal class SchemaDocumentBuilder(
   }
 }
 
+/**
+ * ```
+ * fun foo() {
+ *   GQLSchemaDefinition(
+ *       rootOperationTypeDefinitions = listOf(
+ *           GQLOperationTypeDefinition(
+ *               operationType = "",
+ *               namedType = ""
+ *           )
+ *       )
+ *   )
+ * }
+ * ``
+ */
+private fun List<SirTypeDefinition>.schemaDefinitionCodeBlock(): CodeBlock {
+  return  buildCode {
+    add("%T(\n", AstSchemaDefinition)
+    indent {
+      add("sourceLocation = null,\n")
+      add("description = null,\n")
+      add("directives = emptyList(),\n")
+      add("rootOperationTypeDefinitions = listOf(\n")
+      indent {
+        filterIsInstance<SirObjectDefinition>().filter { it.operationType != null }.forEach {
+          add("%T(\n", AstOperationTypeDefinition)
+          indent {
+            add("operationType = %S,\n", it.operationType)
+            add("namedType = %S,\n", it.name)
+          }
+          add("),\n")
+        }
+      }
+      add(")\n")
+    }
+    add(")")
+  }
+}
 private fun SirInputObjectDefinition.codeBlock(): CodeBlock {
   return buildCommon(AstInputObjectTypeDefinition, name, description) {
     add("inputFields = listOf(\n")
@@ -123,7 +163,7 @@ private fun SirUnionDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirObjectDefinition.codeBlock(): CodeBlock {
-  return  buildCommon(AstObjectTypeDefinition, name, description) {
+  return buildCommon(AstObjectTypeDefinition, name, description) {
     add("implementsInterfaces = listOf(%L),\n", interfaces.map { CodeBlock.builder().add("%S", it).build() }.joinToCode(",·"))
     add("fields = listOf(\n")
     indent()
@@ -156,7 +196,7 @@ private fun SirFieldDefinition.codeBlock(): CodeBlock {
       when (it) {
         SirExecutionContextArgument -> Unit
         is SirGraphQLArgument -> {
-          it.codeBlock()
+          add("%L,\n", it.codeBlock())
         }
       }
     }
@@ -167,10 +207,12 @@ private fun SirFieldDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirGraphQLArgument.codeBlock(): CodeBlock {
-  return buildCommon(AstInputValueDefinition, name = name,  description = description) {
+  return buildCommon(AstInputValueDefinition, name = name, description = description) {
     add("type = %L,\n", type.codeBlock())
     if (defaultValue != null) {
-      add("defaultValue = %M(%S),\n", KotlinSymbols.AstParseAsGQLValue, defaultValue)
+      add("defaultValue = %S.%M().getOrThrow(),\n", defaultValue, KotlinSymbols.AstParseAsGQLValue, )
+    } else {
+      add("defaultValue = null,\n", KotlinSymbols.AstParseAsGQLValue)
     }
   }
 }
@@ -211,6 +253,7 @@ private fun SirEnumDefinition.codeBlock(): CodeBlock {
 internal fun SirEnumValueDefinition.codeBlock(): CodeBlock {
   return buildCommon(KotlinSymbols.AstEnumValueDefinition, name, description = description)
 }
+
 internal fun buildCode(block: CodeBlock.Builder.() -> Unit): CodeBlock {
   return CodeBlock.builder()
       .apply(block)

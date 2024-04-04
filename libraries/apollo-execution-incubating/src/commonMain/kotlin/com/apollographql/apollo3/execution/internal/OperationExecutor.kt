@@ -161,6 +161,7 @@ internal class OperationExecutor(
     val eventStream = try {
       createSourceEventStream(rootObject)
     } catch (e: Exception) {
+      e.printStackTrace()
       return subscriptionError(e.message ?: "cannot create source event stream")
     }
     return mapSourceToResponseEvent(eventStream)

@@ -133,6 +133,7 @@ class SirEnumDefinition(
     val name: String,
     val description: String?,
     override val qualifiedName: String,
+    val targetClassName: SirClassName,
     val values: List<SirEnumValueDefinition>,
 ): SirTypeDefinition
 

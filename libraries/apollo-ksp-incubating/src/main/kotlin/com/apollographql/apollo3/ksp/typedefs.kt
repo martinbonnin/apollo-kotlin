@@ -1,5 +1,6 @@
 package com.apollographql.apollo3.ksp
 
+import com.apollographql.apollo3.ast.parseAsGQLValue
 import com.apollographql.apollo3.compiler.sir.Instantiation
 import com.apollographql.apollo3.compiler.sir.SirArgument
 import com.apollographql.apollo3.compiler.sir.SirEnumDefinition
@@ -143,6 +144,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         name = graphqlName(),
         description = docString,
         qualifiedName = asClassName().asString(),
+        targetClassName = asClassName(),
         values = enumValueDefinitions
     )
   }
@@ -273,12 +275,20 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       logger.error("Default argument are not supported")
       return null
     }
+    var defaultValue = findAnnotation("GraphQLDefault")?.getArgumentValueAsString("value")
+    if (defaultValue != null) {
+      val result = defaultValue.parseAsGQLValue()
+      if (result.issues.isNotEmpty()) {
+        logger.error("@GraphQLDefault value is not a valid GraphQL literal: ${result.issues.first().message}")
+        defaultValue = null
+      }
+    }
     return SirGraphQLArgument(
         name = name,
         description = null,
         targetName = targetName,
         type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null),
-        defaultValue = null
+        defaultValue = defaultValue
     )
   }
 

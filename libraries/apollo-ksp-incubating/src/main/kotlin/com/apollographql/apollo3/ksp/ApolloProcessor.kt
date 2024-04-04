@@ -393,7 +393,7 @@ internal fun KSAnnotation.getArgumentValue(name: String): Any? {
   }?.value
 }
 
-private fun KSAnnotation.getArgumentValueAsString(name: String): String? {
+internal fun KSAnnotation.getArgumentValueAsString(name: String): String? {
   return getArgumentValue(name)?.toString()
 }
 //

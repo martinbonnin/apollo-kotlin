@@ -58,11 +58,11 @@ internal class ExecutableSchemaBuilderBuilder(
                   add(".addCoercing(%T)\n", sirScalarDefinition.coercing.codeBlock())
                 }
 //                sirTypeDefinitions.filterIsInstance<SirInputObjectDefinition>().forEach { sirInputObjectDefinition ->
-//                  add(".addCoercing(%M)\n", context.coercings.get(sirInputObjectDefinition.name))
+//                  add(".addCoercing(%S, %M)\n", sirInputObjectDefinition.name, context.coercings.get(sirInputObjectDefinition.name))
 //                }
-//                sirTypeDefinitions.filterIsInstance<SirEnumDefinition>().forEach { sirEnumDefinition ->
-//                  add(".addCoercing(%M)\n", context.coercings.get(sirEnumDefinition.name))
-//                }
+                sirTypeDefinitions.filterIsInstance<SirEnumDefinition>().forEach { sirEnumDefinition ->
+                  add(".addCoercing(%S, %M)\n", sirEnumDefinition.name, context.coercings.get(sirEnumDefinition.name))
+                }
                 listOf("query", "mutation", "subscription").forEach { operationType ->
                   val sirObjectDefinition = sirTypeDefinitions.rootType(operationType)
                   if (sirObjectDefinition != null && sirObjectDefinition.instantiation != Instantiation.UNKNOWN) {

@@ -70,6 +70,21 @@ internal fun coercingSerialize(value: InternalValue, coercings: Map<String, Coer
   }
 }
 
+object StringCoercing: Coercing<String> {
+  override fun serialize(internalValue: String): ExternalValue {
+    return internalValue
+  }
+
+  override fun deserialize(value: ExternalValue): String {
+    check(value is String)
+    return value
+  }
+
+  override fun parseLiteral(gqlValue: GQLValue): String {
+    check(gqlValue is GQLStringValue)
+    return gqlValue.value
+  }
+}
 
 internal fun coercingParseLiteral(value: GQLValue, coercings: Map<String, Coercing<*>>, typename: String): InternalValue {
   return when (typename) {

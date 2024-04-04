@@ -16,6 +16,7 @@ import com.apollographql.apollo3.ast.validateAsExecutable
 import com.apollographql.apollo3.execution.internal.OperationExecutor
 import com.apollographql.apollo3.execution.internal.ResolveType
 import com.apollographql.apollo3.execution.internal.TypeChecker
+import com.apollographql.apollo3.execution.internal.introspectionCoercings
 import com.apollographql.apollo3.execution.internal.introspectionResolvers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -102,6 +103,10 @@ class ExecutableSchema internal constructor(
       val resolvers = buildMap {
         putAll(introspectionResolvers(schema))
         putAll(resolvers)
+      }
+      val coercings = buildMap {
+        putAll(introspectionCoercings)
+        putAll(coercings)
       }
       val resolveType = if (resolveType != null) {
         check(typeCheckers.isEmpty()) {

@@ -21,10 +21,16 @@ import com.apollographql.apollo3.ast.findDeprecationReason
 import com.apollographql.apollo3.ast.findSpecifiedBy
 import com.apollographql.apollo3.ast.toUtf8
 import com.apollographql.apollo3.execution.Resolver
+import com.apollographql.apollo3.execution.StringCoercing
 
 private inline fun <reified T> Any?.cast() = this as T
 
 private object SchemaObject
+
+internal val introspectionCoercings = mapOf(
+    "__TypeKind" to StringCoercing,
+    "__DirectiveLocation" to StringCoercing,
+)
 
 internal fun introspectionResolvers(schema: Schema): Map<String, Resolver> {
     return mapOf(

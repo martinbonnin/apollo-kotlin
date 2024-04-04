@@ -1,6 +1,7 @@
 package com.apollographql.apollo.sample.server.graphql
 
 import com.apollographql.apollo.sample.server.CurrentWebSocket
+import com.apollographql.apollo3.annotations.GraphQLDefault
 import com.apollographql.apollo3.annotations.GraphQLSubscriptionRoot
 import com.apollographql.apollo3.api.ExecutionContext
 import com.apollographql.apollo3.execution.websocket.subscriptionId
@@ -29,7 +30,7 @@ class SubscriptionRoot(private val tag: String) {
     }
   }
 
-  fun secondsSinceEpoch(intervalMillis: Int): Flow<Double> = flow {
+  fun secondsSinceEpoch(@GraphQLDefault("1000") intervalMillis: Int): Flow<Double> = flow {
     while (true) {
       emit(System.currentTimeMillis().div(1000).toDouble())
       delay(intervalMillis.toLong())
@@ -40,7 +41,7 @@ class SubscriptionRoot(private val tag: String) {
     throw Exception("Woops")
   }
 
-  fun graphqlAccessError(after: Int): Flow<Int?> = flow {
+  fun graphqlAccessError(@GraphQLDefault("1") after: Int): Flow<Int?> = flow {
     repeat(after) {
       emit(it)
     }
@@ -54,7 +55,7 @@ class SubscriptionRoot(private val tag: String) {
     emit("closed")
   }
 
-  fun state(executionContext: ExecutionContext, intervalMillis: Int): Flow<State> = flow {
+  fun state(executionContext: ExecutionContext, @GraphQLDefault("1000") intervalMillis: Int): Flow<State> = flow {
     while (true) {
       emit(State(tag, executionContext.subscriptionId()))
       delay(intervalMillis.toLong())
