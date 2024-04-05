@@ -145,6 +145,7 @@ class SirInputObjectDefinition(
     val name: String,
     val description: String?,
     override val qualifiedName: String,
+    val targetClassName: SirClassName,
     val inputFields: List<SirInputFieldDefinition>,
 ): SirTypeDefinition
 

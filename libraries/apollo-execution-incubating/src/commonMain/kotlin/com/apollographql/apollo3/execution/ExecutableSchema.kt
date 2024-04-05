@@ -96,7 +96,6 @@ class ExecutableSchema internal constructor(
     }
 
     fun build(): ExecutableSchema {
-      // TODO should it be possible to override the builtinDefinitions?
       val definitions = builtinDefinitions() + (schema?.definitions ?: error("A schema is required to build an ExecutableSchema"))
       val schema = GQLDocument(definitions, null).toSchema()
 
@@ -148,14 +147,16 @@ class ExecutableSchema internal constructor(
 
   private fun validateDocument(document: String): PersistedDocument {
     val parseResult = document.parseAsGQLDocument()
-    if (parseResult.issues.any { it is GraphQLIssue }) {
-      return PersistedDocument(null, parseResult.issues)
+    var issues = parseResult.issues.filter { it is GraphQLIssue }
+    if (issues.isNotEmpty()) {
+      return PersistedDocument(null, issues)
     }
 
     val gqlDocument = parseResult.getOrThrow()
     val validationResult = gqlDocument.validateAsExecutable(schema)
-    if (validationResult.issues.any { it is GraphQLIssue }) {
-      return PersistedDocument(null, validationResult.issues)
+    issues = validationResult.issues.filter { it is GraphQLIssue }
+    if (issues.isNotEmpty()) {
+      return PersistedDocument(null, issues)
     }
 
     return PersistedDocument(gqlDocument, emptyList())

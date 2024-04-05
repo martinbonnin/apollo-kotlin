@@ -33,10 +33,10 @@ interface ApolloExtension {
    * You can use the same file names in the different source sets but the operations should be disjoint between different variants.
    * If the same operation is added multiple times, an error will be thrown like for Java/Kotlin classes.
    *
-   * @param sourceFolder: where to look for "*.graphql" files, relative to "src/$sourceSetName/graphql". You can pass "." to
+   * @param sourceFolder where to look for "*.graphql" files, relative to "src/$sourceSetName/graphql". You can pass "." to
    * look into "src/$sourceSetName/graphql"
    *
-   * @param nameSuffix: the suffix to use to name the services. A service will be created per Android variant named "$variant${nameSuffix.capitalize()}".
+   * @param nameSuffix the suffix to use to name the services. A service will be created per Android variant named "$variant${nameSuffix.capitalize()}".
    * For an example, if `nameSuffix = starwars`, the below services will be created:
    * - debugStarwars
    * - releaseStarwars
@@ -48,7 +48,7 @@ interface ApolloExtension {
    *
    * [nameSuffix] name must be unique
    *
-   * @param action: an action to configure the packageName and other parameters on each service. Will be called once for each variant
+   * @param action an action to configure the packageName and other parameters on each service. Will be called once for each variant
    */
   fun createAllAndroidVariantServices(sourceFolder: String, nameSuffix: String, action: Action<Service>)
 
@@ -60,10 +60,10 @@ interface ApolloExtension {
    * Unlike Android variants, each KotlinCompile task will have a single source set so you can put your files in
    * - src/$sourceSetName/graphql/$sourceFolder/Query.graphql
    *
-   * @param sourceFolder: where to look for "*.graphql" files, relative to "src/$sourceSetName/graphql". You can pass "." to
+   * @param sourceFolder where to look for "*.graphql" files, relative to "src/$sourceSetName/graphql". You can pass "." to
    * look into "src/$sourceSetName/graphql"
    *
-   * @param nameSuffix: the suffix to use to name the services. A service will be created per source set named "${sourceSet.name}{nameSuffix.capitalize()}".
+   * @param nameSuffix the suffix to use to name the services. A service will be created per source set named "${sourceSet.name}{nameSuffix.capitalize()}".
    * For an example, if `nameSuffix = starwars`, the below services will be created:
    * - mainStarwars
    * - testStarwars
@@ -89,13 +89,6 @@ interface ApolloExtension {
    * Default: true.
    */
   val generateSourcesDuringGradleSync: Property<Boolean>
-
-  /**
-   * Returns a dependency that contains:
-   * - a generated .jar file containing a KSP processor specialized for the given schema, service and packageName
-   * - the apollo-ksp dependency
-   */
-  fun apolloKspProcessor(schema: File, service: String, packageName: String): Any
 
   /**
    * Common apollo dependencies using the same version as the Apollo Gradle Plugin currently in the classpath

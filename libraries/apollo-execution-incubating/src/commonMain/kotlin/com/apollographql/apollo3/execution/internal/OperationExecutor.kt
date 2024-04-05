@@ -34,7 +34,7 @@ import com.apollographql.apollo3.execution.Roots
 import com.apollographql.apollo3.execution.SubscriptionError
 import com.apollographql.apollo3.execution.SubscriptionEvent
 import com.apollographql.apollo3.execution.SubscriptionResponse
-import com.apollographql.apollo3.execution.coercingSerialize
+import com.apollographql.apollo3.execution.leafCoercingSerialize
 import com.apollographql.apollo3.execution.errorResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -83,7 +83,9 @@ internal class OperationExecutor(
 ) {
   private var errors = mutableListOf<Error>()
 
-  private val coercedVariables = coerceVariablesValues(schema, operation.variableDefinitions, variables, coercings)
+  private val coercedVariables by lazy {
+    coerceVariablesValues(schema, operation.variableDefinitions, variables, coercings)
+  }
 
   fun execute(): GraphQLResponse {
     val operationDefinition = operation
@@ -102,13 +104,15 @@ internal class OperationExecutor(
       executeSelectionSet(operation.selections, typeDefinition as GQLObjectTypeDefinition, rootObject, emptyList())
     } catch (e: BubbleNullException) {
       null
+    } catch (e: Exception) {
+      /**
+       * This happens when variable coercion fails. Maybe other cases?
+       */
+      errors.add(Error.Builder(e.message ?: "Error executing selection set").build())
+      null
     }
 
-    return GraphQLResponse(data, errors, null)
-  }
-
-  private fun errorFlow(message: String): Flow<GraphQLResponse> {
-    return flowOf(errorResponse(message))
+    return GraphQLResponse(data, errors.orNullIfEmpty(), null)
   }
 
   private fun subscriptionError(message: String): Flow<SubscriptionError> {
@@ -248,7 +252,7 @@ internal class OperationExecutor(
       is GQLScalarTypeDefinition,
       -> {
         // leaf type
-        coercingSerialize(result, coercings, typeDefinition.name)
+        leafCoercingSerialize(result, coercings, typeDefinition)
       }
 
       is GQLInterfaceTypeDefinition,
@@ -420,5 +424,11 @@ internal class OperationExecutor(
         }
       }
     }
+  }
+}
+
+private fun <E> List<E>.orNullIfEmpty(): List<E>? {
+  return this.ifEmpty {
+    null
   }
 }

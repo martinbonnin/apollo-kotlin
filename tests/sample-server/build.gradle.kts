@@ -2,8 +2,6 @@ plugins {
   id("org.jetbrains.kotlin.jvm")
   id("com.google.devtools.ksp")
   id("com.apollographql.apollo3")
-  id("org.jetbrains.kotlin.plugin.spring")
-  id("application")
 }
 
 apolloTest()
@@ -21,9 +19,11 @@ dependencies {
     because("jetty uses SL4F")
   }
 
-  ksp(apollo.apolloKspProcessor(file("src/main/resources/schema.graphqls"), "sampleserver", "sample.server"))
+  ksp(libs.apollo.ksp)
 }
 
-application {
-  mainClass.set("com.apollographql.apollo.sample.server.MainKt")
+ksp {
+  this.arg("apolloService", "sampleserver")
+  this.arg("apolloPackageName", "sample.server")
 }
+

@@ -4,6 +4,7 @@ import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
 import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
 import com.apollographql.apollo3.compiler.sir.SirArgument
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
+import com.apollographql.apollo3.compiler.sir.SirNonNullType
 import com.apollographql.apollo3.compiler.sir.SirObjectDefinition
 import com.apollographql.apollo3.compiler.sir.asKotlinPoet
 import com.squareup.kotlinpoet.CodeBlock
@@ -42,8 +43,14 @@ private fun argumentCodeBlock(sirArgument: SirArgument): CodeBlock {
   return buildCode {
     when (sirArgument) {
       is SirGraphQLArgument -> {
+        val getArgument = if (sirArgument.defaultValue == null && sirArgument.type !is SirNonNullType) {
+          // No default value and nullable => Optional
+          "getArgument"
+        } else {
+          "getRequiredArgument"
+        }
         add(
-            "%L·=·it.getArgument(%S).cast()",
+            "%L·=·it.$getArgument(%S).cast()",
             sirArgument.targetName,
             sirArgument.name,
         )

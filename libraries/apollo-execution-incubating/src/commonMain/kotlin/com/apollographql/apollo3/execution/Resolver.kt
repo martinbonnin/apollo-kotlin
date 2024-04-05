@@ -123,17 +123,21 @@ class ResolveInfo internal constructor(
   /**
    * Returns the argument for field [name]
    *
-   * The argument is coerced according to the configured [Coercing] so it is safe to force cast the result.
+   * The argument is coerced according to the configured [Coercing] so it is safe to force cast the result to the matching type.
    *
-   * If the argument is optional (nullable and no defaultValue), the returned value is wrapped in [Optional]. It is the caller responsibility to unwrap
-   *
-   * @throws Exception if [name] is not an argument defined by the current field
    */
   fun getArgument(
       name: String,
-  ): InternalValue {
-    check(arguments.containsKey(name))
-    return arguments.get(name)
+  ): Optional<InternalValue> {
+    return if(!arguments.containsKey(name)) {
+      Optional.absent()
+    } else {
+      Optional.present(arguments.get(name))
+    }
+  }
+
+  fun getRequiredArgument(name: String): InternalValue {
+    return getArgument(name).getOrThrow()
   }
 
   fun coordinates(): String {

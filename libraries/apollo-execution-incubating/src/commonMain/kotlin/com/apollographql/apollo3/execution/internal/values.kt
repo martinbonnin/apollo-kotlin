@@ -20,11 +20,6 @@ import com.apollographql.apollo3.ast.GQLVariableValue
 typealias ExternalValue = Any?
 
 /**
- * A value where scalars are already coerced to [InternalValue] but input objects and enums are still [ExternalValue]s
- */
-typealias InputValue = Any?
-
-/**
  * An internal value
  * - Numbers are either Int, Double or the result of custom scalar coercion (see below)
  * - Enums are Strings
@@ -56,8 +51,8 @@ internal fun GQLValue.toInternalValue(): InternalValue {
   return when (this) {
     is GQLBooleanValue -> value
     is GQLEnumValue -> value
-    is GQLFloatValue -> JsonNumber(value)
-    is GQLIntValue -> JsonNumber(value)
+    is GQLFloatValue -> value.toDouble()
+    is GQLIntValue -> value.toInt()
     is GQLListValue -> values.map { it.toInternalValue() }
     is GQLNullValue -> null
     is GQLObjectValue -> fields.associate { it.name to it.value.toInternalValue() }

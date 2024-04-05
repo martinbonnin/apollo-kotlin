@@ -6,6 +6,7 @@ import com.apollographql.apollo3.api.json.JsonWriter
 import com.apollographql.apollo3.api.json.writeAny
 import com.apollographql.apollo3.api.json.writeArray
 import com.apollographql.apollo3.api.json.writeObject
+import com.apollographql.apollo3.execution.internal.ExternalValue
 import okio.BufferedSink
 import okio.Sink
 import okio.buffer
@@ -14,10 +15,16 @@ import okio.buffer
  * @property errors if non-null, errors must contain at least 1 error
  */
 class GraphQLResponse internal constructor(
-    val data: Any?, // ExternalValue
+    val data: ExternalValue,
     val errors: List<Error>?,
     val extensions: Map<String, Any?>?
 ) {
+  init {
+    check(errors?.isEmpty() != true) {
+      "errors must either be null or a non-empty list"
+    }
+  }
+
   class Builder {
     var data: Map<String, Any?>? = null
     var errors: List<Error>? = null

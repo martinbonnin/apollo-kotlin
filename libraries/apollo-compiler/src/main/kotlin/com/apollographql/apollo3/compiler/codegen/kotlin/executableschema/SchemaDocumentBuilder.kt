@@ -147,7 +147,9 @@ private fun SirInputFieldDefinition.codeBlock(): CodeBlock {
   return buildCommon(AstInputValueDefinition, name, description) {
     add("type = %L,\n", type.codeBlock())
     if (defaultValue != null) {
-      add("defaultValue = %M(%S)", KotlinSymbols.AstParseAsGQLValue, defaultValue)
+      add("defaultValue = %S.%M().getOrThrow(),\n", defaultValue, KotlinSymbols.AstParseAsGQLValue, )
+    } else {
+      add("defaultValue = null,\n")
     }
   }
 }
@@ -212,14 +214,14 @@ private fun SirGraphQLArgument.codeBlock(): CodeBlock {
     if (defaultValue != null) {
       add("defaultValue = %S.%M().getOrThrow(),\n", defaultValue, KotlinSymbols.AstParseAsGQLValue, )
     } else {
-      add("defaultValue = null,\n", KotlinSymbols.AstParseAsGQLValue)
+      add("defaultValue = null,\n")
     }
   }
 }
 
 private fun SirType.codeBlock(): CodeBlock {
   return when (this) {
-    SirErrorType -> CodeBlock.of("%T", "kotlin.Nothing")
+    SirErrorType -> CodeBlock.of("%T", ClassName("kotlin", "Nothing"))
     is SirListType -> CodeBlock.of("%T(type·=·%L)", KotlinSymbols.AstListType, type.codeBlock())
     is SirNamedType -> CodeBlock.of("%T(name·=·%S)", KotlinSymbols.AstNamedType, name)
     is SirNonNullType -> CodeBlock.of("%T(type·=·%L)", KotlinSymbols.AstNonNullType, type.codeBlock())

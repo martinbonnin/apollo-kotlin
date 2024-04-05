@@ -2,9 +2,11 @@ package com.apollographql.apollo3.execution
 
 import com.apollographql.apollo3.api.json.JsonNumber
 import com.apollographql.apollo3.ast.GQLBooleanValue
+import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
 import com.apollographql.apollo3.ast.GQLFloatValue
 import com.apollographql.apollo3.ast.GQLIntValue
 import com.apollographql.apollo3.ast.GQLStringValue
+import com.apollographql.apollo3.ast.GQLTypeDefinition
 import com.apollographql.apollo3.ast.GQLValue
 import com.apollographql.apollo3.execution.internal.ExternalValue
 import com.apollographql.apollo3.execution.internal.InternalValue
@@ -32,8 +34,8 @@ interface Coercing<T> {
 }
 
 
-internal fun coercingSerialize(value: InternalValue, coercings: Map<String, Coercing<*>>, typename: String): ExternalValue {
-  return when (typename) {
+internal fun leafCoercingSerialize(value: InternalValue, coercings: Map<String, Coercing<*>>, typedefinition: GQLTypeDefinition): ExternalValue {
+  return when (typedefinition.name) {
     "Int" -> {
       check(value is Int)
       value
@@ -61,11 +63,17 @@ internal fun coercingSerialize(value: InternalValue, coercings: Map<String, Coer
     }
     else -> {
       @Suppress("UNCHECKED_CAST")
-      val coercing = coercings.get(typename) as Coercing<ExternalValue>?
+      val coercing = coercings.get(typedefinition.name) as Coercing<ExternalValue>?
       if (coercing == null) {
-        error("Cannot get coercing for '${typename}'")
+        if (typedefinition is GQLEnumTypeDefinition) {
+          check(value is String)
+          value
+        } else {
+          error("Cannot get coercing for '${typedefinition.name}'")
+        }
+      } else {
+        coercing.serialize(value)
       }
-      coercing.serialize(value)
     }
   }
 }
@@ -86,7 +94,7 @@ object StringCoercing: Coercing<String> {
   }
 }
 
-internal fun coercingParseLiteral(value: GQLValue, coercings: Map<String, Coercing<*>>, typename: String): InternalValue {
+internal fun scalarCoercingParseLiteral(value: GQLValue, coercings: Map<String, Coercing<*>>, typename: String): InternalValue {
   return when (typename) {
     "Int" -> {
       check(value is GQLIntValue)
@@ -122,7 +130,7 @@ internal fun coercingParseLiteral(value: GQLValue, coercings: Map<String, Coerci
   }
 }
 
-internal fun coercingDeserialize(value: ExternalValue, coercings: Map<String, Coercing<*>>, typename: String): InternalValue {
+internal fun scalarCoercingDeserialize(value: ExternalValue, coercings: Map<String, Coercing<*>>, typename: String): InternalValue {
   return when (typename) {
     "Int" -> {
       when(value) {

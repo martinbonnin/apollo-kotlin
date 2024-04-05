@@ -1,6 +1,7 @@
 package com.apollographql.apollo3.execution.internal
 
 import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
+import com.apollographql.apollo3.ast.GQLEnumValue
 import com.apollographql.apollo3.ast.GQLInputObjectTypeDefinition
 import com.apollographql.apollo3.ast.GQLInterfaceTypeDefinition
 import com.apollographql.apollo3.ast.GQLListType
@@ -10,10 +11,11 @@ import com.apollographql.apollo3.ast.GQLObjectTypeDefinition
 import com.apollographql.apollo3.ast.GQLScalarTypeDefinition
 import com.apollographql.apollo3.ast.GQLType
 import com.apollographql.apollo3.ast.GQLUnionTypeDefinition
+import com.apollographql.apollo3.ast.GQLValue
 import com.apollographql.apollo3.ast.GQLVariableDefinition
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.execution.Coercing
-import com.apollographql.apollo3.execution.coercingDeserialize
+import com.apollographql.apollo3.execution.scalarCoercingDeserialize
 
 internal fun coerceVariablesValues(
     schema: Schema,
@@ -63,6 +65,8 @@ private fun coerceExternalToInternal(schema: Schema, value: ExternalValue, type:
     check(type !is GQLNonNullType) {
       error("'null' found in non-null position")
     }
+
+    return null
   }
 
   return when (type) {
@@ -83,15 +87,7 @@ private fun coerceExternalToInternal(schema: Schema, value: ExternalValue, type:
       val definition = schema.typeDefinition(type.name)
       when (definition) {
         is GQLEnumTypeDefinition -> {
-          if (value is String) {
-            check(definition.enumValues.any { it.name == value }) {
-              val possibleValues = definition.enumValues.map { it.name }.toSet()
-              "'$value' cannot be coerced to a '${definition.name}' enum value. Possible values are: '$possibleValues'"
-            }
-            value
-          } else {
-            error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
-          }
+          coerceEnumExternalToInternal(value = value, coercings = coercings, definition = definition)
         }
 
         is GQLInputObjectTypeDefinition -> {
@@ -106,22 +102,41 @@ private fun coerceExternalToInternal(schema: Schema, value: ExternalValue, type:
         }
 
         is GQLScalarTypeDefinition -> {
-          coercingDeserialize(value, coercings, definition.name)
+          scalarCoercingDeserialize(value, coercings, definition.name)
         }
       }
     }
   }
 }
 
+fun coerceEnumExternalToInternal(value: ExternalValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue? {
+  check(value is String) {
+    error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
+  }
+
+  val coercing = coercings.get(definition.name)
+
+  return if (coercing == null) {
+    check(definition.enumValues.any { it.name == value }) {
+      val possibleValues = definition.enumValues.map { it.name }.toSet()
+      "'$value' cannot be coerced to a '${definition.name}' enum value. Possible values are: '$possibleValues'"
+    }
+    value
+  } else {
+    coercing.deserialize(value)
+  }
+}
+
+
 private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefinition, externalValue: ExternalValue, coercings: Map<String, Coercing<*>>): InternalValue {
   if (externalValue !is Map<*, *>) {
     error("Don't know how to coerce '$externalValue' to a '${definition.name}' input object")
   }
-  return definition.inputFields.mapNotNull { inputValueDefinition ->
+  val map = definition.inputFields.mapNotNull { inputValueDefinition ->
     val inputFieldType = inputValueDefinition.type
     if (!externalValue.containsKey(inputValueDefinition.name)) {
       if (inputValueDefinition.defaultValue != null) {
-        inputValueDefinition.defaultValue!!.toInternalValue()
+        inputValueDefinition.name to inputValueDefinition.defaultValue!!.toInternalValue()
       } else {
         if (inputFieldType is GQLNonNullType) {
           error("Missing input field '${inputValueDefinition.name}")
@@ -133,5 +148,12 @@ private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefi
       val inputFieldValue = externalValue.get(inputValueDefinition.name)
       inputValueDefinition.name to coerceExternalToInternal(schema, inputFieldValue, inputFieldType, coercings)
     }
+  }.toMap()
+
+  val coercing = coercings.get(definition.name)
+  return if (coercing != null) {
+    coercing.deserialize(map)
+  } else {
+    map
   }
 }

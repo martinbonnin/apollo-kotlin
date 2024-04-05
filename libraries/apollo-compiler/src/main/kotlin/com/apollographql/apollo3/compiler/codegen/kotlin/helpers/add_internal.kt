@@ -28,21 +28,33 @@ fun FileSpec.Builder.addInternal(patterns: List<String>): FileSpec.Builder = app
     }
     when (member) {
       is TypeSpec -> {
-        member.toBuilder()
-            .addModifiers(KModifier.INTERNAL)
-            .build()
+        if (!member.modifiers.contains(KModifier.PRIVATE)) {
+          member.toBuilder()
+              .addModifiers(KModifier.INTERNAL)
+              .build()
+        } else {
+          member
+        }
       }
 
       is FunSpec -> {
-        member.toBuilder()
-            .addModifiers(KModifier.INTERNAL)
-            .build()
+        if (!member.modifiers.contains(KModifier.PRIVATE)) {
+          member.toBuilder()
+              .addModifiers(KModifier.INTERNAL)
+              .build()
+        } else {
+          member
+        }
       }
 
       is PropertySpec -> {
-        member.toBuilder()
-            .addModifiers(KModifier.INTERNAL)
-            .build()
+        if (!member.modifiers.contains(KModifier.PRIVATE)) {
+          member.toBuilder()
+              .addModifiers(KModifier.INTERNAL)
+              .build()
+        } else {
+          member
+        }
       }
 
       else -> error("Top Level $member is not supported")

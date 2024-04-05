@@ -35,6 +35,7 @@ internal object KotlinSymbols {
   val AstInputValueDefinition = ClassName(apolloAstPackageName, "GQLInputValueDefinition")
   val AstSchema = ClassName(apolloAstPackageName, "Schema")
   val AstValue = ClassName(apolloAstPackageName, "GQLValue")
+  val AstEnumValue = ClassName(apolloAstPackageName, "GQLEnumValue")
   val AstStringValue = ClassName(apolloAstPackageName, "GQLStringValue")
   val AstSchemaDefinition = ClassName(apolloAstPackageName, "GQLSchemaDefinition")
   val AstOperationTypeDefinition = ClassName(apolloAstPackageName, "GQLOperationTypeDefinition")

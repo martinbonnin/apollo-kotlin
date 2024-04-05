@@ -1,6 +1,5 @@
 package com.apollographql.apollo3.execution.internal
 
-import com.apollographql.apollo3.api.Optional
 import com.apollographql.apollo3.ast.GQLEnumTypeDefinition
 import com.apollographql.apollo3.ast.GQLEnumValue
 import com.apollographql.apollo3.ast.GQLField
@@ -21,7 +20,7 @@ import com.apollographql.apollo3.ast.GQLVariableValue
 import com.apollographql.apollo3.ast.Schema
 import com.apollographql.apollo3.ast.definitionFromScope
 import com.apollographql.apollo3.execution.Coercing
-import com.apollographql.apollo3.execution.coercingParseLiteral
+import com.apollographql.apollo3.execution.scalarCoercingParseLiteral
 
 internal fun coerceArgumentValues(
     schema: Schema,
@@ -72,24 +71,11 @@ internal fun coerceArgumentValues(
       } else {
         error("Cannot coerce '$value'")
       }
-      /**
-       * If there is no default value and the type is nullable, this argument is potentially missing: wrap
-       */
-      coercedValues.put(argumentName, value2.maybeWrap(argumentType !is GQLNonNullType && defaultValue == null))
-    } else {
-      Optional.absent()
+      coercedValues.put(argumentName, value2)
     }
   }
 
   return coercedValues
-}
-
-private fun Any?.maybeWrap(wrap: Boolean): Any? {
-  return if (wrap) {
-    Optional.present(this)
-  } else {
-    this
-  }
 }
 
 /**
@@ -100,6 +86,7 @@ internal fun coerceLiteralToInternal(schema: Schema, value: GQLValue, type: GQLT
     check(type !is GQLNonNullType) {
       error("'null' found in non-null position")
     }
+    return null
   }
   if (value is GQLVariableValue) {
     /**
@@ -150,15 +137,7 @@ internal fun coerceLiteralToInternal(schema: Schema, value: GQLValue, type: GQLT
       val definition = schema.typeDefinition(type.name)
       when (definition) {
         is GQLEnumTypeDefinition -> {
-          if (value is GQLEnumValue) {
-            check(definition.enumValues.any { it.name == value.value }) {
-              val possibleValues = definition.enumValues.map { it.name }.toSet()
-              "'$value' cannot be coerced to a '${definition.name}' enum value. Possible values are: '$possibleValues'"
-            }
-            value.value
-          } else {
-            error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
-          }
+          coerceEnumLiteralToInternal(value, coercings, definition)
         }
 
         is GQLInputObjectTypeDefinition -> {
@@ -173,10 +152,28 @@ internal fun coerceLiteralToInternal(schema: Schema, value: GQLValue, type: GQLT
         }
 
         is GQLScalarTypeDefinition -> {
-          coercingParseLiteral(value, coercings, definition.name)
+          scalarCoercingParseLiteral(value, coercings, definition.name)
         }
       }
     }
+  }
+}
+
+fun coerceEnumLiteralToInternal(value: GQLValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue? {
+  check(value is GQLEnumValue) {
+    error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
+  }
+
+  val coercing = coercings.get(definition.name)
+
+  return if (coercing == null) {
+    check(definition.enumValues.any { it.name == value.value }) {
+      val possibleValues = definition.enumValues.map { it.name }.toSet()
+      "'$value' cannot be coerced to a '${definition.name}' enum value. Possible values are: '$possibleValues'"
+    }
+    value.value
+  } else {
+    coercing.parseLiteral(value)
   }
 }
 
@@ -187,12 +184,12 @@ private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefi
 
   val fields = literalValue.fields.associate { it.name to it.value }
 
-  return definition.inputFields.mapNotNull { inputValueDefinition ->
+  val map = definition.inputFields.mapNotNull { inputValueDefinition ->
     val inputFieldType = inputValueDefinition.type
 
     if (!fields.containsKey(inputValueDefinition.name)) {
       if (inputValueDefinition.defaultValue != null) {
-        inputValueDefinition.defaultValue!!.toInternalValue()
+        inputValueDefinition.name to inputValueDefinition.defaultValue!!.toInternalValue()
       } else {
         if (inputFieldType is GQLNonNullType) {
           error("Missing input field '${inputValueDefinition.name}")
@@ -204,5 +201,12 @@ private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefi
       val inputFieldValue = fields.get(inputValueDefinition.name)!!
       inputValueDefinition.name to coerceLiteralToInternal(schema, inputFieldValue, inputValueDefinition.type, coercings, coercedVariables)
     }
+  }.toMap()
+
+  val coercing = coercings.get(definition.name)
+  return if (coercing != null) {
+    coercing.deserialize(map)
+  } else {
+    map
   }
 }

@@ -27,7 +27,9 @@ import com.google.devtools.ksp.isConstructor
 import com.google.devtools.ksp.isPublic
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.symbol.ClassKind
+import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSFunctionDeclaration
 import com.google.devtools.ksp.symbol.KSNode
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
@@ -257,24 +259,14 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         description = docString,
         targetName = simpleName.asString(),
         isFunction = true,
-        type = returnType!!.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType),
+        type = returnType!!.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType, false),
         arguments = parameters.mapNotNull {
           it.toSirArgument()
         }
     )
   }
 
-  private fun KSValueParameter.toSirArgument(): SirArgument? {
-    if (this.type.resolve().declaration.asClassName() == executionContextClassName) {
-      return SirExecutionContextArgument
-    }
-    val targetName = this.name!!.asString()
-    val name = this.graphqlNameOrNull() ?: targetName
-
-    if (this.hasDefault) {
-      logger.error("Default argument are not supported")
-      return null
-    }
+  private fun KSAnnotated.defaultValue(): String? {
     val defaultValue = findAnnotation("GraphQLDefault")?.getArgumentValueAsString("value")
     if (defaultValue != null) {
       val result = defaultValue.parseAsGQLValue()
@@ -283,14 +275,23 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         return null
       }
     }
-    val type = type.resolve()
-    val sirType = type.toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType = null)
-    if (defaultValue == null && sirType !is SirNonNullType) {
-      if (type.declaration.asClassName().asString() != "com.apollographql.apollo3.api.Optional") {
-        logger.error("Argument is nullable and doesn't have a default value: it must also be optional")
-        return null
-      }
+    return defaultValue
+  }
+  private fun KSValueParameter.toSirArgument(): SirArgument? {
+    if (this.type.resolve().declaration.asClassName() == executionContextClassName) {
+      return SirExecutionContextArgument
     }
+    val targetName = this.name!!.asString()
+    val name = this.graphqlNameOrNull() ?: targetName
+
+    if (this.hasDefault) {
+      logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.")
+      return null
+    }
+    val defaultValue = defaultValue()
+    val type = type.resolve()
+    val sirType = type.toSirType(SirDebugContext(this), VisitContext.INPUT, operationType = null, defaultValue != null)
+
     return SirGraphQLArgument(
         name = name,
         description = null,
@@ -306,7 +307,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         description = docString,
         targetName = simpleName.asString(),
         isFunction = false,
-        type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType),
+        type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType, false),
         arguments = emptyList()
     )
   }
@@ -317,22 +318,30 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       return null
     }
 
+    val propertyNames = getDeclaredProperties().map { it.simpleName.asString() }
     val inputFields = primaryConstructor!!.parameters.map {
-      val name = it.graphqlNameOrNull() ?: it.name?.asString()
-      if (name == null) {
-        logger.error("Cannot find name for parameter", it)
-        return null
-      }
+      val kotlinName =  it.name?.asString() ?: error("No name for constructor parameter")
+      val name = it.graphqlNameOrNull() ?: kotlinName
       if (name.isReserved()) {
         logger.error("Name '$name' is reserved", it)
         return null
       }
+      if (it.hasDefault) {
+        logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.")
+        return null
+      }
+      if (!propertyNames.contains(it.name!!.asString())) {
+        logger.error("Constructor parameter '$kotlinName' must also be declared as a `val` property.")
+        return null
+      }
+
       val declaration = it.type.resolve()
+      val defaultValue = it.defaultValue()
       SirInputFieldDefinition(
           name = name,
           description = docString,
-          type = declaration.toSirType(SirDebugContext(it), VisitContext.INPUT, null),
-          defaultValue = null
+          type = declaration.toSirType(SirDebugContext(it), VisitContext.INPUT, null, defaultValue != null),
+          defaultValue = defaultValue
       )
     }
 
@@ -340,23 +349,45 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         name = graphqlName(),
         description = docString,
         qualifiedName = asClassName().asString(),
+        targetClassName = asClassName(),
         inputFields
     )
   }
 
-  private fun KSType.toSirType(debugContext: SirDebugContext, context: VisitContext, operationType: String?): SirType {
-    val type = if (operationType == "subscription") {
-      if (declaration.asClassName().asString() != "kotlinx.coroutines.flow.Flow") {
+  private fun KSType.toSirType(debugContext: SirDebugContext, context: VisitContext, operationType: String?, hasDefaultValue: Boolean): SirType {
+    var type: KSType = this
+    if (operationType == "subscription") {
+      if (declaration.isFlow()) {
         logger.error("Subscription root fields must be of Flow<T> type", this.declaration)
         return SirErrorType
       }
-      arguments.single().type!!.resolve()
-    } else {
-      if (declaration.asClassName().asString() == "kotlinx.coroutines.flow.Flow") {
-        logger.error("Flows are not supported", this.declaration)
-        return SirErrorType
+      type = arguments.single().type!!.resolve()
+    } else if (context == VisitContext.INPUT) {
+      if (declaration.isApolloOptional()) {
+        val argumentType = type.arguments.first().type!!.resolve()
+
+        if (hasDefaultValue) {
+          logger.error("Input value has a default value and cannot be optional", debugContext.node)
+          return SirErrorType
+        }
+
+        if (!argumentType.isMarkedNullable) {
+          logger.error("Input value is not nullable and cannot be optional", debugContext.node)
+          return SirErrorType
+        }
+
+        type = argumentType
+      } else {
+        if (!hasDefaultValue && isMarkedNullable) {
+          /**
+           * Inputs that are nullable and don't have a default value may be absent and must be modeled as such in Kotlin.
+           *
+           * Note that with variables, that value may be absent at runtime but this will be caught during coercion before it reaches the user code.
+           */
+          logger.error("Input value is nullable and doesn't have a default value: it must also be optional", debugContext.node)
+          return SirErrorType
+        }
       }
-      this
     }
 
     return type.toSirType2(debugContext, context, type.isMarkedNullable)
@@ -368,7 +399,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     }
 
     return when (val qualifiedName = declaration.asClassName().asString()) {
-      "kotlin.collections.List" -> SirListType(arguments.single().type!!.resolve().toSirType(debugContext, context, null))
+      "kotlin.collections.List" -> SirListType(arguments.single().type!!.resolve().toSirType(debugContext, context, null, false))
       "kotlin.String" -> SirNamedType("String")
       "kotlin.Double" -> SirNamedType("Float")
       "kotlin.Int" -> SirNamedType("Int")
@@ -384,7 +415,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
           }
         } else {
           val declaration = declaration
-          if (declaration.containingFile == null) {
+          if (declaration.isExternal()) {
             logger.error("'$qualifiedName' doesn't have a containing file and probably comes from a dependency (when analyzing '${debugContext.name}').", debugContext.node)
             SirErrorType
           } else if (unsupportedBasicTypes.contains(qualifiedName)) {
@@ -407,6 +438,19 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       }
     }
   }
+}
+
+private fun KSDeclaration.isApolloOptional(): Boolean {
+  return asClassName().asString() == "com.apollographql.apollo3.api.Optional"
+}
+
+private fun KSDeclaration.isFlow(): Boolean {
+  return asClassName().asString() == "kotlinx.coroutines.flow.Flow"
+}
+
+
+private fun KSDeclaration.isExternal(): Boolean {
+  return (containingFile == null && !isApolloOptional())
 }
 
 private fun String.isReserved(): Boolean = this.startsWith("__")

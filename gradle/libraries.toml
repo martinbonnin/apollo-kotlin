@@ -66,6 +66,7 @@ androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framewor
 androidx-startup-runtime = { group = "androidx.startup", name = "startup-runtime", version = "1.1.1" }
 apollo-adapters = { group = "com.apollographql.apollo3", name = "apollo-adapters", version.ref = "apollo" }
 apollo-api = { group = "com.apollographql.apollo3", name = "apollo-api", version.ref = "apollo" }
+apollo-ksp = { group = "com.apollographql.apollo3", name = "apollo-ksp-incubating", version.ref = "apollo" }
 apollo-api-java = { group = "com.apollographql.apollo3", name = "apollo-api-java", version.ref = "apollo" }
 apollo-httpCache = { group = "com.apollographql.apollo3", name = "apollo-http-cache", version.ref = "apollo" }
 apollo-idlingresource = { group = "com.apollographql.apollo3", name = "apollo-idling-resource", version.ref = "apollo" }

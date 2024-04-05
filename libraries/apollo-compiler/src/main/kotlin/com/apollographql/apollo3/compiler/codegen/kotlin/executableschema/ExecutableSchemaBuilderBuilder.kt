@@ -57,9 +57,9 @@ internal class ExecutableSchemaBuilderBuilder(
                 sirTypeDefinitions.filterIsInstance<SirScalarDefinition>().forEach { sirScalarDefinition ->
                   add(".addCoercing(%T)\n", sirScalarDefinition.coercing.codeBlock())
                 }
-//                sirTypeDefinitions.filterIsInstance<SirInputObjectDefinition>().forEach { sirInputObjectDefinition ->
-//                  add(".addCoercing(%S, %M)\n", sirInputObjectDefinition.name, context.coercings.get(sirInputObjectDefinition.name))
-//                }
+                sirTypeDefinitions.filterIsInstance<SirInputObjectDefinition>().forEach { sirInputObjectDefinition ->
+                  add(".addCoercing(%S, %M)\n", sirInputObjectDefinition.name, context.coercings.get(sirInputObjectDefinition.name))
+                }
                 sirTypeDefinitions.filterIsInstance<SirEnumDefinition>().forEach { sirEnumDefinition ->
                   add(".addCoercing(%S, %M)\n", sirEnumDefinition.name, context.coercings.get(sirEnumDefinition.name))
                 }

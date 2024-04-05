@@ -28,8 +28,16 @@ sealed class Optional<out V> {
     throw MissingValueException()
   }
 
-  data class Present<V>(val value: V) : Optional<V>()
-  object Absent : Optional<Nothing>()
+  data class Present<V>(val value: V) : Optional<V>() {
+    override fun toString(): String {
+      return "Present(${value})"
+    }
+  }
+  object Absent : Optional<Nothing>() {
+    override fun toString(): String {
+      return "Absent"
+    }
+  }
 
   companion object {
     @JvmStatic
