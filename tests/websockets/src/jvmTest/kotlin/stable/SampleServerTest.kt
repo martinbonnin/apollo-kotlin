@@ -1,6 +1,5 @@
 package stable
 
-import com.apollographql.apollo.sample.server.SampleServer
 import com.apollographql.apollo3.ApolloClient
 import com.apollographql.apollo3.exception.SubscriptionOperationException
 import com.apollographql.apollo3.network.ws.SubscriptionWsProtocolAdapter
@@ -19,34 +18,17 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.junit.AfterClass
-import org.junit.BeforeClass
-import org.junit.Test
 import sample.server.CountSubscription
 import sample.server.GraphqlAccessErrorSubscription
 import sample.server.OperationErrorSubscription
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.Test
+import com.apollographql.apollo.sample.server.SampleServer
 
 class SampleServerTest {
-  companion object {
-    private lateinit var sampleServer: SampleServer
-
-    @BeforeClass
-    @JvmStatic
-    fun beforeClass() {
-      sampleServer = SampleServer()
-    }
-
-    @AfterClass
-    @JvmStatic
-    fun afterClass() {
-      sampleServer.close()
-    }
-  }
-
   @Test
-  fun simple() {
+  fun simple() = SampleServer().use { sampleServer ->
     val apolloClient = ApolloClient.Builder()
         .serverUrl(sampleServer.subscriptionsUrl())
         .build()
@@ -63,7 +45,7 @@ class SampleServerTest {
   }
 
   @Test
-  fun interleavedSubscriptions() {
+  fun interleavedSubscriptions() = SampleServer().use { sampleServer ->
     val apolloClient = ApolloClient.Builder()
         .serverUrl(sampleServer.subscriptionsUrl())
         .build()
@@ -88,7 +70,7 @@ class SampleServerTest {
   }
 
   @Test
-  fun idleTimeout() {
+  fun idleTimeout() = SampleServer().use { sampleServer ->
     val transport = WebSocketNetworkTransport.Builder().serverUrl(
         serverUrl = sampleServer.subscriptionsUrl(),
     ).idleTimeoutMillis(
@@ -113,7 +95,7 @@ class SampleServerTest {
   }
 
   @Test
-  fun slowConsumer() {
+  fun slowConsumer() = SampleServer().use { sampleServer ->
     val apolloClient = ApolloClient.Builder().serverUrl(serverUrl = sampleServer.subscriptionsUrl()).build()
 
     runBlocking {
@@ -138,7 +120,7 @@ class SampleServerTest {
   }
 
   @Test
-  fun serverTermination() {
+  fun serverTermination() = SampleServer().use { sampleServer ->
     val transport = WebSocketNetworkTransport.Builder().serverUrl(
         serverUrl = sampleServer.subscriptionsUrl(),
     ).idleTimeoutMillis(
@@ -161,10 +143,11 @@ class SampleServerTest {
         transport.subscriptionCount.first { it == 0 }
       }
     }
+    Unit
   }
 
   @Test
-  fun operationError() {
+  fun operationError() = SampleServer().use { sampleServer ->
     val apolloClient = ApolloClient.Builder()
         .serverUrl(sampleServer.subscriptionsUrl())
         .build()
@@ -230,7 +213,7 @@ class SampleServerTest {
   }
 
   @Test
-  fun canResumeAfterGraphQLError() {
+  fun canResumeAfterGraphQLError() = SampleServer().use { sampleServer ->
     val wsFactory = AuthorizationAwareWsProtocolFactory()
     val apolloClient = ApolloClient.Builder()
         .serverUrl(sampleServer.subscriptionsUrl())

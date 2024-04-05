@@ -1,11 +1,14 @@
 package com.apollographql.apollo3.execution
 
 import com.apollographql.apollo3.api.Error
+import com.apollographql.apollo3.api.json.BufferedSinkJsonWriter
 import com.apollographql.apollo3.api.json.JsonWriter
 import com.apollographql.apollo3.api.json.writeAny
 import com.apollographql.apollo3.api.json.writeArray
 import com.apollographql.apollo3.api.json.writeObject
+import okio.BufferedSink
 import okio.Sink
+import okio.buffer
 
 /**
  * @property errors if non-null, errors must contain at least 1 error
@@ -65,6 +68,8 @@ class GraphQLResponse internal constructor(
     serialize(sink.jsonWriter())
   }
 }
+
+internal fun Sink.jsonWriter(): JsonWriter = BufferedSinkJsonWriter(if (this is BufferedSink) this else this.buffer())
 
 internal fun JsonWriter.writeError(error: Error) {
     writeObject {

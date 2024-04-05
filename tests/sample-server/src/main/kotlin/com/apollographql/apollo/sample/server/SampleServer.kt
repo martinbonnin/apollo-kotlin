@@ -2,15 +2,13 @@ package com.apollographql.apollo.sample.server
 
 import com.apollographql.apollo.sample.server.graphql.SubscriptionRoot
 import com.apollographql.apollo3.api.ExecutionContext
-import com.apollographql.apollo3.ast.toGQLDocument
-import com.apollographql.apollo3.ast.toSchema
 import com.apollographql.apollo3.execution.ExecutableSchema
 import com.apollographql.apollo3.execution.websocket.WebSocketBinaryMessage
 import com.apollographql.apollo3.execution.websocket.WebSocketMessage
 import com.apollographql.apollo3.execution.websocket.WebSocketTextMessage
 import com.apollographql.apollo3.execution.parseGetGraphQLRequest
 import com.apollographql.apollo3.execution.parsePostGraphQLRequest
-import com.apollographql.apollo3.execution.websocket.ApolloWebSocketHandler
+import com.apollographql.apollo3.execution.websocket.SubscriptionWebSocketHandler
 import com.apollographql.apollo3.execution.websocket.ConnectionInitAck
 import com.apollographql.apollo3.execution.websocket.ConnectionInitError
 import com.apollographql.apollo3.execution.websocket.ConnectionInitHandler
@@ -165,7 +163,7 @@ fun ApolloWebsocketHandler(executableSchema: ExecutableSchema, webSocketRegistry
         ws.send(webSocketMessage.toWsMessage())
       }
 
-      val handler = ApolloWebSocketHandler(
+      val handler = SubscriptionWebSocketHandler(
           executableSchema = executableSchema,
           scope = scope,
           executionContext = webSocketRegistry + CurrentWebSocket(ws),

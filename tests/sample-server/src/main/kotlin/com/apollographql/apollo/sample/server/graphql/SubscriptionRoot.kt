@@ -38,7 +38,7 @@ class SubscriptionRoot(private val tag: String) {
   }
 
   fun operationError(): Flow<String> = flow {
-    throw Exception("Woops")
+    error("Woops")
   }
 
   fun graphqlAccessError(@GraphQLDefault("1") after: Int): Flow<Int?> = flow {
@@ -46,7 +46,7 @@ class SubscriptionRoot(private val tag: String) {
       emit(it)
     }
 
-    error("Woops")
+    error("Woops after $after items")
   }
 
   fun closeWebSocket(executionContext: ExecutionContext): Flow<String> = flow {

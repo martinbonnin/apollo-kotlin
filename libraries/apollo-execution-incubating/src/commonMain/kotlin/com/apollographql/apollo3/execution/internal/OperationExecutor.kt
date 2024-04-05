@@ -37,6 +37,7 @@ import com.apollographql.apollo3.execution.SubscriptionResponse
 import com.apollographql.apollo3.execution.coercingSerialize
 import com.apollographql.apollo3.execution.errorResponse
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
@@ -174,10 +175,11 @@ internal class OperationExecutor(
     val eventStream = try {
       createSourceEventStream(rootObject)
     } catch (e: Exception) {
-      e.printStackTrace()
       return subscriptionError(e.message ?: "cannot create source event stream")
     }
-    return mapSourceToResponseEvent(eventStream)
+    return mapSourceToResponseEvent(eventStream).catch {
+      emit(SubscriptionError(listOf(Error.Builder(it.message ?: "error collecting the source event stream").build())))
+    }
   }
 
   private fun mapSourceToResponseEvent(sourceStream: Flow<PendingField>): Flow<SubscriptionEvent> {
@@ -193,7 +195,7 @@ internal class OperationExecutor(
       is PendingFieldItem -> {
         val data = try {
           mapOf(
-              "data" to completeValue(
+              event.responseName to completeValue(
                   event.fields.first().definitionFromScope(schema, event.parentType)!!.type,
                   fields = event.fields,
                   event.objectValue,
@@ -202,6 +204,7 @@ internal class OperationExecutor(
               )
           )
         } catch (e: Exception) {
+          e.printStackTrace()
           null
         }
         GraphQLResponse(data, errors, null)
