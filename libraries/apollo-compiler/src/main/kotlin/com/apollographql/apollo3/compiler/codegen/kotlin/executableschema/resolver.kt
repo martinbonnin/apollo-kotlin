@@ -1,8 +1,8 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
-import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
-import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
-import com.apollographql.apollo3.compiler.sir.SirArgument
+import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgumentDefinition
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinitionDefinition
+import com.apollographql.apollo3.compiler.sir.SirArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirNonNullType
 import com.apollographql.apollo3.compiler.sir.SirObjectDefinition
@@ -39,10 +39,10 @@ internal fun CodeBlock.Builder.indent(condition: Boolean = true, block: CodeBloc
   }
 }
 
-private fun argumentCodeBlock(sirArgument: SirArgument): CodeBlock {
+private fun argumentCodeBlock(sirArgument: SirArgumentDefinition): CodeBlock {
   return buildCode {
     when (sirArgument) {
-      is SirGraphQLArgument -> {
+      is SirGraphQLArgumentDefinitionDefinition -> {
         val getArgument = if (sirArgument.defaultValue == null && sirArgument.type !is SirNonNullType) {
           // No default value and nullable => Optional
           "getArgument"
@@ -56,8 +56,8 @@ private fun argumentCodeBlock(sirArgument: SirArgument): CodeBlock {
         )
       }
 
-      SirExecutionContextArgument -> {
-        add("executionContext·=·it.executionContext")
+      is SirExecutionContextArgumentDefinition -> {
+        add("%L·=·it.executionContext", sirArgument.name)
       }
     }
   }

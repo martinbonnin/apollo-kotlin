@@ -70,12 +70,15 @@ suspend fun ApplicationRequest.toGraphQLRequest(method: HttpMethod): Result<Grap
   }
 }
 
-fun Application.apolloModule(executableSchema: ExecutableSchema) {
+fun Application.apolloModule(
+    executableSchema: ExecutableSchema,
+    path: String = "/graphql"
+) {
   routing {
-    post("/graphql") {
+    post(path) {
       call.handle(executableSchema, call.request.toGraphQLRequest(HttpMethod.Post))
     }
-    get("/graphql") {
+    get(path) {
       call.handle(executableSchema, call.request.toGraphQLRequest(HttpMethod.Get))
     }
   }

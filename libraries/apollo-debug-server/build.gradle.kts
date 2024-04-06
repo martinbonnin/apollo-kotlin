@@ -82,14 +82,10 @@ configurations.getByName(kotlin.sourceSets.getByName("commonMain").compileOnlyCo
 fun configureKsp() {
   dependencies {
     add("kspCommonMainMetadata", project(":apollo-ksp-incubating"))
-    add(
-        "kspCommonMainMetadata",
-        apollo.apolloKspProcessor(
-            schema = file(path = "src/androidMain/resources/schema.graphqls"),
-            service = "apolloDebugServer",
-            packageName = "com.apollographql.apollo3.debugserver.internal.graphql"
-        )
-    )
+  }
+  ksp {
+    arg("apolloService", "apolloDebugServer")
+    arg("apolloPackageName", "com.apollographql.apollo3.debugserver.internal.graphql")
   }
   tasks.withType<KotlinCompile>().configureEach {
     dependsOn("kspCommonMainKotlinMetadata")

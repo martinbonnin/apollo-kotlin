@@ -39,8 +39,7 @@ internal fun coerceArgumentValues(
     val defaultValue = argumentDefinition.defaultValue
     var hasValue = argumentValues.containsKey(argumentName)
     val argumentValue = argumentValues.get(argumentName)
-    // This may hold either an InternalValue (for coerced variables) or a GQLValue (for argument values)
-    val value: Any?
+    var value: Any?
     if (argumentValue is GQLVariableValue) {
       val variableName = argumentValue.name
       hasValue = coercedVariables.containsKey(variableName)
@@ -49,15 +48,16 @@ internal fun coerceArgumentValues(
       value = argumentValue
     }
     if (!hasValue && defaultValue != null) {
-      coercedValues.put(argumentName, defaultValue.toInternalValue())
-      return@forEach
-    }
-    if (argumentType is GQLNonNullType) {
-      if (!hasValue) {
-        error("No value passed for required argument: '$argumentName'")
-      }
-      if (value == null) {
-        error("'null' found in non-null position for argument: '$argumentName'")
+      hasValue = true
+      value = defaultValue
+    } else {
+      if (argumentType is GQLNonNullType) {
+        if (!hasValue) {
+          error("No value passed for required argument: '$argumentName'")
+        }
+        if (value == null) {
+          error("'null' found in non-null position for argument: '$argumentName'")
+        }
       }
     }
 
@@ -159,7 +159,7 @@ internal fun coerceLiteralToInternal(schema: Schema, value: GQLValue, type: GQLT
   }
 }
 
-fun coerceEnumLiteralToInternal(value: GQLValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue? {
+fun coerceEnumLiteralToInternal(value: GQLValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue {
   check(value is GQLEnumValue) {
     error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
   }
@@ -208,5 +208,34 @@ private fun coerceInputObject(schema: Schema, definition: GQLInputObjectTypeDefi
     coercing.deserialize(map)
   } else {
     map
+  }
+}
+
+internal fun coerceInputMaps(value: Any?, schema: Schema, expectedType: GQLType , coercings: Map<String, Coercing<*>>): InternalValue {
+  if (value == null) {
+    return null
+  }
+
+  return when (expectedType) {
+    is GQLNonNullType -> {
+      coerceInputMaps(value, schema, expectedType.type, coercings)
+    }
+    is GQLListType -> {
+      check(value is List<*>)
+      value.map { coerceInputMaps(it, schema, expectedType.type, coercings) }
+    }
+    is GQLNamedType -> {
+      val definition = schema.typeDefinition(expectedType.name)
+      if (definition is GQLInputObjectTypeDefinition) {
+        val coercing = coercings.get(definition.name)
+        return if (coercing != null) {
+          coercing.deserialize(value)
+        } else {
+          value
+        }
+      } else {
+        value
+      }
+    }
   }
 }

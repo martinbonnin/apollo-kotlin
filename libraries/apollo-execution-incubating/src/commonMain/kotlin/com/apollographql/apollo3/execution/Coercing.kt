@@ -13,8 +13,6 @@ import com.apollographql.apollo3.execution.internal.InternalValue
 
 /**
  * See https://www.graphql.de/blog/scalars-in-depth/
- *
- * TODO: add a version that can stream
  */
 interface Coercing<T> {
   /**

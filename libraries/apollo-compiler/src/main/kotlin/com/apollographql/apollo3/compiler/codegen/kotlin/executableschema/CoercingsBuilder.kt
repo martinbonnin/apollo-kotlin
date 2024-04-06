@@ -13,6 +13,7 @@ import com.apollographql.apollo3.compiler.sir.SirInputObjectDefinition
 import com.apollographql.apollo3.compiler.sir.SirNonNullType
 import com.apollographql.apollo3.compiler.sir.SirTypeDefinition
 import com.apollographql.apollo3.compiler.sir.asKotlinPoet
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
@@ -43,16 +44,23 @@ internal class CoercingsBuilder(
   private fun String.coercingName() = "${this}Coercing".decapitalizeFirstLetter()
 
   override fun build(): CgFile {
+
+    val funSpecs = if (sirEnumDefinitions.isNotEmpty() || sirInputObjectDefinitions.isNotEmpty()) {
+      listOf(getInputFunSpec(), getRequiredInputFunSpec())
+    } else {
+      emptyList()
+    }
     return CgFile(
         packageName = context.layout.packageName(),
         fileName = fileName,
-        funSpecs = listOf(getInputFunSpec(), getRequiredInputFunSpec()),
+        funSpecs = funSpecs,
         propertySpecs = sirEnumDefinitions.map { it.propertySpec() } + sirInputObjectDefinitions.map { it.propertySpec() }
     )
   }
 
   private fun inputFunSpecInternal(name: String, block: CodeBlock.Builder.() -> Unit): FunSpec {
     return FunSpec.builder(name)
+        .addAnnotation(AnnotationSpec.builder(KotlinSymbols.Suppress).addMember("\"UNCHECKED_CAST\"").build())
         .addTypeVariable(TypeVariableName("T"))
         .receiver(KotlinSymbols.Any.copy(nullable = true))
         .addModifiers(KModifier.PRIVATE)

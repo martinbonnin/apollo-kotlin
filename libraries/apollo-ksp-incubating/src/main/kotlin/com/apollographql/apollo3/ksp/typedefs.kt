@@ -2,13 +2,13 @@ package com.apollographql.apollo3.ksp
 
 import com.apollographql.apollo3.ast.parseAsGQLValue
 import com.apollographql.apollo3.compiler.sir.Instantiation
-import com.apollographql.apollo3.compiler.sir.SirArgument
+import com.apollographql.apollo3.compiler.sir.SirArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirEnumDefinition
 import com.apollographql.apollo3.compiler.sir.SirEnumValueDefinition
 import com.apollographql.apollo3.compiler.sir.SirErrorType
-import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
+import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
-import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinitionDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputObjectDefinition
 import com.apollographql.apollo3.compiler.sir.SirInterfaceDefinition
@@ -113,7 +113,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
 
       val sirTypeDefinition = when {
         declaration.classKind == ClassKind.ENUM_CLASS -> {
-          declaration.toSirEnum()
+          declaration.toSirEnumDefinition()
         }
 
         context == VisitContext.INPUT -> {
@@ -131,13 +131,14 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     return this.typeDefinitions.values.filterNotNull().toList()
   }
 
-  private fun KSClassDeclaration.toSirEnum(): SirEnumDefinition? {
+  private fun KSClassDeclaration.toSirEnumDefinition(): SirEnumDefinition {
     val enumValueDefinitions = this.declarations.filterIsInstance<KSClassDeclaration>().filter {
       it.classKind == ClassKind.ENUM_ENTRY
     }.map {
       SirEnumValueDefinition(
           name = it.graphqlName(),
           description = it.docString,
+          deprecationReason = it.deprecationReason(),
           className = it.asClassName()
       )
     }.toList()
@@ -257,6 +258,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     return SirFieldDefinition(
         name = name,
         description = docString,
+        deprecationReason = deprecationReason(),
         targetName = simpleName.asString(),
         isFunction = true,
         type = returnType!!.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType, false),
@@ -271,30 +273,31 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     if (defaultValue != null) {
       val result = defaultValue.parseAsGQLValue()
       if (result.issues.isNotEmpty()) {
-        logger.error("@GraphQLDefault value is not a valid GraphQL literal: ${result.issues.first().message}")
+        logger.error("@GraphQLDefault value is not a valid GraphQL literal: ${result.issues.first().message}", this)
         return null
       }
     }
     return defaultValue
   }
-  private fun KSValueParameter.toSirArgument(): SirArgument? {
+  private fun KSValueParameter.toSirArgument(): SirArgumentDefinition? {
     if (this.type.resolve().declaration.asClassName() == executionContextClassName) {
-      return SirExecutionContextArgument
+      return SirExecutionContextArgumentDefinition(name?.asString() ?: error(""))
     }
     val targetName = this.name!!.asString()
     val name = this.graphqlNameOrNull() ?: targetName
 
     if (this.hasDefault) {
-      logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.")
+      logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.", this)
       return null
     }
     val defaultValue = defaultValue()
     val type = type.resolve()
     val sirType = type.toSirType(SirDebugContext(this), VisitContext.INPUT, operationType = null, defaultValue != null)
 
-    return SirGraphQLArgument(
+    return SirGraphQLArgumentDefinitionDefinition(
         name = name,
         description = null,
+        deprecationReason = deprecationReason(),
         targetName = targetName,
         type = sirType,
         defaultValue = defaultValue
@@ -305,6 +308,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     return SirFieldDefinition(
         name = graphqlName(),
         description = docString,
+        deprecationReason = deprecationReason(),
         targetName = simpleName.asString(),
         isFunction = false,
         type = type.resolve().toSirType(SirDebugContext(this), VisitContext.OUTPUT, operationType, false),
@@ -327,11 +331,11 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         return null
       }
       if (it.hasDefault) {
-        logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.")
+        logger.error("Default arguments are not supported, use '@GraphQLDefault' instead.", this)
         return null
       }
       if (!propertyNames.contains(it.name!!.asString())) {
-        logger.error("Constructor parameter '$kotlinName' must also be declared as a `val` property.")
+        logger.error("Constructor parameter '$kotlinName' must also be declared as a `val` property.", this)
         return null
       }
 
@@ -340,6 +344,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
       SirInputFieldDefinition(
           name = name,
           description = docString,
+          deprecationReason = it.deprecationReason(),
           type = declaration.toSirType(SirDebugContext(it), VisitContext.INPUT, null, defaultValue != null),
           defaultValue = defaultValue
       )
@@ -408,7 +413,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
         if (scalars.containsKey(qualifiedName)) {
           val definition = scalars.get(qualifiedName)
           if (definition == null) {
-            logger.error("Aliased type '$qualifiedName' is used by 2 different scalars. Use the type alias to disambiguate.", declaration)
+            logger.error("Aliased type '$qualifiedName' is used by 2 different scalars. Use the type alias to disambiguate.", debugContext.node)
             SirErrorType
           } else {
             SirNamedType(definition.name)

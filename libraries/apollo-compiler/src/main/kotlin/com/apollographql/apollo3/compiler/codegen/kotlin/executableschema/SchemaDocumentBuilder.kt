@@ -1,9 +1,5 @@
 package com.apollographql.apollo3.compiler.codegen.kotlin.executableschema
 
-import com.apollographql.apollo3.ast.GQLDirective
-import com.apollographql.apollo3.ast.GQLFieldDefinition
-import com.apollographql.apollo3.ast.SourceLocation
-import com.apollographql.apollo3.compiler.capitalizeFirstLetter
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinExecutableSchemaContext
@@ -18,13 +14,12 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstOperat
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstSchemaDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstUnionTypeDefinition
 import com.apollographql.apollo3.compiler.decapitalizeFirstLetter
-import com.apollographql.apollo3.compiler.sir.SirArgument
 import com.apollographql.apollo3.compiler.sir.SirEnumDefinition
 import com.apollographql.apollo3.compiler.sir.SirEnumValueDefinition
 import com.apollographql.apollo3.compiler.sir.SirErrorType
-import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgument
+import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
-import com.apollographql.apollo3.compiler.sir.SirGraphQLArgument
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinitionDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputObjectDefinition
 import com.apollographql.apollo3.compiler.sir.SirInterfaceDefinition
@@ -179,7 +174,7 @@ private fun SirObjectDefinition.codeBlock(): CodeBlock {
 
 private fun SirInterfaceDefinition.codeBlock(): CodeBlock {
   return buildCommon(AstInterfaceTypeDefinition, name, description) {
-    add("implementsInterfaces = listOf(%L)\n", interfaces.map { CodeBlock.builder().add("%S", it).build() }.joinToCode(",·"))
+    add("implementsInterfaces = listOf(%L),\n", interfaces.map { CodeBlock.builder().add("%S", it).build() }.joinToCode(",·"))
     add("fields = listOf(\n")
     indent()
     fields.forEach {
@@ -196,8 +191,8 @@ private fun SirFieldDefinition.codeBlock(): CodeBlock {
     indent()
     arguments.forEach {
       when (it) {
-        SirExecutionContextArgument -> Unit
-        is SirGraphQLArgument -> {
+        is SirExecutionContextArgumentDefinition -> Unit
+        is SirGraphQLArgumentDefinitionDefinition -> {
           add("%L,\n", it.codeBlock())
         }
       }
@@ -208,7 +203,7 @@ private fun SirFieldDefinition.codeBlock(): CodeBlock {
   }
 }
 
-private fun SirGraphQLArgument.codeBlock(): CodeBlock {
+private fun SirGraphQLArgumentDefinitionDefinition.codeBlock(): CodeBlock {
   return buildCommon(AstInputValueDefinition, name = name, description = description) {
     add("type = %L,\n", type.codeBlock())
     if (defaultValue != null) {

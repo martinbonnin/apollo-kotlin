@@ -109,7 +109,7 @@ private fun coerceExternalToInternal(schema: Schema, value: ExternalValue, type:
   }
 }
 
-fun coerceEnumExternalToInternal(value: ExternalValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue? {
+fun coerceEnumExternalToInternal(value: ExternalValue, coercings: Map<String, Coercing<*>>, definition: GQLEnumTypeDefinition): InternalValue {
   check(value is String) {
     error("Don't know how to coerce '$value' to a '${definition.name}' enum value")
   }

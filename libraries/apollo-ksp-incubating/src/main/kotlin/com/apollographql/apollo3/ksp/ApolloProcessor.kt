@@ -103,6 +103,9 @@ internal fun KSClassDeclaration.hasNoArgsConstructor(): Boolean {
   }
 }
 
+internal fun KSAnnotated.deprecationReason(): String? {
+  return findAnnotation("Deprecated")?.getArgumentValueAsString("reason")
+}
 internal fun KSClassDeclaration.graphqlName(): String {
   return graphqlNameOrNull() ?: simpleName.asString()
 }

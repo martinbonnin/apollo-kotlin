@@ -62,12 +62,23 @@ private class ScalarContext(val logger: KSPLogger) {
   }
 }
 
-
+private fun KSClassDeclaration.hasSuperType(qualifiedName: String): Boolean {
+  return superTypes.any {
+    it.resolve().declaration.asClassName().asString() == qualifiedName
+  }
+}
 fun KSAnnotated.coercing(logger: KSPLogger): SirCoercing? {
-  val ksType = findAnnotation("GraphQLScalar")?.getArgumentValue("coercing") as KSType
+  val ksType = findAnnotation("GraphQLScalar")?.getArgumentValue("coercing") as KSType?
+  if (ksType == null) {
+    return null
+  }
   val declaration = ksType.declaration
   val instantiation = when {
     declaration is KSClassDeclaration -> {
+      if (!declaration.hasSuperType("com.apollographql.apollo3.execution.Coercing")) {
+        logger.error("Coercing implementation must implement the com.apollographql.apollo3.execution.Coercing interface", this)
+        return null
+      }
       declaration.instantiation().also {
         if (it == Instantiation.UNKNOWN) {
           logger.error("Coercing implementation must either be objects or have a no-arg constructor", this)

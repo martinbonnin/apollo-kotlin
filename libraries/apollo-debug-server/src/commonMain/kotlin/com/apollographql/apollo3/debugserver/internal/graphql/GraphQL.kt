@@ -1,22 +1,17 @@
 package com.apollographql.apollo3.debugserver.internal.graphql
 
 import com.apollographql.apollo3.ApolloClient
-import com.apollographql.apollo3.annotations.GraphQLScalar
 import com.apollographql.apollo3.annotations.GraphQLName
-import com.apollographql.apollo3.annotations.GraphQLObject
-import com.apollographql.apollo3.api.Adapter
-import com.apollographql.apollo3.api.CustomScalarAdapters
+import com.apollographql.apollo3.annotations.GraphQLQueryRoot
+import com.apollographql.apollo3.annotations.GraphQLScalar
 import com.apollographql.apollo3.api.ExecutionContext
-import com.apollographql.apollo3.api.json.JsonReader
-import com.apollographql.apollo3.api.json.JsonWriter
-import com.apollographql.apollo3.api.json.writeObject
-import com.apollographql.apollo3.ast.toGQLDocument
-import com.apollographql.apollo3.ast.toSchema
+import com.apollographql.apollo3.ast.GQLValue
 import com.apollographql.apollo3.cache.normalized.api.CacheKey
 import com.apollographql.apollo3.cache.normalized.api.Record
 import com.apollographql.apollo3.cache.normalized.apolloStore
-import com.apollographql.apollo3.debugserver.internal.graphql.execution.ApolloDebugServerExecutableSchemaBuilder
+import com.apollographql.apollo3.execution.Coercing
 import com.apollographql.apollo3.execution.ExecutableSchema
+import com.apollographql.apollo3.execution.internal.ExternalValue
 import com.apollographql.apollo3.execution.parsePostGraphQLRequest
 import okio.Buffer
 import java.util.concurrent.atomic.AtomicReference
@@ -28,13 +23,9 @@ internal class GraphQL(
     private val apolloClients: AtomicReference<Map<ApolloClient, String>>,
 ) {
   private val executableSchema: ExecutableSchema by lazy {
-    val schema = getExecutableSchema()
-        .toGQLDocument()
-        .toSchema()
-
-    ApolloDebugServerExecutableSchemaBuilder(schema) {
-      Query(apolloClients)
-    }.build()
+    ApolloDebugServerExecutableSchemaBuilder()
+        .queryRoot { Query(apolloClients) }
+        .build()
   }
 
   fun executeGraphQL(jsonBody: String): String {
@@ -52,7 +43,7 @@ internal class GraphQL(
   }
 }
 
-@GraphQLObject
+@GraphQLQueryRoot
 internal class Query(private val apolloClients: AtomicReference<Map<ApolloClient, String>>) {
   private fun graphQLApolloClients() =
       apolloClients.get().map { (apolloClient, apolloClientId) ->
@@ -71,7 +62,6 @@ internal class Query(private val apolloClients: AtomicReference<Map<ApolloClient
   }
 }
 
-@GraphQLObject
 @GraphQLName("ApolloClient")
 internal class GraphQLApolloClient(
     private val id: String,
@@ -82,7 +72,7 @@ internal class GraphQLApolloClient(
   fun displayName() = id
 
   fun normalizedCaches(): List<NormalizedCache> {
-    val apolloStore = runCatching {  apolloClient.apolloStore }.getOrNull() ?: return emptyList()
+    val apolloStore = runCatching { apolloClient.apolloStore }.getOrNull() ?: return emptyList()
     return apolloStore.dump().map {
       NormalizedCache(id, it.key, it.value)
     }
@@ -93,7 +83,6 @@ internal class GraphQLApolloClient(
   }
 }
 
-@GraphQLObject
 internal class NormalizedCache(
     apolloClientId: String,
     private val clazz: KClass<*>,
@@ -109,7 +98,6 @@ internal class NormalizedCache(
   fun records(): List<GraphQLRecord> = records.map { GraphQLRecord(it.value) }
 }
 
-@GraphQLObject
 @GraphQLName("Record")
 internal class GraphQLRecord(
     private val record: Record,
@@ -121,46 +109,41 @@ internal class GraphQLRecord(
   fun sizeInBytes(): Int = record.sizeInBytes
 }
 
-@GraphQLScalar(forScalar = "Fields")
-internal class FieldsAdapter : Adapter<Map<String, Any?>> {
-  override fun fromJson(reader: JsonReader, customScalarAdapters: CustomScalarAdapters): Map<String, Any?> {
-    throw UnsupportedOperationException()
+@GraphQLScalar(coercing = FieldsAdapter::class)
+typealias Fields = Map<String, Any?>
+
+internal class FieldsAdapter : Coercing<Fields> {
+  override fun serialize(internalValue: Fields): ExternalValue {
+    return internalValue.toExternalValue()
   }
 
-  override fun toJson(writer: JsonWriter, customScalarAdapters: CustomScalarAdapters, value: Map<String, Any?>) {
-    writer.writeObject {
-      for ((k, v) in value) {
-        writer.name(k).writeJsonValue(v)
-      }
-    }
+  override fun deserialize(value: ExternalValue): Fields {
+    error("Fields are never used in input position")
+  }
+
+  override fun parseLiteral(gqlValue: GQLValue): Fields {
+    error("Fields are never used in input position")
   }
 
   // Taken from JsonRecordSerializer
-  @Suppress("UNCHECKED_CAST")
-  private fun JsonWriter.writeJsonValue(value: Any?) {
-    when (value) {
-      null -> this.nullValue()
-      is String -> this.value(value)
-      is Boolean -> this.value(value)
-      is Int -> this.value(value)
-      is Long -> this.value(value)
-      is Double -> this.value(value)
-      is CacheKey -> this.value(value.serialize())
+  private fun Any?.toExternalValue(): Any? {
+    return when (this) {
+      null -> null
+      is String -> this
+      is Boolean -> this
+      is Int -> this
+      is Long -> this
+      is Double -> this
+      is CacheKey -> serialize()
       is List<*> -> {
-        this.beginArray()
-        value.forEach { writeJsonValue(it) }
-        this.endArray()
+        this.map { it.toExternalValue() }
       }
 
       is Map<*, *> -> {
-        this.beginObject()
-        for (entry in value as Map<String, Any?>) {
-          this.name(entry.key).writeJsonValue(entry.value)
-        }
-        this.endObject()
+        this.mapValues { it.toExternalValue() }
       }
 
-      else -> error("Unsupported record value type: '$value'")
+      else -> error("Unsupported record value type: '$this'")
     }
   }
 }

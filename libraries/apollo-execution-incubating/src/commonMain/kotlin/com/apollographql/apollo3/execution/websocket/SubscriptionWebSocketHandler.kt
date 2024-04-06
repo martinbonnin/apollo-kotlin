@@ -235,6 +235,7 @@ internal class SubscriptionWebsocketComplete(
 
 @OptIn(ApolloInternal::class)
 internal fun String.parseApolloWebsocketClientMessage(): SubscriptionWebsocketClientMessageResult {
+  @Suppress("UNCHECKED_CAST")
   val map = try {
     Buffer().writeUtf8(this).jsonReader().readAny() as Map<String, Any?>
   } catch (e: Exception) {
@@ -269,6 +270,7 @@ internal fun String.parseApolloWebsocketClientMessage(): SubscriptionWebsocketCl
           return SubscriptionWebsocketClientMessageParseError("'payload' must be an Object in $this")
         }
 
+        @Suppress("UNCHECKED_CAST")
         val request = (payload as Map<String, Any?>).toGraphQLRequest()
         return request.fold(
             onFailure = { SubscriptionWebsocketClientMessageParseError("Cannot parse start payload: '${it.message}'") },
