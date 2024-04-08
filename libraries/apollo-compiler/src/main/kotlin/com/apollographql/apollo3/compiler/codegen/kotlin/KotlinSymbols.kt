@@ -41,6 +41,8 @@ internal object KotlinSymbols {
   val AstOperationTypeDefinition = ClassName(apolloAstPackageName, "GQLOperationTypeDefinition")
   val AstParseAsGQLValue = MemberName(apolloAstPackageName, "parseAsGQLValue")
   val AstBuiltinDefinitions = MemberName(apolloAstPackageName, "builtinDefinitions")
+  val AstDirective = ClassName(apolloAstPackageName, "GQLDirective")
+  val AstArgument = ClassName(apolloAstPackageName, "GQLArgument")
   val ObjectType = ClassNames.ObjectType.toKotlinPoetClassName()
   val ObjectTypeBuilder = ClassNames.ObjectTypeBuilder.toKotlinPoetClassName()
   val InterfaceType = ClassNames.InterfaceType.toKotlinPoetClassName()

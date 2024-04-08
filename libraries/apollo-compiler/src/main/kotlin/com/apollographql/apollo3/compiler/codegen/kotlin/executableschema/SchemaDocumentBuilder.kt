@@ -4,6 +4,8 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.CgFile
 import com.apollographql.apollo3.compiler.codegen.kotlin.CgFileBuilder
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinExecutableSchemaContext
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstArgument
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstDirective
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstDocument
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstFieldDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstInputObjectTypeDefinition
@@ -12,6 +14,7 @@ import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstInterf
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstObjectTypeDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstOperationTypeDefinition
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstSchemaDefinition
+import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstStringValue
 import com.apollographql.apollo3.compiler.codegen.kotlin.KotlinSymbols.AstUnionTypeDefinition
 import com.apollographql.apollo3.compiler.decapitalizeFirstLetter
 import com.apollographql.apollo3.compiler.sir.SirEnumDefinition
@@ -19,7 +22,7 @@ import com.apollographql.apollo3.compiler.sir.SirEnumValueDefinition
 import com.apollographql.apollo3.compiler.sir.SirErrorType
 import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
-import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinitionDefinition
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputObjectDefinition
 import com.apollographql.apollo3.compiler.sir.SirInterfaceDefinition
@@ -127,7 +130,7 @@ private fun List<SirTypeDefinition>.schemaDefinitionCodeBlock(): CodeBlock {
   }
 }
 private fun SirInputObjectDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstInputObjectTypeDefinition, name, description) {
+  return buildCommon(className = AstInputObjectTypeDefinition, name = name, description = description, deprecationReason = null) {
     add("inputFields = listOf(\n")
     indent()
     inputFields.forEach {
@@ -139,7 +142,7 @@ private fun SirInputObjectDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirInputFieldDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstInputValueDefinition, name, description) {
+  return buildCommon(className = AstInputValueDefinition, name = name, description = description, deprecationReason = deprecationReason) {
     add("type = %L,\n", type.codeBlock())
     if (defaultValue != null) {
       add("defaultValue = %S.%M().getOrThrow(),\n", defaultValue, KotlinSymbols.AstParseAsGQLValue, )
@@ -150,7 +153,7 @@ private fun SirInputFieldDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirUnionDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstUnionTypeDefinition, name, description) {
+  return buildCommon(className = AstUnionTypeDefinition, name = name, description = description, deprecationReason = null) {
     add("memberTypes = listOf(")
     memberTypes.forEach {
       add("%S,·", it)
@@ -160,7 +163,7 @@ private fun SirUnionDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirObjectDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstObjectTypeDefinition, name, description) {
+  return buildCommon(className = AstObjectTypeDefinition, name = name, description = description, deprecationReason = null) {
     add("implementsInterfaces = listOf(%L),\n", interfaces.map { CodeBlock.builder().add("%S", it).build() }.joinToCode(",·"))
     add("fields = listOf(\n")
     indent()
@@ -173,7 +176,7 @@ private fun SirObjectDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirInterfaceDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstInterfaceTypeDefinition, name, description) {
+  return buildCommon(className = AstInterfaceTypeDefinition, name = name, description = description, deprecationReason = null) {
     add("implementsInterfaces = listOf(%L),\n", interfaces.map { CodeBlock.builder().add("%S", it).build() }.joinToCode(",·"))
     add("fields = listOf(\n")
     indent()
@@ -186,13 +189,13 @@ private fun SirInterfaceDefinition.codeBlock(): CodeBlock {
 }
 
 private fun SirFieldDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstFieldDefinition, name, description) {
+  return buildCommon(className = AstFieldDefinition, name = name, description = description, deprecationReason = deprecationReason) {
     add("arguments = listOf(\n")
     indent()
     arguments.forEach {
       when (it) {
         is SirExecutionContextArgumentDefinition -> Unit
-        is SirGraphQLArgumentDefinitionDefinition -> {
+        is SirGraphQLArgumentDefinition -> {
           add("%L,\n", it.codeBlock())
         }
       }
@@ -203,8 +206,8 @@ private fun SirFieldDefinition.codeBlock(): CodeBlock {
   }
 }
 
-private fun SirGraphQLArgumentDefinitionDefinition.codeBlock(): CodeBlock {
-  return buildCommon(AstInputValueDefinition, name = name, description = description) {
+private fun SirGraphQLArgumentDefinition.codeBlock(): CodeBlock {
+  return buildCommon(className = AstInputValueDefinition, name = name, deprecationReason = deprecationReason, description = description) {
     add("type = %L,\n", type.codeBlock())
     if (defaultValue != null) {
       add("defaultValue = %S.%M().getOrThrow(),\n", defaultValue, KotlinSymbols.AstParseAsGQLValue, )
@@ -223,22 +226,30 @@ private fun SirType.codeBlock(): CodeBlock {
   }
 }
 
-private fun buildCommon(className: ClassName, name: String, description: String?, block: CodeBlock.Builder.() -> Unit = {}): CodeBlock {
+private fun buildCommon(className: ClassName, name: String, description: String?, deprecationReason: String?, block: CodeBlock.Builder.() -> Unit = {}): CodeBlock {
   return buildCode {
     add("%T(\n", className)
     indent()
     add("sourceLocation = null,\n")
     add("description = %S,\n", description)
     add("name = %S,\n", name)
-    add("directives = emptyList(),\n")
+    add("directives = %L,\n", deprecationReason.toDirectives())
     block()
     unindent()
     add(")")
   }
 }
 
+private fun String?.toDirectives(): CodeBlock = buildCode {
+  if (this@toDirectives == null) {
+    add("emptyList()")
+    return@buildCode
+  }
+  add("listOf(%T(null, %S, listOf(%T(null, %S, %T(null, %S)))))", AstDirective, "deprecated", AstArgument, "reason", AstStringValue, this@toDirectives)
+}
+
 private fun SirEnumDefinition.codeBlock(): CodeBlock {
-  return buildCommon(KotlinSymbols.AstEnumTypeDefinition, name, description) {
+  return buildCommon(className = KotlinSymbols.AstEnumTypeDefinition, name = name, description = description, deprecationReason = null) {
     add("enumValues = listOf(\n")
     indent()
     add("%L", values.map { it.codeBlock() }.joinToCode(",\n", suffix = ",\n"))
@@ -248,7 +259,7 @@ private fun SirEnumDefinition.codeBlock(): CodeBlock {
 }
 
 internal fun SirEnumValueDefinition.codeBlock(): CodeBlock {
-  return buildCommon(KotlinSymbols.AstEnumValueDefinition, name, description = description)
+  return buildCommon(className = KotlinSymbols.AstEnumValueDefinition, name = name, deprecationReason = deprecationReason, description = description)
 }
 
 internal fun buildCode(block: CodeBlock.Builder.() -> Unit): CodeBlock {
@@ -258,5 +269,5 @@ internal fun buildCode(block: CodeBlock.Builder.() -> Unit): CodeBlock {
 }
 
 private fun SirScalarDefinition.codeBlock(): CodeBlock {
-  return buildCommon(KotlinSymbols.AstScalarTypeDefinition, name, description)
+  return buildCommon(className = KotlinSymbols.AstScalarTypeDefinition, name = name, description = description, deprecationReason = null)
 }

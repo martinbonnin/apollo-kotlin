@@ -33,7 +33,7 @@ sealed interface SirArgumentDefinition
 class SirExecutionContextArgumentDefinition(val name: String): SirArgumentDefinition
 
 @ApolloInternal
-class SirGraphQLArgumentDefinitionDefinition(
+class SirGraphQLArgumentDefinition(
     val name: String,
     val description: String?,
     val deprecationReason: String?,

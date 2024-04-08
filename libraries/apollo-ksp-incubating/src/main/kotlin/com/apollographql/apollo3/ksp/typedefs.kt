@@ -8,7 +8,7 @@ import com.apollographql.apollo3.compiler.sir.SirEnumValueDefinition
 import com.apollographql.apollo3.compiler.sir.SirErrorType
 import com.apollographql.apollo3.compiler.sir.SirExecutionContextArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirFieldDefinition
-import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinitionDefinition
+import com.apollographql.apollo3.compiler.sir.SirGraphQLArgumentDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputFieldDefinition
 import com.apollographql.apollo3.compiler.sir.SirInputObjectDefinition
 import com.apollographql.apollo3.compiler.sir.SirInterfaceDefinition
@@ -294,7 +294,7 @@ private class TypeDefinitionContext(val logger: KSPLogger, val scalarDefinitions
     val type = type.resolve()
     val sirType = type.toSirType(SirDebugContext(this), VisitContext.INPUT, operationType = null, defaultValue != null)
 
-    return SirGraphQLArgumentDefinitionDefinition(
+    return SirGraphQLArgumentDefinition(
         name = name,
         description = null,
         deprecationReason = deprecationReason(),
