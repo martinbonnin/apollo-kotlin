@@ -9,10 +9,12 @@ import com.apollographql.apollo3.execution.parsePostGraphQLRequest
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.request.ApplicationRequest
+import io.ktor.server.request.httpMethod
 import io.ktor.server.request.queryString
 import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
@@ -22,17 +24,24 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import okio.Buffer
 
-private suspend fun ApplicationCall.handle(executableSchema: ExecutableSchema, result: Result<GraphQLRequest>) {
+suspend fun ApplicationCall.respondGraphQL(executableSchema: ExecutableSchema, executionContext: ExecutionContext = ExecutionContext.Empty, configure: OutgoingContent.(GraphQLResponse?) -> Unit = {}) {
+  val request = request.toGraphQLRequest(request.httpMethod)
   val contentType = ContentType.parse("application/graphql-response+json")
-  if (result.isFailure) {
-    respondText(contentType = contentType, status = HttpStatusCode.BadRequest) {
-      result.exceptionOrNull()?.message ?: ""
-    }
+  if (request.isFailure) {
+    respondText(
+        contentType = contentType,
+        status = HttpStatusCode.BadRequest,
+        text = request.exceptionOrNull()?.message ?: "",
+        configure = { configure(null) }
+    )
   } else {
-    respondBytes(contentType = contentType, status = io.ktor.http.HttpStatusCode.OK) {
-      val response = executableSchema.execute(result.getOrThrow(), com.apollographql.apollo3.api.ExecutionContext.Empty)
-      response.toByteArray()
-    }
+    val response = executableSchema.execute(request.getOrThrow(), executionContext)
+    respondBytes(
+        contentType = contentType,
+        status = HttpStatusCode.OK,
+        bytes = response.toByteArray(),
+        configure = { configure(response) }
+    )
   }
 }
 
@@ -63,7 +72,7 @@ private fun GraphQLResponse.toByteArray(): ByteArray {
 }
 
 suspend fun ApplicationRequest.toGraphQLRequest(method: HttpMethod): Result<GraphQLRequest> {
-  return when(method) {
+  return when (method) {
     HttpMethod.Post -> receiveChannel().buffer().parsePostGraphQLRequest()
     HttpMethod.Get -> queryString().parseGetGraphQLRequest()
     else -> Result.failure(Exception("Unhandled method: $method"))
@@ -72,14 +81,14 @@ suspend fun ApplicationRequest.toGraphQLRequest(method: HttpMethod): Result<Grap
 
 fun Application.apolloModule(
     executableSchema: ExecutableSchema,
-    path: String = "/graphql"
+    path: String = "/graphql",
 ) {
   routing {
     post(path) {
-      call.handle(executableSchema, call.request.toGraphQLRequest(HttpMethod.Post))
+      call.respondGraphQL(executableSchema)
     }
     get(path) {
-      call.handle(executableSchema, call.request.toGraphQLRequest(HttpMethod.Get))
+      call.respondGraphQL(executableSchema)
     }
   }
 }
