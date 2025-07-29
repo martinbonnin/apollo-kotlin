@@ -1,0 +1,11 @@
+mutation AddString($value: String!) {
+  addString(value: $value)
+}
+
+mutation UpdateString($index: Int!, $newValue: String!) {
+  updateStringByIndex(index: $index, newValue: $newValue)
+}
+
+mutation DeleteString($index: Int!) {
+  deleteString(index: $index)
+}

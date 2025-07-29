@@ -15,19 +15,6 @@ import org.w3c.dom.BinaryType
 import kotlin.time.Duration.Companion.milliseconds
 import org.w3c.dom.WebSocket as PlatformWebSocket
 
-/**
- * WebSocket implementation for wasmJs platform.
- * 
- * This implementation has several limitations due to wasmJs platform constraints:
- * - Only browser WebSocket API is supported (no Node.js)
- * - Custom HTTP headers are not supported (browser WebSocket API limitation)
- * - Binary data is properly supported using ArrayBufferView for sending and Uint8Array for receiving
- * - Multiple protocols are simplified to use only the first one
- * - Complex js() function calls are split into simple helper functions
- * 
- * For authentication, use connectionPayload or URL-based authentication instead of headers.
- */
-
 // Node.js detection for wasmJs - using top-level function for compiler requirements
 private fun isNodeEnvironment(): Boolean = js("typeof process !== 'undefined' && process.versions != null && process.versions.node != null")
 
@@ -57,6 +44,14 @@ internal class WasmJsWebSocketEngine: WebSocketEngine {
   }
 }
 
+/**
+ * WebSocket implementation for wasmJs platform.
+ *
+ * This implementation has several limitations:
+ * - Node is not supported
+ * - Custom HTTP headers are not supported (browser WebSocket API limitation)
+ * - Multiple protocols are simplified to use only the first one
+ */
 internal class WasmJsWebSocket(
     url: String,
     headers: List<HttpHeader>,
@@ -85,12 +80,18 @@ internal class WasmJsWebSocket(
       }
       val asString = tryGetEventDataAsString(data)
       if (asString != null) {
+        println("onMessage text: $data")
         listener.onMessage(data.toString())
+        println("onMessage done")
         return@onmessage
       }
       val asArrayBuffer = tryGetEventDataAsArrayBuffer(data)
       if (asArrayBuffer != null) {
-        listener.onMessage(Uint8Array(asArrayBuffer).asByteArray())
+        println("onMessage bytes: $data")
+        val asByteArray = Uint8Array(asArrayBuffer).asByteArray()
+        println("asByteArray = $asByteArray")
+        listener.onMessage(asByteArray)
+        println("onMessage done")
         return@onmessage
       }
       if (!disposed) {

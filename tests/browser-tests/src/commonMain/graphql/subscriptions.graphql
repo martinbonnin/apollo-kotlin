@@ -1,0 +1,7 @@
+subscription StringListUpdates {
+  stringListChanges
+}
+
+subscription BinaryStringListUpdates {
+  binaryStringListChanges
+}

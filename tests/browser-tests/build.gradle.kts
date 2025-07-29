@@ -4,6 +4,7 @@ import websocket_server.configureWebSocketServer
 
 plugins {
   id("org.jetbrains.kotlin.multiplatform")
+  id("com.apollographql.apollo")
 }
 
 apolloTest {
@@ -52,3 +53,9 @@ kotlin {
 }
 
 configureWebSocketServer()
+
+apollo {
+  service("service") {
+    packageName.set("com.example")
+  }
+}

@@ -62,6 +62,11 @@ fun defaultTargets(
       @OptIn(ExperimentalWasmDsl::class)
       wasmJs {
         nodejs()
+
+        compilerOptions {
+          freeCompilerArgs.add("-Xwasm-debugger-custom-formatters")
+          freeCompilerArgs.add("-Xwasm-use-new-exception-proposal")
+        }
       }
     }
 
