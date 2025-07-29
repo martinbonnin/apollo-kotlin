@@ -73,6 +73,34 @@ class GraphQLWsProtocol(
       "pong" -> PongServerMessage
       "next", "complete", "error" -> {
         val id = map["id"] as? String
+        /**
+         * To reproduce, run
+         * `gradle browser-tests:wasmJsBrowserProductionRun`
+         *
+         * You should get the exception below in your browser:
+         * ```
+         * [object WebAssembly.Exception]
+         * u@http://localhost:8081/browser-tests.js:2:23578
+         * l@http://localhost:8081/browser-tests.js:2:23782
+         * ```
+         *
+         * Then uncomment and re-run:
+         *
+         * You should get the logs below in your browser console:
+         *
+         * ```
+         * onMessage text: {"type":"connection_ack"} apollo-tests-browser-tests.uninstantiated.mjs:100:56
+         * onMessage done apollo-tests-browser-tests.uninstantiated.mjs:100:56
+         * onMessage text: {"id":"6ec9b9d0-ba93-42aa-a013-3fa7c559defa","payload":{"data":{"stringListChanges":["GraphQL","World","Hello"]}},"type":"next"} apollo-tests-browser-tests.uninstantiated.mjs:100:56
+         * onMessage done apollo-tests-browser-tests.uninstantiated.mjs:100:56
+         * Subscription returned: [GraphQL, World, Hello] // or something equivalent depending on the server state
+         * ```
+         *
+         * Running in development mode doesn't show the issue
+         */
+//        if (type == "next") {
+//          return ResponseServerMessage(id.toString(), map["payload"])
+//        }
         when {
           id == null -> ParseErrorServerMessage("No 'id' found in message: '$text'")
           type == "next" -> ResponseServerMessage(id, map["payload"])
